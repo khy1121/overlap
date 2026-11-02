@@ -1,12 +1,13 @@
-// 주간 시간표: 칸 색, 빗금(불가), 확정 시간 테두리
-$hatch-sw: repeating-linear-gradient(135deg, transparent 0 3px, rgba(255,255,255,.55) 3px 4.5px);
-$hatch-cell: repeating-linear-gradient(135deg, transparent 0 5px, rgba(255,255,255,.35) 5px 7px);
+// 주간 시간표: 칸 색, X 표시(불가), 확정 시간 테두리
+// 불가는 빨간색 대신 회색 칸에 X를 그려요 (색을 구분하기 어려워도 모양으로 알아볼 수 있게)
+$x-line: transparent calc(50% - .7px), var(--off-mark) calc(50% - .7px), var(--off-mark) calc(50% + .7px), transparent calc(50% + .7px);
+$x-mark: linear-gradient(to top right, $x-line), linear-gradient(to bottom right, $x-line);
 
 .sw {
   width: 12px; height: 12px; border-radius: 2px; display: inline-block; flex: none;
   &.y { background: var(--yes); }
   &.m { background: var(--maybe); }
-  &.n { background-color: var(--no); background-image: $hatch-sw; }
+  &.n { background-color: var(--off); background-image: $x-mark; }
   &.e { background: var(--cell); border: 1px solid var(--rule); }
 }
 
@@ -49,7 +50,7 @@ $hatch-cell: repeating-linear-gradient(135deg, transparent 0 5px, rgba(255,255,2
     &.hh { border-top: 1px dashed var(--rule-2); }
     &.y { background: var(--yes); }
     &.m { background: var(--maybe); }
-    &.n { background-color: var(--no); background-image: $hatch-cell; }
+    &.n { background-color: var(--off); background-image: $x-mark; }
     // 칠한 칸 안에서는 30분 점선을 숨겨 한 덩어리로 보이게
     &.hh.y, &.hh.m, &.hh.n { border-top-color: transparent; }
     &.sel { outline: 2px solid var(--ink); outline-offset: -2px; z-index: 2; }

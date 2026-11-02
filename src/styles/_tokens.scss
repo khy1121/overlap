@@ -9,6 +9,8 @@ $light: (
   pen: #3182f6, pen-strong: #1b64da, accent: #1b64da, pen-ink: #ffffff, pen-soft: #e8f3ff, pink: #ff8fb1,
   yes: #3ccb9a, maybe: #ffc94d, no: #ff7a6b,
   yes-soft: #d6f5ea, maybe-soft: #fff1cc, no-soft: #ffe1dc,
+  // 시간표 '불가': 빨간색 대신 회색 칸 + X 표시
+  off: #d1d6db, off-mark: #8b95a1,
 );
 $dark: (
   paper: #17171c, sheet: #202027, ink: #f2f2f4, ink-2: #9e9ea4,
@@ -16,6 +18,7 @@ $dark: (
   pen: #4593fc, pen-strong: #1b64da, accent: #4593fc, pen-ink: #ffffff, pen-soft: #1c2a45, pink: #ff9dbb,
   yes: #4fd8a8, maybe: #ffd36b, no: #ff8e81,
   yes-soft: #173a30, maybe-soft: #3d3317, no-soft: #41231f,
+  off: #3a3a45, off-mark: #6f6f7a,
 );
 
 @mixin palette($map) {

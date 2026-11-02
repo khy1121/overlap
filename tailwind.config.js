@@ -27,6 +27,8 @@ export default {
         'yes-soft': v('yes-soft'),
         'maybe-soft': v('maybe-soft'),
         'no-soft': v('no-soft'),
+        off: v('off'),
+        'off-mark': v('off-mark'),
       },
       // 타이포는 전부 Pretendard. 기존 클래스(font-display, font-mono)는 그대로 두고 글꼴만 바꿔요.
       fontFamily: {

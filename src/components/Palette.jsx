@@ -1,7 +1,7 @@
 const BRUSHES = [
   { b: 'y', label: '가능', key: '1', on: 'bg-yes text-white' },
   { b: 'm', label: '조율 가능', short: '조율', key: '2', on: 'bg-maybe text-[#2a2100]' },
-  { b: 'n', label: '불가', key: '3', on: 'bg-no text-white' },
+  { b: 'n', label: '불가', key: '3', on: 'bg-ink2 text-sheet' },
   { b: '', label: '지우기', key: '0', on: 'bg-ink text-sheet' },
 ]
 

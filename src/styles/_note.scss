@@ -12,8 +12,8 @@
 .tok {
   &.y .avatar { background: var(--yes); color: #fff; }
   &.m .avatar { background: var(--maybe); color: #2a2100; }
-  &.n { text-decoration: line-through; text-decoration-color: var(--no); color: var(--ink-2); }
-  &.n .avatar { background: var(--no); color: #fff; }
+  &.n { text-decoration: line-through; text-decoration-color: var(--off-mark); color: var(--ink-2); }
+  &.n .avatar { background: var(--off-mark); color: #fff; }
   &.u { border-style: dashed; color: var(--ink-2); }
 }
 
