@@ -31,6 +31,14 @@ function validBirth(birth: string) {
   return year >= 1900 && d.getTime() < Date.now()
 }
 
+// 만 나이 (한국 시간 기준 오늘) — 만 14세 미만은 보호자 동의가 필요해서 가입을 받지 않아요
+function ageOf(birth: string) {
+  const [y, m, d] = birth.split('-').map(Number)
+  const now = new Date(Date.now() + 9 * 3600 * 1000) // UTC+9
+  const [ny, nm, nd] = [now.getUTCFullYear(), now.getUTCMonth() + 1, now.getUTCDate()]
+  return ny - y - (nm < m || (nm === m && nd < d) ? 1 : 0)
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS })
   if (req.method !== 'POST') return json(405, { error: 'method_not_allowed' })
@@ -47,6 +55,7 @@ Deno.serve(async (req) => {
 
   if (!name || [...name].length > 20) return json(400, { error: 'invalid_name', message: '이름은 1~20자로 입력해 주세요.' })
   if (!validBirth(birth)) return json(400, { error: 'invalid_birth', message: '생년월일을 다시 확인해 주세요.' })
+  if (ageOf(birth) < 14) return json(400, { error: 'under_14', message: '만 14세 이상만 가입할 수 있어요.' })
   if (password.length < 6 || password.length > 72) return json(400, { error: 'invalid_password', message: '비밀번호는 6자 이상으로 정해 주세요.' })
 
   const admin = createClient(Deno.env.get('SUPABASE_URL')!, Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!, {

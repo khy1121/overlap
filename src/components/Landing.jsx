@@ -58,6 +58,7 @@ export default function Landing() {
       <div className="flex flex-col gap-3">
         <AuthForm />
         <InstallApp />
+        <a href="/?page=privacy" className="self-center text-[13px] text-ink2 underline underline-offset-2 hover:text-ink">개인정보처리방침</a>
       </div>
 
       <ul className="m-0 flex list-none flex-col gap-4 p-0 md:hidden">

@@ -20,6 +20,13 @@ export function parseBirth(value) {
   return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`
 }
 
+/** 'YYYY-MM-DD' → 만 나이 */
+export function ageOf(iso) {
+  const [y, m, d] = iso.split('-').map(Number)
+  const now = new Date()
+  return now.getFullYear() - y - (now.getMonth() + 1 < m || (now.getMonth() + 1 === m && now.getDate() < d) ? 1 : 0)
+}
+
 function BirthInput({ value, onChange }) {
   return (
     <input
@@ -59,6 +66,7 @@ export default function AuthForm({ initial = 'login', onDone }) {
     setError('')
     const birth = parseBirth(form.birth)
     if (!birth) return setError('생년월일을 8자리(19990315)나 6자리(990315)로 입력해 주세요.')
+    if (signup && ageOf(birth) < 14) return setError('만 14세 이상만 가입할 수 있어요.')
     if (signup && form.password !== form.confirm) return setError('비밀번호가 서로 달라요.')
     setBusy(true)
     try {
@@ -138,8 +146,11 @@ export default function AuthForm({ initial = 'login', onDone }) {
         </button>
         <p className="small m-0">
           {signup
-            ? '이름과 생년월일이 같은 계정은 하나만 만들 수 있어요. 생년월일은 로그인 확인에만 쓰고 그대로 저장하지 않아요.'
+            ? '이름과 생년월일이 같은 계정은 하나만 만들 수 있어요. 생년월일은 로그인 확인에만 쓰고 그대로 저장하지 않아요. 만 14세 이상만 가입할 수 있어요.'
             : '비밀번호를 잊으면 되찾을 수 없어요. 가입할 때 쓴 이름과 생년월일을 그대로 입력해 주세요.'}
+        </p>
+        <p className="small m-0">
+          {signup ? '가입하면' : '로그인하면'} <a href="/?page=privacy" className="font-semibold text-accent underline underline-offset-2">개인정보처리방침</a>에 따라 정보를 처리하는 데 동의하는 것으로 봐요.
         </p>
       </form>
     </div>

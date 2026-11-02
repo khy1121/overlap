@@ -11,6 +11,7 @@ import MySchedule from './components/MySchedule'
 import Friends from './components/Friends'
 import Settings from './components/Settings'
 import UpdateBanner from './components/UpdateBanner'
+import Privacy from './components/Privacy'
 
 const params = new URLSearchParams(window.location.search)
 const MID = params.get('m')
@@ -41,6 +42,7 @@ export default function App() {
   let view
   if (session === undefined) view = <Center>불러오는 중…</Center>
   else if (MID) view = session ? <Board key={MID} mid={MID} session={session} /> : <InviteGate mid={MID} />
+  else if (params.get('page') === 'privacy') view = <Privacy /> // 로그인 없이도 볼 수 있어요
   else if (!session) view = <Landing />
   else view = Page ? <Page session={session} /> : <Home session={session} />
 
