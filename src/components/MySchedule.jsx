@@ -71,7 +71,7 @@ export default function MySchedule() {
   const eventsOn = (day) => {
     const next = addDays(day, 1)
     return [
-      ...confirmed.filter((x) => sameDay(x.t.start, day)).map((x) => ({ kind: 'meet', start: x.t.start, end: x.t.end, m: x.m })),
+      ...confirmed.filter((x) => sameDay(x.t.start, day)).map((x) => ({ kind: 'meet', start: x.t.start, end: x.t.end, open: x.t.open, m: x.m })),
       ...gBusy.filter((b) => b.start < next && b.end > day).map((b) => ({ kind: 'google', start: b.start < day ? day : b.start, end: b.end > next ? next : b.end })),
     ].sort((a, b) => a.start - b.start)
   }
@@ -175,7 +175,7 @@ export default function MySchedule() {
               {meetings !== null && !dayEvents.length && !pendingOn(picked).length && <li className="text-[13px] text-ink2">잡힌 일정이 없어요.</li>}
               {dayEvents.map((e, i) => (
                 <li key={i} className={`rounded-[14px] px-3.5 py-3 ${e.kind === 'meet' ? 'bg-pen-soft' : 'bg-rule2'}`}>
-                  <div className="text-[13px] font-semibold text-ink2 tabular">{hm(e.start)}–{hm(e.end)}</div>
+                  <div className="text-[13px] font-semibold text-ink2 tabular">{e.open ? `${hm(e.start)}부터 (시간 미정)` : `${hm(e.start)}–${hm(e.end)}`}</div>
                   {e.kind === 'meet' ? (
                     <>
                       <a href={`/?m=${e.m.id}`} className="block truncate text-[15px] font-bold text-ink no-underline hover:underline">{e.m.title}</a>

@@ -64,8 +64,8 @@ export default function NewMeeting() {
     const { data: mid, error } = await supabase.rpc('create_meeting', args)
     if (error) {
       setBusy(false)
-      const outdated = /function|p_days|dur_check/i.test(error.message)
-      return toast(outdated ? '서버 업데이트가 아직이라 7일·6시간 이하로만 만들 수 있어요.' : `약속을 만들지 못했어요: ${error.message}`)
+      const outdated = /function|p_days|dur_check|null value/i.test(error.message)
+      return toast(outdated ? '서버 업데이트가 아직이라 이 설정(기간·만나는 시간)으로는 만들 수 없어요.' : `약속을 만들지 못했어요: ${error.message}`)
     }
     // 고른 친구를 바로 초대
     const ids = [...picked]

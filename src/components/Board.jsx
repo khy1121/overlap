@@ -6,7 +6,7 @@ import { GOOGLE_CLIENT_ID, requestCalendarToken } from '../lib/googleCalendar'
 import { copyText } from '../lib/copy'
 import { myRequests, requestFriend, resultText } from '../lib/friends'
 import { supabase } from '../lib/supabase'
-import { BRUSH_LABEL, dayLabel, durText, evaluate, md, nDays, nSlots, summary, tm } from '../lib/schedule'
+import { BRUSH_LABEL, dayLabel, durText, evaluate, md, nDays, nSlots, summary, timeText, tm } from '../lib/schedule'
 import CalendarImport from './CalendarImport'
 import InvitePanel from './InvitePanel'
 import Palette from './Palette'
@@ -161,7 +161,7 @@ export default function Board({ mid, session }) {
   }
 
   function noticeText(w, dur, final) {
-    const head = `${cfg.title} 시간 ${final ? '확정' : '제안'}\n${dayLabel(cfg, w.d)} ${tm(cfg, w.s)}–${tm(cfg, w.s + dur)}`
+    const head = `${cfg.title} 시간 ${final ? '확정' : '제안'}\n${dayLabel(cfg, w.d)} ${timeText(cfg, w.s, dur)}`
     if (final) return `${head}\n이 시간에 만나요!\n${link}`
     return `${head}\n(${summary(w, n)})\n이 시간 어때요?\n${link}`
   }
@@ -177,7 +177,7 @@ export default function Board({ mid, session }) {
     }
   }
 
-  const picked = cfg.picked && cfg.picked.d < nDays(cfg) && cfg.picked.s + cfg.picked.dur <= nSlots(cfg) ? cfg.picked : null
+  const picked = cfg.picked && cfg.picked.d < nDays(cfg) && cfg.picked.s + (cfg.picked.dur || 1) <= nSlots(cfg) ? cfg.picked : null
   const selDetail = mode === 'all' && sel
     ? ['y', 'm', 'n', 'u'].map((k) => [k, people.filter((p) => (p.cells[`${sel.d}-${sel.s}`] || 'u') === k)]).filter(([, ps]) => ps.length)
     : null
@@ -226,7 +226,7 @@ export default function Board({ mid, session }) {
         <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-md bg-pen-strong px-4 py-3 text-pen-ink">
           <div>
             <div className="text-xs opacity-85">확정된 약속 시간</div>
-            <strong className="font-display text-xl font-extrabold">{dayLabel(cfg, picked.d)} {tm(cfg, picked.s)}–{tm(cfg, picked.s + picked.dur)}</strong>
+            <strong className="font-display text-xl font-extrabold">{dayLabel(cfg, picked.d)} {timeText(cfg, picked.s, picked.dur)}</strong>
           </div>
           <div className="flex flex-wrap gap-1.5">
             <button className="btn btn-sm bg-[color-mix(in_oklab,var(--pen-ink)_18%,transparent)] text-pen-ink hover:bg-[color-mix(in_oklab,var(--pen-ink)_28%,transparent)]" onClick={() => copy(noticeText(picked, picked.dur, true))}>공지 문구 복사</button>

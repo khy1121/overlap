@@ -177,10 +177,10 @@ export default function TimeGrid({ cfg, people, mode, cells, canPaint, brush, se
         if (sel && sel.d === d && sel.s === s) cls += ' sel'
       }
       if (cur.d === d && cur.s === s) cls += ' cur'
-      if (picked && picked.d === d && s >= picked.s && s < picked.s + picked.dur) {
+      if (picked && picked.d === d && s >= picked.s && s < picked.s + (picked.dur || 1)) {
         cls += ' pick'
         if (s === picked.s) cls += ' top'
-        if (s === picked.s + picked.dur - 1) cls += ' bot'
+        if (s === picked.s + (picked.dur || 1) - 1) cls += ' bot'
       }
       out.push(<div key={k} data-k={k} className={cls} style={style} title={title} />)
     }

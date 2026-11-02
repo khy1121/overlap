@@ -108,7 +108,7 @@ export default function Home({ session }) {
                   </span>
                   <span className="min-w-0">
                     <span className="block truncate text-[15px] font-semibold">{m.title}</span>
-                    <span className="text-[13px] text-ink2">({DAYS[t.start.getDay()]}) {hm(t.start)}–{hm(t.end)}</span>
+                    <span className="text-[13px] text-ink2">({DAYS[t.start.getDay()]}) {t.open ? `${hm(t.start)}부터` : `${hm(t.start)}–${hm(t.end)}`}</span>
                   </span>
                 </a>
               </li>

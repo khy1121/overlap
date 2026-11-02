@@ -14,13 +14,13 @@ const startOf = (m) => {
   return new Date(y, mo - 1, d)
 }
 
-/** 확정된 회의 시간 → { start, end } (확정 전이면 null) */
+/** 확정된 약속 시간 → { start, end, open } (확정 전이면 null). open: 만나는 시간 미정(시작만 정함) → end는 1시간 뒤로 표시용 */
 export function confirmedTime(m) {
   const p = m.picked
   if (!p || p.d >= (m.days || 7)) return null
   const day = startOf(m)
   const start = new Date(day.getFullYear(), day.getMonth(), day.getDate() + p.d, 0, m.from_hour * 60 + p.s * 30)
-  return { start, end: new Date(start.getTime() + p.dur * 30 * 60000) }
+  return { start, end: new Date(start.getTime() + (p.dur || 2) * 30 * 60000), open: !p.dur }
 }
 
 /** 조율 중인 약속의 기간(시작일~종료일) */
