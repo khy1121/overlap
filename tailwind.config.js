@@ -38,7 +38,7 @@ export default {
         sm: '8px',
         DEFAULT: '10px',
         md: '16px',
-        lg: '24px',
+        lg: '20px',
       },
       boxShadow: {
         soft: v('shadow-soft'),

@@ -1,7 +1,7 @@
 // 테마 선택: 'system'(기본) | 'light' | 'dark'. 선택은 이 브라우저에만 기억해요.
 // 첫 페인트 전 적용은 index.html의 인라인 스크립트가 같은 키로 해요.
 const KEY = 'overlap-theme'
-const COLORS = { light: '#faf7f2', dark: '#15141a' }
+const COLORS = { light: '#f2f4f6', dark: '#17171c' }
 
 export function getTheme() {
   try {

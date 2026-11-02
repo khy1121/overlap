@@ -1,17 +1,18 @@
-// Overlap 팔레트: 말랑 파스텔 (Figma "Overlap — 말랑 파스텔 디자인" Color 컬렉션과 같은 값)
+// Overlap 팔레트: 토스 디자인 시스템 톤 (회색 배경 · 평평한 흰 카드 · 토스 블루 · 회색 글자 체계)
 // 기존 토큰 이름(paper, sheet, ink, pen …)은 그대로 두고 값만 바꿔 화면 전체에 적용해요.
-// pen-strong: 글자가 올라가는 버튼 배경·작은 링크 글자용. 라이트에서 흰 글자 대비 5.6:1 (pen은 4.2:1이라 본문 크기엔 부족).
+// pen: 포인트 블루(#3182f6). pen-strong: 흰 글자가 올라가는 버튼 배경·작은 글자용(#1b64da, 흰 글자 대비 5.4:1).
+// 상태색(yes/maybe/no)은 시간표 의미색이라 그대로 둬요.
 $light: (
-  paper: #faf7f2, sheet: #ffffff, ink: #2a2838, ink-2: #6e6a80,
-  rule: #ece6dc, rule-2: #f3eee6, cell: #f3eee6, weekend: #eee8de,
-  pen: #5b6cff, pen-strong: #4353ea, pen-ink: #ffffff, pen-soft: #e6e8ff, pink: #ff8fb1,
+  paper: #f2f4f6, sheet: #ffffff, ink: #191f28, ink-2: #6b7684,
+  rule: #e5e8eb, rule-2: #f2f4f6, cell: #f2f4f6, weekend: #e9ecef,
+  pen: #3182f6, pen-strong: #1b64da, pen-ink: #ffffff, pen-soft: #e8f3ff, pink: #ff8fb1,
   yes: #3ccb9a, maybe: #ffc94d, no: #ff7a6b,
   yes-soft: #d6f5ea, maybe-soft: #fff1cc, no-soft: #ffe1dc,
 );
 $dark: (
-  paper: #15141a, sheet: #1e1d25, ink: #f1eff7, ink-2: #a9a5ba,
-  rule: #302e3a, rule-2: #24232c, cell: #24232c, weekend: #1b1a21,
-  pen: #8c98ff, pen-strong: #8c98ff, pen-ink: #14152e, pen-soft: #262a52, pink: #ff9dbb,
+  paper: #17171c, sheet: #202027, ink: #f2f2f4, ink-2: #9e9ea4,
+  rule: #2c2c35, rule-2: #2a2a32, cell: #2a2a32, weekend: #24242b,
+  pen: #4593fc, pen-strong: #1b64da, pen-ink: #ffffff, pen-soft: #1c2a45, pink: #ff9dbb,
   yes: #4fd8a8, maybe: #ffd36b, no: #ff8e81,
   yes-soft: #173a30, maybe-soft: #3d3317, no-soft: #41231f,
 );
@@ -25,8 +26,9 @@ $dark: (
 :root {
   @include palette($light);
   --ease: cubic-bezier(.23, 1, .32, 1);
-  --shadow-soft: 0 4px 16px rgba(92, 84, 140, .08);
-  --shadow-float: 0 12px 32px -4px rgba(91, 108, 255, .18);
+  // 토스처럼 그림자는 아주 옅게
+  --shadow-soft: 0 1px 3px rgba(0, 29, 58, .04);
+  --shadow-float: 0 8px 24px rgba(0, 29, 58, .08);
   --bg-art: url('/brand/bg-mobile.webp');
   color-scheme: light;
 }
@@ -38,8 +40,8 @@ $dark: (
 // 다크 값 묶음. 시스템이 다크일 때(사용자가 라이트를 고르지 않았으면)와 직접 다크를 골랐을 때 둘 다 써요.
 @mixin dark-theme {
   @include palette($dark);
-  --shadow-soft: 0 4px 16px rgba(0, 0, 0, .35);
-  --shadow-float: 0 12px 32px -4px rgba(0, 0, 0, .5);
+  --shadow-soft: 0 1px 3px rgba(0, 0, 0, .3);
+  --shadow-float: 0 8px 24px rgba(0, 0, 0, .4);
   // 다크 모드: 크림 이미지를 어둡게 덮으면 탁해져서, 같은 자리에 파스텔 빛 번짐만 그려요.
   --bg-art:
     radial-gradient(38% 42% at 72% 10%, rgba(140, 152, 255, .34), transparent 70%),

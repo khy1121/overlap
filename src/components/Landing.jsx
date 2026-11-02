@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import AuthForm from './AuthForm'
 
 const STEPS = [
@@ -59,6 +60,10 @@ function DemoBoard() {
 }
 
 export default function Landing() {
+  useEffect(() => {
+    document.body.classList.add('landing-art')
+    return () => document.body.classList.remove('landing-art')
+  }, [])
   return (
     <div className="flex flex-col gap-12 pb-4 pt-4 md:gap-16 md:pt-10">
       <section className="grid items-start gap-8 md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] md:gap-14 lg:grid-cols-[minmax(0,1.05fr)_minmax(0,1fr)]">

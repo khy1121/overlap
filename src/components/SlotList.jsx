@@ -2,7 +2,7 @@ import { summary, whenText } from '../lib/schedule'
 
 export default function SlotList({ title, count, hint, items, empty, cfg, n, byId, onOpen }) {
   return (
-    <section>
+    <section className="sheet">
       <h2 className="m-0 flex items-baseline gap-2 font-display text-base font-extrabold">
         {title}
         {count ? <span className="font-mono text-xs font-medium text-ink2">{count}개</span> : null}
@@ -13,7 +13,7 @@ export default function SlotList({ title, count, hint, items, empty, cfg, n, byI
         {items.slice(0, 8).map((w) => (
           <li key={`${w.d}-${w.s}`} className="border-b border-rule2">
             <button
-              className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 rounded-none bg-transparent px-1 py-[9px] text-left hover:bg-sheet active:!transform-none"
+              className="grid w-full grid-cols-[minmax(0,1fr)_auto] items-center gap-x-2 gap-y-0.5 rounded-none bg-transparent px-1 py-[9px] text-left hover:bg-rule2 active:!transform-none"
               onClick={() => onOpen(w)}
             >
               <span className="tabular font-mono text-[13px] font-semibold">{whenText(cfg, w)}</span>

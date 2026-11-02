@@ -1,11 +1,10 @@
-// "이 시간 어때요?" 카드: 라벤더 테두리 + 떠 있는 그림자
+// "이 시간 어때요?" 카드: 토스식 평평한 흰 카드
 .note {
   position: relative;
   background: var(--sheet);
-  border: 1.5px solid var(--pen-soft);
-  border-radius: 24px;
-  padding: 20px 22px 18px;
-  box-shadow: var(--shadow-float);
+  border-radius: 20px;
+  padding: 22px 22px 20px;
+  box-shadow: var(--shadow-soft);
 
   &.swap .when, &.swap .att { animation: rise .24s var(--ease); }
 }
@@ -21,5 +20,5 @@
 .hero-em { font-style: normal; color: var(--pen); }
 
 // 마스코트: 살짝 떠다니는 움직임
-.mascot { animation: float 5s ease-in-out infinite; filter: drop-shadow(0 18px 24px rgba(91, 108, 255, .18)); }
+.mascot { animation: float 5s ease-in-out infinite; filter: drop-shadow(0 18px 24px rgba(49, 130, 246, .16)); }
 @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }

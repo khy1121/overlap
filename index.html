@@ -8,15 +8,15 @@
     <meta property="og:title" content="Overlap" />
     <meta property="og:description" content="되는 시간을 칠하면, 모두 겹치는 시간을 찾아 드려요." />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
-    <meta name="theme-color" content="#faf7f2" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#15141a" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#f2f4f6" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#17171c" media="(prefers-color-scheme: dark)" />
     <script>
       // 저장된 테마를 첫 페인트 전에 적용해 깜빡임을 막아요 (src/lib/theme.js와 같은 키).
       try {
         var t = localStorage.getItem('overlap-theme')
         if (t === 'light' || t === 'dark') {
           document.documentElement.dataset.theme = t
-          document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) { m.content = t === 'dark' ? '#15141a' : '#faf7f2' })
+          document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) { m.content = t === 'dark' ? '#17171c' : '#f2f4f6' })
         }
       } catch (e) {}
     </script>
