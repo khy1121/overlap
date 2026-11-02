@@ -1,18 +1,19 @@
 // Overlap 팔레트: 토스 디자인 시스템 톤 (회색 배경 · 평평한 흰 카드 · 토스 블루 · 회색 글자 체계)
 // 기존 토큰 이름(paper, sheet, ink, pen …)은 그대로 두고 값만 바꿔 화면 전체에 적용해요.
-// pen: 포인트 블루(#3182f6). pen-strong: 흰 글자가 올라가는 버튼 배경·작은 글자용(#1b64da, 흰 글자 대비 5.4:1).
+// pen: 포인트 블루(#3182f6). pen-strong: 흰 글자가 올라가는 버튼 배경(#1b64da, 흰 글자 대비 5.4:1).
+// accent: 파란 글자(링크·강조). 라이트는 #1b64da, 다크는 배경 위에서 잘 보이게 #4593fc.
 // 상태색(yes/maybe/no)은 시간표 의미색이라 그대로 둬요.
 $light: (
   paper: #f2f4f6, sheet: #ffffff, ink: #191f28, ink-2: #6b7684,
   rule: #e5e8eb, rule-2: #f2f4f6, cell: #f2f4f6, weekend: #e9ecef,
-  pen: #3182f6, pen-strong: #1b64da, pen-ink: #ffffff, pen-soft: #e8f3ff, pink: #ff8fb1,
+  pen: #3182f6, pen-strong: #1b64da, accent: #1b64da, pen-ink: #ffffff, pen-soft: #e8f3ff, pink: #ff8fb1,
   yes: #3ccb9a, maybe: #ffc94d, no: #ff7a6b,
   yes-soft: #d6f5ea, maybe-soft: #fff1cc, no-soft: #ffe1dc,
 );
 $dark: (
   paper: #17171c, sheet: #202027, ink: #f2f2f4, ink-2: #9e9ea4,
   rule: #2c2c35, rule-2: #2a2a32, cell: #2a2a32, weekend: #24242b,
-  pen: #4593fc, pen-strong: #1b64da, pen-ink: #ffffff, pen-soft: #1c2a45, pink: #ff9dbb,
+  pen: #4593fc, pen-strong: #1b64da, accent: #4593fc, pen-ink: #ffffff, pen-soft: #1c2a45, pink: #ff9dbb,
   yes: #4fd8a8, maybe: #ffd36b, no: #ff8e81,
   yes-soft: #173a30, maybe-soft: #3d3317, no-soft: #41231f,
 );
@@ -29,12 +30,7 @@ $dark: (
   // 토스처럼 그림자는 아주 옅게
   --shadow-soft: 0 1px 3px rgba(0, 29, 58, .04);
   --shadow-float: 0 8px 24px rgba(0, 29, 58, .08);
-  --bg-art: url('/brand/bg-mobile.webp');
   color-scheme: light;
-}
-
-@media (min-width: 768px) {
-  :root { --bg-art: url('/brand/bg-desktop.webp'); }
 }
 
 // 다크 값 묶음. 시스템이 다크일 때(사용자가 라이트를 고르지 않았으면)와 직접 다크를 골랐을 때 둘 다 써요.
@@ -42,12 +38,6 @@ $dark: (
   @include palette($dark);
   --shadow-soft: 0 1px 3px rgba(0, 0, 0, .3);
   --shadow-float: 0 8px 24px rgba(0, 0, 0, .4);
-  // 다크 모드: 크림 이미지를 어둡게 덮으면 탁해져서, 같은 자리에 파스텔 빛 번짐만 그려요.
-  --bg-art:
-    radial-gradient(38% 42% at 72% 10%, rgba(140, 152, 255, .34), transparent 70%),
-    radial-gradient(30% 40% at 98% 38%, rgba(79, 216, 168, .24), transparent 70%),
-    radial-gradient(38% 40% at 92% 92%, rgba(255, 157, 187, .22), transparent 70%),
-    radial-gradient(34% 34% at 45% 85%, rgba(255, 211, 107, .14), transparent 70%);
   color-scheme: dark;
 }
 

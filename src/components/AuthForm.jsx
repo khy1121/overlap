@@ -73,7 +73,7 @@ export default function AuthForm({ initial = 'login', onDone }) {
 
   const label = 'flex flex-col gap-1.5 text-left text-[13px] font-medium text-ink2'
   return (
-    <div className="w-full max-w-[420px] rounded-lg bg-sheet p-5 text-left shadow-float sm:p-6">
+    <div className="w-full rounded-[20px] bg-sheet p-5 text-left shadow-soft sm:p-6">
       <div className="mb-4 grid grid-cols-2 gap-1 rounded-full bg-rule2 p-1" role="tablist">
         {[['login', '로그인'], ['signup', '처음이에요 (가입)']].map(([k, t]) => (
           <button

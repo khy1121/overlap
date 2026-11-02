@@ -17,6 +17,7 @@ export default {
         weekend: v('weekend'),
         pen: v('pen'),
         'pen-strong': v('pen-strong'),
+        accent: v('accent'),
         'pen-ink': v('pen-ink'),
         'pen-soft': v('pen-soft'),
         pink: v('pink'),

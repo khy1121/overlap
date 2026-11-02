@@ -179,7 +179,7 @@ export default function MySchedule() {
                   {e.kind === 'meet' ? (
                     <>
                       <a href={`/?m=${e.m.id}`} className="block truncate text-[15px] font-bold text-ink no-underline hover:underline">{e.m.title}</a>
-                      <a href={googleAddLink(e.m, { start: e.start, end: e.end })} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-[13px] font-semibold text-pen-strong no-underline hover:underline">
+                      <a href={googleAddLink(e.m, { start: e.start, end: e.end })} target="_blank" rel="noreferrer" className="mt-1 inline-flex items-center gap-1 text-[13px] font-semibold text-accent no-underline hover:underline">
                         <GoogleIcon /> Google 캘린더에 추가
                       </a>
                     </>
@@ -205,7 +205,7 @@ export default function MySchedule() {
                 const s = meetingSpan(m)
                 return (
                   <li key={m.id} className="border-b border-rule2 last:border-0">
-                    <a href={`/?m=${m.id}`} className="flex items-center justify-between gap-2 py-2.5 text-ink no-underline hover:text-pen-strong">
+                    <a href={`/?m=${m.id}`} className="flex items-center justify-between gap-2 py-2.5 text-ink no-underline hover:text-accent">
                       <span className="min-w-0">
                         <span className="block truncate text-[15px] font-semibold">{m.title}</span>
                         <span className="text-[13px] text-ink2">{s.start.getMonth() + 1}/{s.start.getDate()} – {s.end.getMonth() + 1}/{s.end.getDate()} · {m.participants?.[0]?.count ?? 0}명 참여</span>

@@ -26,7 +26,7 @@ export default function ThemeToggle() {
       {/* 모바일: 아이콘 하나, 누를 때마다 시스템 → 라이트 → 다크 */}
       <button
         type="button"
-        className="grid h-9 w-9 shrink-0 place-items-center rounded-full border-0 bg-rule text-pen-strong sm:hidden"
+        className="grid h-9 w-9 shrink-0 place-items-center rounded-full border-0 bg-rule text-accent sm:hidden"
         aria-label={`화면 테마: ${curLabel}. 누르면 ${nextLabel}`}
         title={curLabel}
         onClick={() => choose(nextKey)}
@@ -43,7 +43,7 @@ export default function ThemeToggle() {
             aria-checked={theme === key}
             aria-label={label}
             title={label}
-            className={`grid h-8 w-8 place-items-center rounded-full border-0 ${theme === key ? 'bg-sheet text-pen-strong shadow-soft' : 'bg-transparent text-ink2 hover:text-ink'}`}
+            className={`grid h-8 w-8 place-items-center rounded-full border-0 ${theme === key ? 'bg-sheet text-accent shadow-soft' : 'bg-transparent text-ink2 hover:text-ink'}`}
             onClick={() => choose(key)}
           >
             {svg}

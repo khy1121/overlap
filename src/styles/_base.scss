@@ -17,16 +17,6 @@ body {
   min-height: 100vh;
 }
 
-// 파스텔 블롭 배경은 랜딩에서만 (모바일/데스크톱 이미지는 _tokens.scss의 --bg-art).
-// 로그인 후 화면은 토스처럼 단색 회색 배경이에요.
-body.landing-art {
-  background-image: var(--bg-art);
-  background-repeat: no-repeat;
-  background-size: cover;
-  background-position: top center;
-  background-attachment: fixed;
-}
-
 // 숫자는 Pretendard 고정폭 숫자로 (시간표·시각 표시)
 .font-mono, .tabular { font-variant-numeric: tabular-nums; }
 

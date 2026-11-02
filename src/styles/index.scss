@@ -21,7 +21,7 @@
     @apply btn bg-pen-strong text-pen-ink hover:bg-[color-mix(in_oklab,var(--pen-strong)_88%,black)];
   }
   .btn-soft {
-    @apply btn bg-pen-soft text-pen-strong hover:bg-[color-mix(in_oklab,var(--pen-soft)_85%,var(--pen))];
+    @apply btn bg-pen-soft text-accent hover:bg-[color-mix(in_oklab,var(--pen-soft)_85%,var(--pen))];
   }
   .btn-ghost {
     @apply btn bg-transparent text-ink2 hover:bg-rule2 hover:text-ink;
@@ -36,7 +36,7 @@
     @apply min-w-0 rounded-lg bg-sheet p-4 shadow-soft sm:p-6;
   }
   .link-btn {
-    @apply border-0 bg-transparent p-0 text-[13px] font-semibold text-pen-strong underline underline-offset-2;
+    @apply border-0 bg-transparent p-0 text-[13px] font-semibold text-accent underline underline-offset-2;
   }
   .field-input {
     @apply min-h-[48px] rounded-md border-[1.5px] border-transparent bg-rule2 px-4 py-2.5 text-base text-ink outline-none transition-colors placeholder:text-ink2 focus:border-pen focus:bg-sheet;

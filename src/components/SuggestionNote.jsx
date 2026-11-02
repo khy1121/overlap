@@ -8,7 +8,7 @@ export default function SuggestionNote({ cfg, result, list, cand, byId, onNext, 
   if (!entered || !list.length) {
     return (
       <div className="note">
-        <div className="font-display text-[22px] font-extrabold leading-tight tracking-[-.02em] text-pen-strong">이 시간 어때요?</div>
+        <div className="font-display text-[22px] font-extrabold leading-tight tracking-[-.02em] text-accent">이 시간 어때요?</div>
         <div className="mt-2 font-display text-[19px] font-extrabold leading-tight">
           {entered ? '아직 겹치는 시간이 없어요' : '아직 아무도 입력하지 않았어요'}
         </div>
@@ -25,7 +25,7 @@ export default function SuggestionNote({ cfg, result, list, cand, byId, onNext, 
   const early = entered * 2 < n
   return (
     <div className="note swap" key={swapKey}>
-      <div className="font-display text-[22px] font-extrabold leading-tight tracking-[-.02em] text-pen-strong">{w.all ? '이 시간 어때요? 다 돼요!' : '이 시간 어때요?'}</div>
+      <div className="font-display text-[22px] font-extrabold leading-tight tracking-[-.02em] text-accent">{w.all ? '이 시간 어때요? 다 돼요!' : '이 시간 어때요?'}</div>
       {early && (
         <p className="m-0 mt-2 rounded-[12px] bg-maybe-soft px-3 py-2 text-[13px] text-ink">
           아직 {n}명 중 {entered}명만 입력했어요. 더 모이면 추천이 바뀔 수 있어요.
