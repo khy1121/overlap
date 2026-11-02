@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { md } from '../lib/schedule'
+import { md, nDays } from '../lib/schedule'
 import { copyText } from '../lib/copy'
 import { useToast } from '../hooks/useToast'
 import Avatar from './Avatar'
@@ -8,11 +8,12 @@ import { AddFriend } from './Friends'
 
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/
 
+/** 초대 창: 저장된 친구 목록 → 링크 한 줄 → 이메일 한 줄 */
 export default function InvitePanel({ mid, cfg, link, onClose }) {
   const toast = useToast()
-  const [emails, setEmails] = useState('')
-  const [emailNote, setEmailNote] = useState('')
   const [friends, setFriends] = useState(null)
+  const [addOpen, setAddOpen] = useState(false)
+  const [emails, setEmails] = useState('')
   const inviteText = `${cfg.title} 시간 맞추기\n되는 시간을 칠해 주세요!\n${link}`
 
   const load = useCallback(() => {
@@ -20,71 +21,98 @@ export default function InvitePanel({ mid, cfg, link, onClose }) {
   }, [mid])
   useEffect(load, [load])
 
-  function sendEmails() {
+  async function invite(list) {
+    const results = await Promise.all(list.map((f) => supabase.rpc('invite_friend', { mid, target: f.user_id })))
+    const ok = list.filter((_, i) => !results[i].error)
+    setFriends((all) => all.map((x) => (ok.some((f) => f.user_id === x.user_id) ? { ...x, in_meeting: true } : x)))
+    if (ok.length < list.length) toast('일부 친구를 초대하지 못했어요. 다시 시도해 주세요.')
+    else toast(ok.length === 1 ? `${ok[0].name || '친구'}님을 초대했어요` : `친구 ${ok.length}명을 초대했어요`)
+  }
+
+  function sendEmails(e) {
+    e.preventDefault()
     const list = emails.split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean)
     const bad = list.filter((x) => !EMAIL_RE.test(x))
-    if (!list.length) return setEmailNote('이메일 주소를 입력해 주세요.')
-    if (bad.length) return setEmailNote(`주소를 확인해 주세요: ${bad.join(', ')}`)
+    if (!list.length) return toast('이메일 주소를 입력해 주세요')
+    if (bad.length) return toast(`주소를 확인해 주세요: ${bad.join(', ')}`)
     const subject = `[Overlap] ${cfg.title} 시간 맞추기`
-    const body = `안녕하세요!\n\n"${cfg.title}" 시간을 정하려고 해요.\n${md(cfg, 0)}부터 일주일 중 되는 시간을 칠해 주세요.\n\n${link}\n\n이름·생년월일·비밀번호로 간단히 가입하면 바로 참여할 수 있어요.`
+    const body = `"${cfg.title}" 시간을 정하려고 해요.\n${md(cfg, 0)}–${md(cfg, nDays(cfg) - 1)} 중 되는 시간을 칠해 주세요.\n\n${link}`
     window.location.href = `mailto:?bcc=${encodeURIComponent(list.join(','))}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-    setEmailNote('메일 앱이 열리지 않으면 링크를 복사해서 직접 보내 주세요.')
   }
 
-  async function add(f) {
-    const { error } = await supabase.rpc('invite_friend', { mid, target: f.user_id })
-    if (error) return toast(`추가하지 못했어요: ${error.message}`)
-    setFriends((list) => list.map((x) => (x.user_id === f.user_id ? { ...x, in_meeting: true } : x)))
-    toast(`${f.name || '친구'}님을 약속에 추가했어요`)
-  }
-
-  const h3 = 'm-0 mb-1 font-display text-[15px] font-extrabold'
+  const waiting = friends?.filter((f) => !f.in_meeting) || []
+  const canShare = typeof navigator !== 'undefined' && navigator.share
   return (
-    <section className="relative grid grid-cols-1 gap-[18px] rounded-md border border-rule bg-sheet px-[18px] py-4 lg:grid-cols-3" aria-label="초대하기">
-      <button className="absolute right-2 top-2 h-8 w-8 rounded text-lg text-ink2 hover:bg-cell" aria-label="초대 창 닫기" onClick={onClose}>×</button>
-
-      <div className="flex min-w-0 flex-col gap-2">
-        <h3 className={h3}>친구 초대</h3>
-        <p className="small m-0">친구는 누르면 바로 이 약속에 들어와요. 친구 코드를 입력해서 새 친구를 맺을 수도 있어요.</p>
-        <ul className="m-0 flex max-h-[220px] list-none flex-col gap-1 overflow-auto p-0">
-          {friends === null && <li className="small">불러오는 중…</li>}
-          {friends?.length === 0 && <li className="small">아직 친구가 없어요. 아래에 친구 코드를 입력해 보세요.</li>}
-          {friends?.map((f) => (
-            <li key={f.user_id} className="flex items-center gap-2 px-0.5 py-1 text-[13px]">
-              <Avatar name={f.name} />
-              <span className="min-w-0 flex-1 truncate">{f.name || '이름 없음'}</span>
-              {f.in_meeting ? <span className="small">참여 중</span> : <button className="btn-soft btn-sm" onClick={() => add(f)}>초대</button>}
-            </li>
-          ))}
-        </ul>
-        <AddFriend onAdded={load} />
+    <section className="flex flex-col gap-5 rounded-[20px] bg-sheet p-5 shadow-soft" aria-label="초대하기">
+      <div className="flex items-center justify-between">
+        <h2 className="m-0 text-[18px] font-bold">초대하기</h2>
+        <button className="btn-ghost btn-sm !px-2" aria-label="초대 창 닫기" onClick={onClose}>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+        </button>
       </div>
 
-      <div className="flex min-w-0 flex-col gap-2">
-        <h3 className={h3}>링크로 초대</h3>
-        <p className="small m-0">단톡방이나 메신저에 붙여 넣으세요. 받은 사람은 가입하거나 로그인하면 바로 참여해요.</p>
-        <div className="flex gap-1.5">
-          <input readOnly aria-label="초대 링크" value={link} className="min-w-0 flex-1 rounded border border-rule bg-paper px-2.5 py-1.5 text-sm" onFocus={(e) => e.target.select()} />
-          <button className="btn" onClick={async () => toast((await copyText(inviteText)) ? '복사했어요' : '복사하지 못했어요')}>복사</button>
+      {/* 저장된 친구 */}
+      <div className="flex flex-col gap-2">
+        <div className="flex items-center justify-between">
+          <span className="text-[15px] font-semibold">친구</span>
+          {waiting.length > 1 && <button className="btn-soft btn-sm" onClick={() => invite(waiting)}>모두 초대 ({waiting.length})</button>}
         </div>
-        {typeof navigator !== 'undefined' && navigator.share && (
-          <button className="btn" onClick={() => navigator.share({ title: cfg.title, text: inviteText }).catch(() => {})}>다른 앱으로 공유</button>
+        {friends === null && <p className="m-0 text-[13px] text-ink2">불러오는 중…</p>}
+        {friends?.length === 0 && <p className="m-0 text-[13px] text-ink2">저장된 친구가 없어요. 아래에서 코드로 추가하거나 링크를 보내 주세요.</p>}
+        {friends?.length > 0 && (
+          <ul className="m-0 grid max-h-[232px] list-none grid-cols-1 gap-0.5 overflow-auto p-0 sm:grid-cols-2 sm:gap-x-3">
+            {friends.map((f) => (
+              <li key={f.user_id} className="flex items-center gap-2.5 py-1.5">
+                <Avatar name={f.name} size={32} />
+                <span className="min-w-0 flex-1 truncate text-[15px]">{f.name || '이름 없음'}</span>
+                {f.in_meeting ? (
+                  <span className="text-[13px] text-ink2">참여 중</span>
+                ) : (
+                  <button className="btn-soft btn-sm" onClick={() => invite([f])}>초대</button>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
+        {addOpen ? (
+          <AddFriend autoFocus onAdded={() => { setAddOpen(false); load() }} />
+        ) : (
+          <button className="btn-ghost btn-sm self-start" onClick={() => setAddOpen(true)}>+ 코드로 친구 추가</button>
         )}
       </div>
 
-      <div className="flex min-w-0 flex-col gap-2">
-        <h3 className={h3}>이메일로 초대</h3>
-        <p className="small m-0">여러 명은 쉼표로 구분해요. 내 메일 앱이 초대 문구가 채워진 채로 열려요.</p>
-        <textarea
-          aria-label="초대할 이메일"
-          placeholder="minsu@example.com, jiyun@example.com"
-          className="min-h-[62px] resize-y rounded border border-rule bg-paper px-2.5 py-1.5 text-sm"
-          value={emails}
-          onChange={(e) => setEmails(e.target.value)}
-        />
-        <button className="btn" onClick={sendEmails}>메일 앱으로 초대 보내기</button>
-        {emailNote && <p className="small m-0">{emailNote}</p>}
+      {/* 링크 */}
+      <div className="flex flex-col gap-2 border-t border-rule2 pt-4">
+        <span className="text-[15px] font-semibold">링크로 초대</span>
+        <div className="flex items-center gap-2 rounded-[14px] bg-rule2 p-1.5 pl-3.5">
+          <span className="min-w-0 flex-1 truncate text-[13px] text-ink2">{link.replace(/^https?:\/\//, '')}</span>
+          <button className="btn-primary btn-sm" onClick={async () => toast((await copyText(inviteText)) ? '초대 문구를 복사했어요' : '복사하지 못했어요')}>복사</button>
+          {canShare && (
+            <button className="btn btn-sm bg-sheet" aria-label="다른 앱으로 공유" onClick={() => navigator.share({ title: cfg.title, text: inviteText }).catch(() => {})}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 3v12M8 7l4-4 4 4" /><path d="M5 12v7a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2v-7" /></svg>
+              공유
+            </button>
+          )}
+        </div>
       </div>
+
+      {/* 이메일 */}
+      <form className="flex flex-col gap-2 border-t border-rule2 pt-4" onSubmit={sendEmails}>
+        <label htmlFor="invite-emails" className="text-[15px] font-semibold">이메일로 초대</label>
+        <div className="flex gap-2">
+          <input
+            id="invite-emails"
+            type="text"
+            inputMode="email"
+            autoComplete="off"
+            placeholder="여러 명은 쉼표로 (a@ex.com, b@ex.com)"
+            className="field-input min-w-0 flex-1"
+            value={emails}
+            onChange={(e) => setEmails(e.target.value)}
+          />
+          <button className="btn min-h-[48px]" type="submit">보내기</button>
+        </div>
+      </form>
     </section>
   )
 }
