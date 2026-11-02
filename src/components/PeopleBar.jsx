@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import Avatar from './Avatar'
 
-function NameEditor({ person, canRemove, onSave, onCancel, onRemove }) {
+function NameEditor({ person, onSave, onCancel }) {
   const [value, setValue] = useState(person.name)
   const ref = useRef()
   const done = useRef(false)
@@ -35,21 +35,17 @@ function NameEditor({ person, canRemove, onSave, onCancel, onRemove }) {
       <button className="rounded-full bg-ink px-2.5 py-0.5 text-xs text-sheet" onMouseDown={(e) => e.preventDefault()} onClick={() => finish(() => onSave(value.trim()))}>
         저장
       </button>
-      {canRemove && (
-        <button className="px-1.5 py-0.5 text-xs text-no" onMouseDown={(e) => e.preventDefault()} onClick={() => finish(onRemove)}>
-          삭제
-        </button>
-      )}
     </span>
   )
 }
 
-export default function PeopleBar({ people, myPid, target, mode, n, canEdit, canRemove, editing, setEditing, onSelect, onRename, onRemove, onAddGuest }) {
+/** 참여자 목록. 일정은 각자 본인 것만 입력할 수 있어서, 고칠 수 있는 건 내 이름뿐이에요. */
+export default function PeopleBar({ people, myPid, target, mode, n, canEdit, editing, setEditing, onSelect, onRename }) {
   const done = people.filter((p) => Object.keys(p.cells).length > 0)
   return (
     <>
       <div className="mb-2 flex flex-wrap items-baseline justify-between gap-1.5">
-        <span className="text-[13px] font-semibold">누구의 시간을 입력할까요?</span>
+        <span className="text-[13px] font-semibold">참여자</span>
         <span className="flex items-center gap-2 text-xs text-ink2">
           <span className="flex flex-wrap gap-0.5" aria-hidden="true">
             {Array.from({ length: n }, (_, i) => (
@@ -66,10 +62,8 @@ export default function PeopleBar({ people, myPid, target, mode, n, canEdit, can
               <NameEditor
                 key={p.id}
                 person={p}
-                canRemove={canRemove(p.id)}
                 onSave={(v) => onRename(p.id, v)}
                 onCancel={() => setEditing(null)}
-                onRemove={() => onRemove(p.id)}
               />
             )
           }
@@ -80,10 +74,10 @@ export default function PeopleBar({ people, myPid, target, mode, n, canEdit, can
             <button
               key={p.id}
               aria-pressed={active}
-              title={editable ? (entered ? '입력함' : '아직 입력 안 함') : '본인만 고칠 수 있어요'}
+              title={entered ? '입력함' : '아직 입력 안 함'}
               className={`inline-flex min-h-[34px] items-center gap-[7px] rounded-full border py-[5px] pl-1.5 pr-3 text-[13px] ${
                 active ? 'border-ink bg-ink text-sheet' : 'border-rule bg-sheet hover:border-ink2'
-              } ${editable ? '' : 'opacity-75'}`}
+              }`}
               onClick={() => onSelect(p.id)}
             >
               <Avatar
@@ -93,7 +87,7 @@ export default function PeopleBar({ people, myPid, target, mode, n, canEdit, can
               />
               {p.name || '이름 없음'}
               {p.id === myPid && <span className="rounded-[3px] bg-pen px-1.5 text-[10px] font-semibold text-pen-ink">나</span>}
-              {!p.user_id && <span className="rounded-[3px] border border-current px-1.5 text-[10px] font-semibold opacity-70">대리 입력</span>}
+              {!p.user_id && <span className="rounded-[3px] border border-current px-1.5 text-[10px] font-semibold opacity-70">계정 없음</span>}
               {editable && (
                 <span
                   role="button"
@@ -111,13 +105,6 @@ export default function PeopleBar({ people, myPid, target, mode, n, canEdit, can
             </button>
           )
         })}
-        <button
-          className="min-h-[34px] rounded-full border border-dashed border-ink2 bg-transparent px-3 py-1 text-xs text-ink2"
-          title="가입하지 않은 사람 대신 시간을 입력할 때 써요"
-          onClick={onAddGuest}
-        >
-          + 계정 없는 사람 추가
-        </button>
       </div>
     </>
   )

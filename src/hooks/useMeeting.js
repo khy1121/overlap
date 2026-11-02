@@ -103,30 +103,5 @@ export function useMeeting(mid, onError) {
     if (error) errRef.current?.(`저장하지 못했어요: ${error.message}`)
   }, [])
 
-  const addGuest = useCallback(async () => {
-    const { data, error } = await supabase
-      .from('participants')
-      .insert({ meeting_id: mid, name: '', user_id: null })
-      .select(PERSON_COLS)
-      .single()
-    if (error) {
-      errRef.current?.(`추가하지 못했어요: ${error.message}`)
-      return null
-    }
-    const row = toPerson(data)
-    setPeople((list) => (list.some((p) => p.id === row.id) ? list : [...list, row]))
-    return row.id
-  }, [mid])
-
-  const removePerson = useCallback(async (pid) => {
-    const { error } = await supabase.from('participants').delete().eq('id', pid)
-    if (error) {
-      errRef.current?.(`삭제하지 못했어요: ${error.message}`)
-      return false
-    }
-    setPeople((list) => list.filter((p) => p.id !== pid))
-    return true
-  }, [])
-
-  return { ...state, cfg, people, myPid, live, updateCfg, updatePerson, addGuest, removePerson }
+  return { ...state, cfg, people, myPid, live, updateCfg, updatePerson }
 }

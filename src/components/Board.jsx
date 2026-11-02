@@ -17,11 +17,10 @@ import TimeGrid from './TimeGrid'
 export default function Board({ mid, session }) {
   const toast = useToast()
   const m = useMeeting(mid, toast)
-  const { cfg, people, myPid, live, updateCfg, updatePerson, addGuest, removePerson } = m
+  const { cfg, people, myPid, live, updateCfg, updatePerson } = m
 
   const [mode, setMode] = useState('edit')
   const [brush, setBrush] = useState('y')
-  const [target, setTarget] = useState(null)
   const [sel, setSel] = useState(null)
   const [cand, setCand] = useState(0)
   const [editing, setEditing] = useState(null)
@@ -37,18 +36,10 @@ export default function Board({ mid, session }) {
   const link = `${window.location.origin}/?m=${mid}`
   const uid = session.user.id
   const byId = useMemo(() => Object.fromEntries(people.map((p) => [p.id, p])), [people])
-  const isOwner = cfg?.owner === uid
-  const tgt = byId[target] ? target : myPid
+  // 일정은 각자 본인 것만 입력·수정·삭제할 수 있어요 (서버 RLS도 같은 규칙).
+  const tgt = myPid
   const targetPerson = byId[tgt]
-
-  const canEdit = useCallback((pid) => {
-    const p = byId[pid]
-    return Boolean(p && (p.user_id === uid || !p.user_id || isOwner))
-  }, [byId, uid, isOwner])
-  const canRemove = useCallback((pid) => {
-    const p = byId[pid]
-    return Boolean(p && pid !== myPid && (!p.user_id || isOwner))
-  }, [byId, myPid, isOwner])
+  const canEdit = useCallback((pid) => Boolean(byId[pid] && byId[pid].user_id === uid), [byId, uid])
 
   // 처음 열렸을 때: 새 회의면 초대 창
   useEffect(() => {
@@ -111,11 +102,11 @@ export default function Board({ mid, session }) {
   function selectPerson(pid) {
     if (!canEdit(pid)) {
       setMode('all')
-      toast(`${byId[pid]?.name || '그 사람'}님의 시간은 본인만 고칠 수 있어요`)
+      setPainting(false)
+      toast(`${byId[pid]?.name || '그 사람'}님의 일정은 본인만 입력할 수 있어요`)
       return
     }
-    if (pid === tgt && mode === 'edit') return setEditing(pid)
-    setTarget(pid)
+    if (mode === 'edit') return setEditing(pid)
     setMode('edit')
   }
 
@@ -198,28 +189,12 @@ export default function Board({ mid, session }) {
             mode={mode}
             n={n}
             canEdit={canEdit}
-            canRemove={canRemove}
             editing={editing}
             setEditing={setEditing}
             onSelect={selectPerson}
             onRename={(pid, name) => {
               setEditing(null)
               if (byId[pid] && byId[pid].name !== name) updatePerson(pid, { name })
-            }}
-            onRemove={async (pid) => {
-              setEditing(null)
-              if (await removePerson(pid)) {
-                setTarget(myPid)
-                toast('참여자를 뺐어요')
-              }
-            }}
-            onAddGuest={async () => {
-              const id = await addGuest()
-              if (id) {
-                setTarget(id)
-                setMode('edit')
-                setEditing(id)
-              }
             }}
           />
 
@@ -243,10 +218,10 @@ export default function Board({ mid, session }) {
                   const prev = targetPerson.cells
                   const pid = tgt
                   updatePerson(pid, { cells: {} })
-                  toast(`${targetPerson.name || '이 사람'}님의 입력을 지웠어요`, { label: '되돌리기', run: () => updatePerson(pid, { cells: prev }) })
+                  toast('내 입력을 지웠어요', { label: '되돌리기', run: () => updatePerson(pid, { cells: prev }) })
                 }}
               >
-                이 사람 입력 모두 지우기
+                내 입력 지우기
               </button>
             )}
           </div>
@@ -267,14 +242,13 @@ export default function Board({ mid, session }) {
                   onClose={() => setCalOpen(false)}
                   onApply={(next, changed) => {
                     updatePerson(myPid, { cells: next })
-                    setTarget(myPid)
                     setCalOpen(false)
                     toast(changed ? `캘린더 내용을 ${changed}칸에 반영했어요` : '바뀐 칸이 없어요')
                   }}
                 />
               )}
               <div className="mb-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink2">
-                {tgt === myPid && GOOGLE_CLIENT_ID && (
+                {GOOGLE_CLIENT_ID && (
                   <button className="btn" onClick={startCalendar}>
                     <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
                       <rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" strokeWidth="2" />
@@ -283,7 +257,7 @@ export default function Board({ mid, session }) {
                     내 Google 캘린더에서 바쁜 시간 가져오기
                   </button>
                 )}
-                <span>{tgt === myPid ? '내 시간을 입력하는 중이에요.' : `${targetPerson?.name || '이름 없음'}님 대신 입력하는 중이에요.`}</span>
+
                 <span>
                   {paintOn
                     ? lockable
@@ -405,7 +379,6 @@ export default function Board({ mid, session }) {
       {lockable && (
         <MobileBar
           painting={painting}
-          who={tgt === myPid ? '내 시간' : `${targetPerson?.name || '이름 없음'}님 시간`}
           canPaint={canEdit(tgt)}
           brush={brush}
           setBrush={setBrush}
@@ -423,7 +396,7 @@ export default function Board({ mid, session }) {
 }
 
 /** 모바일 하단 고정 바: 평소엔 추천 시간 + '시간 입력', 입력 중엔 칠하기 도구 + '완료'. */
-function MobileBar({ painting, who, canPaint, brush, setBrush, best, bestText, bestCount, onStart, onDone, onBest }) {
+function MobileBar({ painting, canPaint, brush, setBrush, best, bestText, bestCount, onStart, onDone, onBest }) {
   return (
     <div
       className="fixed inset-x-0 bottom-0 z-30 border-t border-rule bg-[color-mix(in_oklab,var(--sheet)_92%,transparent)] px-3 pt-2.5 shadow-[0_-8px_24px_-12px_rgba(42,40,56,.18)] backdrop-blur"
@@ -449,7 +422,7 @@ function MobileBar({ painting, who, canPaint, brush, setBrush, best, bestText, b
           {canPaint && (
             <button type="button" className="btn-primary min-h-[44px] px-4" onClick={onStart}>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
-              {who} 입력
+              내 시간 입력
             </button>
           )}
         </div>
