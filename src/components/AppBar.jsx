@@ -1,4 +1,3 @@
-import { supabase } from '../lib/supabase'
 import { displayName } from '../lib/auth'
 import Avatar from './Avatar'
 import Logo from './Logo'
@@ -13,27 +12,17 @@ export default function AppBar({ session }) {
         Overlap
       </a>
       <div className="flex min-w-0 items-center gap-2 text-[13px] text-ink2">
-        <ThemeToggle />
+        {/* 로그인 전엔 테마 버튼, 로그인 후엔 설정(테마·알림·이름·로그아웃)으로 */}
+        {!user && <ThemeToggle />}
         {user && (
-          <>
-            <Avatar name={displayName(user)} size={28} />
-            <span className="hidden truncate sm:inline">{displayName(user)}</span>
-            <button
-              className="btn-ghost btn-sm max-sm:!px-2"
-              aria-label="로그아웃"
-              title="로그아웃"
-              onClick={async () => {
-                await supabase.auth.signOut()
-                window.location.href = '/'
-              }}
-            >
-              {/* 모바일은 아이콘만 (큰 글자 설정에서도 상단 바가 넘치지 않게) */}
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="sm:hidden">
-                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
-              </svg>
-              <span className="max-sm:hidden">로그아웃</span>
-            </button>
-          </>
+          <a href="/?page=settings" className="btn-ghost btn-sm gap-2 !pl-1.5 text-ink no-underline" aria-label="설정">
+            <Avatar name={displayName(user)} url={user.user_metadata?.avatar_url} size={28} />
+            <span className="hidden max-w-[120px] truncate sm:inline">{displayName(user)}</span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="text-ink2">
+              <circle cx="12" cy="12" r="3" />
+              <path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1Z" />
+            </svg>
+          </a>
         )}
       </div>
     </nav>

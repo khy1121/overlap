@@ -9,11 +9,12 @@ import Board from './components/Board'
 import NewMeeting from './components/NewMeeting'
 import MySchedule from './components/MySchedule'
 import Friends from './components/Friends'
+import Settings from './components/Settings'
 
 const params = new URLSearchParams(window.location.search)
 const MID = params.get('m')
-// 로그인 후 하위 페이지: /?page=new | schedule | friends
-const PAGES = { new: NewMeeting, schedule: MySchedule, friends: Friends }
+// 로그인 후 하위 페이지: /?page=new | schedule | friends | settings
+const PAGES = { new: NewMeeting, schedule: MySchedule, friends: Friends, settings: Settings }
 const Page = PAGES[params.get('page')]
 
 export default function App() {
