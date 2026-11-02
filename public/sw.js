@@ -2,8 +2,8 @@
 // - 페이지 이동: 네트워크 먼저, 끊기면 저장해 둔 첫 화면
 // - 빌드 파일(/assets)·아이콘·이미지: 한 번 받으면 캐시에서
 // - Supabase·Google 등 다른 주소 요청은 건드리지 않아요.
-// v2: 예전 버전이 HTML을 JS로 잘못 저장했을 수 있어 캐시를 새로 시작해요
-const CACHE = 'overlap-v2'
+// v3: 알림 기능 추가 (v2: HTML을 JS로 잘못 저장한 캐시 정리)
+const CACHE = 'overlap-v3'
 const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/brand/mascot.webp']
 
 self.addEventListener('install', (e) => {
@@ -54,4 +54,38 @@ self.addEventListener('fetch', (e) => {
       ),
     )
   }
+})
+
+// ── 앱 알림 ─────────────────────────────────────────────
+// 서버(push-send)가 보낸 { title, body, url, tag } 를 알림으로 보여 줘요
+self.addEventListener('push', (e) => {
+  let data = {}
+  try {
+    data = e.data ? e.data.json() : {}
+  } catch {
+    data = { body: e.data ? e.data.text() : '' }
+  }
+  e.waitUntil(
+    self.registration.showNotification(data.title || 'Overlap', {
+      body: data.body || '',
+      icon: '/icons/icon-192.png',
+      badge: '/icons/icon-192.png',
+      tag: data.tag || undefined,
+      renotify: Boolean(data.tag),
+      data: { url: typeof data.url === 'string' && data.url.startsWith('/') ? data.url : '/' },
+    }),
+  )
+})
+
+// 알림을 누르면 열려 있는 앱 창으로 가거나 새로 열어요 (우리 사이트 주소만)
+self.addEventListener('notificationclick', (e) => {
+  e.notification.close()
+  const target = new URL(e.notification.data?.url || '/', self.location.origin).href
+  e.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((wins) => {
+      const win = wins.find((w) => new URL(w.url).origin === self.location.origin)
+      if (win) return win.navigate(target).then((w) => (w || win).focus())
+      return self.clients.openWindow(target)
+    }),
+  )
 })
