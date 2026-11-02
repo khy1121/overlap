@@ -21,6 +21,13 @@ export default function TimeGrid({ cfg, people, mode, cells, canPaint, brush, se
     setCur((c) => ({ ...c, s: Math.min(c.s, slots - 1) }))
   }, [slots])
 
+  // 칠하기가 꺼지면 진행 중이던 드래그를 버려요
+  useEffect(() => {
+    if (canPaint) return
+    drag.current = null
+    setDraft(null)
+  }, [canPaint])
+
   useEffect(() => {
     const end = () => {
       if (!drag.current) return

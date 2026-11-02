@@ -29,18 +29,34 @@ export default function Board({ mid, session }) {
   const [calToken, setCalToken] = useState(null)
   const [calOpen, setCalOpen] = useState(false)
   const [announce, setAnnounce] = useState('')
-  // 모바일·터치: 스크롤하다 칸이 칠해지지 않게 '내 시간 입력'을 눌러야 칠할 수 있어요.
+  // 모바일·터치는 하단 고정 바, 데스크톱은 시간표 위 도구 막대를 써요.
   const lockable = useMedia('(max-width: 767px), (pointer: coarse)')
-  const [painting, setPainting] = useState(false)
-  const paintOn = !lockable || painting
+  // 내 일정 편집: '내 일정 등록/수정'을 눌러야 시작하고, 칠한 내용은 저장 전까지 화면에만 있어요(draft).
+  const [draft, setDraft] = useState(null)
+  const paintOn = draft !== null
 
   const link = `${window.location.origin}/?m=${mid}`
   const uid = session.user.id
   const byId = useMemo(() => Object.fromEntries(people.map((p) => [p.id, p])), [people])
   // 일정은 각자 본인 것만 입력·수정·삭제할 수 있어요 (서버 RLS도 같은 규칙).
   const tgt = myPid
-  const targetPerson = byId[tgt]
   const canEdit = useCallback((pid) => Boolean(byId[pid] && byId[pid].user_id === uid), [byId, uid])
+  const myCells = byId[myPid]?.cells || {}
+  const hasMine = Object.keys(myCells).length > 0
+  const dirty = paintOn && JSON.stringify(draft) !== JSON.stringify(myCells)
+  // 편집 중에는 내 칸을 draft로 바꿔 끼워서 추천·겹쳐 보기에도 바로 반영해요.
+  const shownPeople = useMemo(
+    () => (paintOn ? people.map((p) => (p.id === myPid ? { ...p, cells: draft } : p)) : people),
+    [people, paintOn, draft, myPid],
+  )
+
+  // 저장하지 않은 채 페이지를 떠나려 하면 확인
+  useEffect(() => {
+    if (!dirty) return
+    const warn = (e) => { e.preventDefault(); e.returnValue = '' }
+    window.addEventListener('beforeunload', warn)
+    return () => window.removeEventListener('beforeunload', warn)
+  }, [dirty])
 
   // 처음 열렸을 때: 새 회의면 초대 창
   useEffect(() => {
@@ -69,9 +85,8 @@ export default function Board({ mid, session }) {
     return () => document.removeEventListener('keydown', onKey)
   }, [mode, paintOn])
 
-  const commitCells = useCallback((next) => {
-    if (tgt) updatePerson(tgt, { cells: next })
-  }, [tgt, updatePerson])
+  // 편집 중일 때만 반영 (편집이 끝난 뒤 늦게 도착한 드래그 결과는 버려요)
+  const commitCells = useCallback((next) => setDraft((prev) => (prev === null ? null : next)), [])
 
   const onCalExpired = useCallback(() => setCalToken(null), [])
 
@@ -86,24 +101,35 @@ export default function Board({ mid, session }) {
     )
   }
 
-  const result = evaluate(cfg, people)
+  const result = evaluate(cfg, shownPeople)
   const list = result.all.length ? result.all : result.rec
   const n = result.n
 
   function fill(keys) {
-    if (!canEdit(tgt)) return
-    const cells = targetPerson.cells
-    const clear = brush && keys.every((k) => cells[k] === brush)
-    const next = { ...cells }
+    if (!paintOn) return
+    const clear = brush && keys.every((k) => draft[k] === brush)
+    const next = { ...draft }
     keys.forEach((k) => { if (clear || !brush) delete next[k]; else next[k] = brush })
-    commitCells(next)
-    toast(clear || !brush ? '지웠어요' : `${{ y: '가능으로', m: '조율 가능으로', n: '불가로' }[brush]} 칠했어요`)
+    setDraft(next)
   }
+
+  const startEdit = () => { setMode('edit'); setSel(null); setDraft({ ...myCells }) }
+  function cancelEdit() {
+    setDraft(null)
+    setCalOpen(false)
+    if (dirty) toast('바꾼 내용을 취소했어요')
+  }
+  function saveEdit() {
+    if (dirty) updatePerson(myPid, { cells: draft })
+    setDraft(null)
+    setCalOpen(false)
+    toast(dirty ? '내 일정을 저장했어요' : '바뀐 내용이 없어요')
+  }
+  const editLabel = hasMine ? '내 일정 수정' : '내 일정 등록'
 
   function selectPerson(pid) {
     if (!canEdit(pid)) {
-      setMode('all')
-      setPainting(false)
+      if (!paintOn) setMode('all')
       toast(`${byId[pid]?.name || '그 사람'}님의 일정은 본인만 입력할 수 있어요`)
       return
     }
@@ -134,7 +160,7 @@ export default function Board({ mid, session }) {
     : null
 
   return (
-    <div className={`flex flex-col gap-[18px] ${lockable ? 'pb-24' : ''}`}>
+    <div className={`flex flex-col gap-[18px] ${lockable ? (paintOn ? 'pb-36' : 'pb-24') : ''}`}>
       <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
         <div className="min-w-0 flex-[1_1_320px]">
           <input
@@ -203,52 +229,55 @@ export default function Board({ mid, session }) {
             }}
           />
 
-          <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2.5">
-            <div className="inline-flex gap-1 rounded-full bg-rule2 p-1" role="group" aria-label="보기">
-              {[['edit', '시간 입력'], ['all', '전체 겹쳐 보기']].map(([k, label]) => (
-                <button
-                  key={k}
-                  aria-pressed={mode === k}
-                  className={`min-h-[34px] rounded-full border-0 px-3.5 text-[13px] font-semibold ${mode === k ? 'bg-sheet text-ink shadow-soft' : 'bg-transparent text-ink2 hover:text-ink'}`}
-                  onClick={() => { setMode(k); if (k === 'all') setPainting(false) }}
-                >
-                  {label}
-                </button>
-              ))}
+          {paintOn ? (
+            <div className="mb-1.5 flex min-h-[42px] flex-wrap items-center gap-2">
+              <span className="text-[15px] font-bold">{hasMine ? '내 일정 수정 중' : '내 일정 등록 중'}</span>
+              {Object.keys(draft).length > 0 && (
+                <button className="btn-ghost btn-sm text-no hover:text-no" onClick={() => setDraft({})}>모두 지우기</button>
+              )}
             </div>
-            {mode === 'edit' && paintOn && targetPerson && Object.keys(targetPerson.cells).length > 0 && canEdit(tgt) && (
-              <button
-                className="btn-ghost btn-sm text-no hover:text-no"
-                onClick={() => {
-                  const prev = targetPerson.cells
-                  const pid = tgt
-                  updatePerson(pid, { cells: {} })
-                  toast('내 입력을 지웠어요', { label: '되돌리기', run: () => updatePerson(pid, { cells: prev }) })
-                }}
-              >
-                내 입력 지우기
-              </button>
-            )}
-          </div>
-
-          {mode === 'edit' && !lockable && (
-            <div className="sticky z-[5] mb-1 bg-sheet py-2" style={{ top: 'env(safe-area-inset-top, 0px)' }}>
-              <Palette brush={brush} setBrush={setBrush} />
+          ) : (
+            <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2.5">
+              <div className="inline-flex gap-1 rounded-full bg-rule2 p-1" role="group" aria-label="보기">
+                {[['edit', '내 일정'], ['all', '전체 겹쳐 보기']].map(([k, label]) => (
+                  <button
+                    key={k}
+                    aria-pressed={mode === k}
+                    className={`min-h-[34px] rounded-full border-0 px-3.5 text-[13px] font-semibold ${mode === k ? 'bg-sheet text-ink shadow-soft' : 'bg-transparent text-ink2 hover:text-ink'}`}
+                    onClick={() => setMode(k)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {!lockable && canEdit(myPid) && (
+                <button className="btn-primary" onClick={startEdit}>
+                  <PenIcon /> {editLabel}
+                </button>
+              )}
             </div>
           )}
-          {mode === 'edit' && (
+
+          {paintOn && !lockable && (
+            <div className="sticky z-[5] mb-1 flex items-center gap-2 bg-sheet py-2" style={{ top: 'env(safe-area-inset-top, 0px)' }}>
+              <Palette brush={brush} setBrush={setBrush} className="min-w-0 flex-1" />
+              <button className="btn min-h-[44px]" onClick={cancelEdit}>취소</button>
+              <button className="btn-primary min-h-[44px]" onClick={saveEdit}>저장</button>
+            </div>
+          )}
+          {paintOn && (
             <>
               {calOpen && calToken && (
                 <CalendarImport
                   cfg={cfg}
                   token={calToken}
-                  cells={byId[myPid]?.cells || {}}
+                  cells={draft}
                   onExpired={onCalExpired}
                   onClose={() => setCalOpen(false)}
                   onApply={(next, changed) => {
-                    updatePerson(myPid, { cells: next })
+                    setDraft(next)
                     setCalOpen(false)
-                    toast(changed ? `캘린더 내용을 ${changed}칸에 반영했어요` : '바뀐 칸이 없어요')
+                    toast(changed ? `캘린더 내용을 ${changed}칸에 반영했어요. 저장을 눌러야 적용돼요.` : '바뀐 칸이 없어요')
                   }}
                 />
               )}
@@ -262,32 +291,35 @@ export default function Board({ mid, session }) {
                     내 Google 캘린더에서 바쁜 시간 가져오기
                   </button>
                 )}
-
                 <span>
-                  {paintOn
-                    ? lockable
-                      ? '칸을 누르거나 드래그해서 칠해요. 스크롤은 왼쪽 시간 눈금을 잡고 하세요.'
-                      : '칸을 누르거나 드래그해서 칠해요. 요일·시간을 누르면 그 줄 전체가 칠해져요.'
-                    : '아래 ‘입력’ 버튼을 누르면 칠할 수 있어요. 그 전에는 마음껏 스크롤해도 돼요.'}
+                  {lockable
+                    ? '칸을 누르거나 드래그해서 칠해요. 스크롤은 왼쪽 시간 눈금을 잡고 하세요.'
+                    : '칸을 누르거나 드래그해서 칠해요. 요일·시간을 누르면 그 줄 전체가 칠해져요.'}{' '}
+                  다 칠했으면 저장을 눌러 주세요.
                 </span>
               </div>
             </>
           )}
+          {!paintOn && mode === 'edit' && (
+            <p className="mb-2.5 mt-0 text-xs text-ink2">
+              {hasMine ? '내가 입력한 일정이에요.' : '아직 내 일정을 입력하지 않았어요.'} ‘{editLabel}’을 누르면 칠할 수 있어요.
+            </p>
+          )}
 
           <TimeGrid
             cfg={cfg}
-            people={people}
+            people={shownPeople}
             mode={mode}
-            cells={targetPerson?.cells || {}}
-            canPaint={canEdit(tgt) && paintOn}
-            onLockedTap={canEdit(tgt) ? () => toast('아래 ‘입력’ 버튼을 누르면 칠할 수 있어요') : undefined}
+            cells={draft ?? myCells}
+            canPaint={paintOn}
+            onLockedTap={canEdit(myPid) ? () => toast(`‘${editLabel}’ 버튼을 누르면 칠할 수 있어요`) : undefined}
             brush={brush}
             sel={sel}
             onSelect={setSel}
             onCommit={commitCells}
             onFill={fill}
             onAnnounce={(c) => {
-              const v = targetPerson?.cells[`${c.d}-${c.s}`]
+              const v = (draft ?? myCells)[`${c.d}-${c.s}`]
               setAnnounce(`${dayLabel(cfg, c.d)} ${tm(cfg, c.s)}${mode === 'edit' ? ` ${BRUSH_LABEL[v] || '미입력'}` : ''}`)
             }}
           />
@@ -384,15 +416,17 @@ export default function Board({ mid, session }) {
       </div>
       {lockable && (
         <MobileBar
-          painting={painting}
-          canPaint={canEdit(tgt)}
+          painting={paintOn}
+          canPaint={canEdit(myPid)}
+          editLabel={editLabel}
           brush={brush}
           setBrush={setBrush}
           best={result.entered && list.length ? list[cand % list.length] : null}
           bestText={(w) => `${dayLabel(cfg, w.d)} ${tm(cfg, w.s)}`}
           bestCount={(w) => `${w.g.y.length + w.g.m.length}/${n}명`}
-          onStart={() => { setMode('edit'); setPainting(true) }}
-          onDone={() => { setPainting(false); toast('저장했어요') }}
+          onStart={startEdit}
+          onCancel={cancelEdit}
+          onSave={saveEdit}
           onBest={() => document.getElementById('suggest')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
         />
       )}
@@ -401,17 +435,26 @@ export default function Board({ mid, session }) {
   )
 }
 
-/** 모바일 하단 고정 바: 평소엔 추천 시간 + '시간 입력', 입력 중엔 칠하기 도구 + '완료'. */
-function MobileBar({ painting, canPaint, brush, setBrush, best, bestText, bestCount, onStart, onDone, onBest }) {
+function PenIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+  )
+}
+
+/** 모바일 하단 고정 바: 평소엔 추천 시간 + '내 일정 등록/수정', 편집 중엔 칠하기 도구 + 취소·저장. */
+function MobileBar({ painting, canPaint, editLabel, brush, setBrush, best, bestText, bestCount, onStart, onCancel, onSave, onBest }) {
   return (
     <div
       className="fixed inset-x-0 bottom-0 z-30 border-t border-rule bg-[color-mix(in_oklab,var(--sheet)_92%,transparent)] px-3 pt-2.5 shadow-[0_-8px_24px_-12px_rgba(42,40,56,.18)] backdrop-blur"
       style={{ paddingBottom: 'max(10px, env(safe-area-inset-bottom, 0px))' }}
     >
       {painting ? (
-        <div className="mx-auto flex max-w-[560px] items-center gap-2">
-          <Palette brush={brush} setBrush={setBrush} compact className="min-w-0 flex-1" />
-          <button type="button" className="btn-primary min-h-[44px] px-4" onClick={onDone}>완료</button>
+        <div className="mx-auto flex max-w-[560px] flex-col gap-2">
+          <Palette brush={brush} setBrush={setBrush} compact />
+          <div className="grid grid-cols-[1fr_2fr] gap-2">
+            <button type="button" className="btn min-h-[48px]" onClick={onCancel}>취소</button>
+            <button type="button" className="btn-primary min-h-[48px]" onClick={onSave}>저장</button>
+          </div>
         </div>
       ) : (
         <div className="mx-auto flex max-w-[560px] items-center gap-2">
@@ -427,8 +470,8 @@ function MobileBar({ painting, canPaint, brush, setBrush, best, bestText, bestCo
           )}
           {canPaint && (
             <button type="button" className="btn-primary min-h-[44px] px-4" onClick={onStart}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
-              내 시간 입력
+              <PenIcon />
+              {editLabel}
             </button>
           )}
         </div>
