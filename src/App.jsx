@@ -10,6 +10,7 @@ import NewMeeting from './components/NewMeeting'
 import MySchedule from './components/MySchedule'
 import Friends from './components/Friends'
 import Settings from './components/Settings'
+import UpdateBanner from './components/UpdateBanner'
 
 const params = new URLSearchParams(window.location.search)
 const MID = params.get('m')
@@ -47,6 +48,7 @@ export default function App() {
     <div className="wrap">
       <AppBar session={session} />
       <main>{view}</main>
+      <UpdateBanner />
     </div>
   )
 }

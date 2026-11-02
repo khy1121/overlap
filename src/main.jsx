@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App'
 import { ToastProvider } from './hooks/useToast'
 import './lib/install' // 설치 이벤트(beforeinstallprompt)를 화면이 뜨기 전부터 받아 두기
+import { registerServiceWorker } from './lib/updates'
 
 // 앱이 정상으로 떴으면 '한 번 새로고침' 표시를 지워요 (index.html의 복구 스크립트 참고)
 try { sessionStorage.removeItem('overlap-reloaded') } catch { /* 저장소 막힘 */ }
@@ -25,7 +26,5 @@ ReactDOM.createRoot(document.getElementById('root')).render(
   </React.StrictMode>,
 )
 
-// 앱 설치(PWA)용 서비스 워커. 개발 서버에서는 화면 갱신(HMR)을 방해하지 않게 끔.
-if ('serviceWorker' in navigator && import.meta.env.PROD) {
-  window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}))
-}
+// 앱 설치(PWA)·알림용 서비스 워커 + 새 버전 확인. 개발 서버에서는 화면 갱신(HMR)을 방해하지 않게 꺼요.
+registerServiceWorker()
