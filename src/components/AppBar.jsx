@@ -8,18 +8,18 @@ export default function AppBar({ session }) {
   const user = session?.user
   return (
     <nav className="flex min-h-[44px] items-center justify-between gap-3">
-      <a href="/" className="inline-flex items-center gap-2 font-display text-xl font-extrabold tracking-tight text-ink no-underline" aria-label="Overlap 홈">
+      <a href="/" className="inline-flex shrink-0 items-center gap-2 whitespace-nowrap font-display text-xl font-extrabold tracking-tight text-ink no-underline" aria-label="Overlap 홈">
         <Logo />
         Overlap
       </a>
-      <div className="flex items-center gap-2 text-[13px] text-ink2">
+      <div className="flex min-w-0 items-center gap-2 text-[13px] text-ink2">
         <ThemeToggle />
         {user && (
           <>
             <Avatar name={displayName(user)} size={28} />
-            <span className="hidden sm:inline">{displayName(user)}</span>
+            <span className="hidden truncate sm:inline">{displayName(user)}</span>
             <button
-              className="btn"
+              className="btn shrink-0 whitespace-nowrap"
               onClick={async () => {
                 await supabase.auth.signOut()
                 window.location.href = '/'
