@@ -2,12 +2,20 @@
 // 불가는 빨간색 대신 회색 칸에 X를 그려요 (색을 구분하기 어려워도 모양으로 알아볼 수 있게)
 $x-line: transparent calc(50% - .7px), var(--off-mark) calc(50% - .7px), var(--off-mark) calc(50% + .7px), transparent calc(50% + .7px);
 $x-mark: linear-gradient(to top right, $x-line), linear-gradient(to bottom right, $x-line);
+// 칸 가운데에 작은 X 하나 (모서리까지 그리면 칸이 이어질 때 사슬무늬처럼 보여요)
+@mixin small-x($size) {
+  background-color: var(--off);
+  background-image: $x-mark;
+  background-size: $size $size;
+  background-position: center;
+  background-repeat: no-repeat;
+}
 
 .sw {
   width: 12px; height: 12px; border-radius: 2px; display: inline-block; flex: none;
   &.y { background: var(--yes); }
   &.m { background: var(--maybe); }
-  &.n { background-color: var(--off); background-image: $x-mark; }
+  &.n { @include small-x(8px); }
   &.e { background: var(--cell); border: 1px solid var(--rule); }
 }
 
@@ -50,7 +58,7 @@ $x-mark: linear-gradient(to top right, $x-line), linear-gradient(to bottom right
     &.hh { border-top: 1px dashed var(--rule-2); }
     &.y { background: var(--yes); }
     &.m { background: var(--maybe); }
-    &.n { background-color: var(--off); background-image: $x-mark; }
+    &.n { @include small-x(9px); }
     // 칠한 칸 안에서는 30분 점선을 숨겨 한 덩어리로 보이게
     &.hh.y, &.hh.m, &.hh.n { border-top-color: transparent; }
     &.sel { outline: 2px solid var(--ink); outline-offset: -2px; z-index: 2; }
