@@ -1,4 +1,4 @@
-import { summary, whenText } from '../lib/schedule'
+import { spanText, summary, whenText } from '../lib/schedule'
 
 export default function SlotList({ title, count, hint, items, empty, cfg, n, byId, onOpen }) {
   return (
@@ -20,6 +20,7 @@ export default function SlotList({ title, count, hint, items, empty, cfg, n, byI
               <span className={`whitespace-nowrap rounded-[3px] px-[7px] py-px font-mono text-[11px] font-semibold text-ink ${w.all ? 'bg-yes-soft' : 'bg-maybe-soft'}`}>
                 {w.all ? '전원' : `${w.g.y.length + w.g.m.length}/${n}`}
               </span>
+              {spanText(cfg, w) && <span className="col-span-2 text-xs font-semibold text-accent">{spanText(cfg, w)}</span>}
               <span className="col-span-2 text-xs text-ink2">
                 {w.all ? "모두 '가능'" : summary(w, n) + (w.g.n.length ? ` — 불가: ${w.g.n.map((id) => byId[id]?.name || '이름 없음').join(', ')}` : '')}
               </span>

@@ -1,10 +1,14 @@
-import { dayLabel, summary, tm } from '../lib/schedule'
+import { useEffect, useState } from 'react'
+import { dayLabel, spanText, startChoices, summary, timeText, tm } from '../lib/schedule'
 import Avatar from './Avatar'
 
 const STATUS_TITLE = { y: '가능', m: '조율 필요', n: '불가', u: '미입력' }
 
 export default function SuggestionNote({ cfg, result, list, cand, byId, onNext, onPick, onCopy, onInvite, swapKey }) {
   const { entered, n } = result
+  // 연속 구간 안에서 고른 시작 칸 (추천이 바뀌면 처음으로)
+  const [picked, setPicked] = useState(null)
+  useEffect(() => setPicked(null), [swapKey])
   if (!entered || !list.length) {
     return (
       <div className="note">
@@ -20,7 +24,10 @@ export default function SuggestionNote({ cfg, result, list, cand, byId, onNext, 
       </div>
     )
   }
-  const w = list[cand % list.length]
+  const base = list[cand % list.length]
+  const choices = startChoices(cfg, base)
+  const w = { ...base, s: picked ?? base.s } // 고른 시작 시각을 반영한 후보
+  const span = spanText(cfg, base)
   // 입력한 사람이 절반 미만이면 확정보다 초대를 먼저 권해요.
   const early = entered * 2 < n
   return (
@@ -34,10 +41,21 @@ export default function SuggestionNote({ cfg, result, list, cand, byId, onNext, 
       <div className="when mt-2 text-balance font-display text-[25px] font-extrabold leading-tight">
         {dayLabel(cfg, w.d)}
         <br />
-        <span className="tabular font-mono text-[22px] font-semibold tracking-tight">
-          {tm(cfg, w.s)}–{tm(cfg, w.s + cfg.dur)}
-        </span>
+        <span className="tabular font-mono text-[22px] font-semibold tracking-tight">{timeText(cfg, w.s)}</span>
       </div>
+      {span && <div className="mt-1.5 text-[13px] font-semibold text-accent">{span}</div>}
+      {choices.length > 1 && (
+        <label className="mt-2 flex items-center gap-2 text-[13px] text-ink2">
+          시작 시각
+          <select
+            className="rounded-[10px] border-0 bg-rule2 px-2.5 py-1.5 text-[14px] font-semibold text-ink"
+            value={w.s}
+            onChange={(e) => setPicked(Number(e.target.value))}
+          >
+            {choices.map((s) => <option key={s} value={s}>{tm(cfg, s)}</option>)}
+          </select>
+        </label>
+      )}
       <div className="mt-1.5 text-[13px] text-ink2">{summary(w, n)}</div>
       <div className="att mt-3 flex flex-wrap gap-1.5">
         {['y', 'm', 'n', 'u'].flatMap((k) =>
