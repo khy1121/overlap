@@ -48,6 +48,7 @@ export default function Friends() {
   const [me, setMe] = useState(null)
   const [friends, setFriends] = useState(null)
   const [confirming, setConfirming] = useState(null)
+  const [renewing, setRenewing] = useState(false)
 
   const load = useCallback(async () => {
     const [p, f] = await Promise.all([supabase.rpc('my_profile'), supabase.rpc('my_friends')])
@@ -57,6 +58,7 @@ export default function Friends() {
   useEffect(() => { load() }, [load])
 
   async function regenerate() {
+    setRenewing(false)
     const { data, error } = await supabase.rpc('regenerate_invite_code')
     if (error) return toast('코드를 새로 만들지 못했어요.')
     setMe((m) => ({ ...m, invite_code: data }))
@@ -88,7 +90,14 @@ export default function Friends() {
         >
           복사
         </button>
-        <button className="link-btn" disabled={!code} onClick={regenerate}>새 코드 받기</button>
+        <button className="btn-ghost btn-sm" disabled={!code} onClick={() => setRenewing(true)}>새 코드</button>
+        {renewing && (
+          <div className="flex w-full flex-wrap items-center gap-2 rounded-[12px] bg-maybe-soft px-3 py-2 text-[13px] text-ink" role="alert">
+            <span className="min-w-0 flex-1">새 코드를 만들면 지금 코드로는 친구를 맺을 수 없어요.</span>
+            <button className="btn btn-sm" onClick={regenerate}>새로 만들기</button>
+            <button className="btn-ghost btn-sm" onClick={() => setRenewing(false)}>취소</button>
+          </div>
+        )}
       </div>
 
       <AddFriend onAdded={load} />
