@@ -9,14 +9,22 @@ body {
   overflow-wrap: anywhere;
   background-color: var(--paper);
   color: var(--ink);
-  font-size: 14px;
-  line-height: 1.5;
-  // 모눈종이 배경
-  background-image:
-    linear-gradient(var(--rule-2) 1px, transparent 1px),
-    linear-gradient(90deg, var(--rule-2) 1px, transparent 1px);
-  background-size: 24px 24px;
+  font-family: 'Pretendard Variable', Pretendard, -apple-system, BlinkMacSystemFont, system-ui, 'Apple SD Gothic Neo', 'Malgun Gothic', sans-serif;
+  font-size: 15px;
+  line-height: 1.6;
+  letter-spacing: -0.003em;
+  -webkit-font-smoothing: antialiased;
+  // 파스텔 블롭 배경 (모바일/데스크톱 이미지는 _tokens.scss의 --bg-art)
+  background-image: var(--bg-art);
+  background-repeat: no-repeat;
+  background-size: cover;
+  background-position: top center;
+  background-attachment: fixed;
+  min-height: 100vh;
 }
+
+// 숫자는 Pretendard 고정폭 숫자로 (시간표·시각 표시)
+.font-mono, .tabular { font-variant-numeric: tabular-nums; }
 
 [hidden] { display: none !important; }
 
@@ -29,8 +37,6 @@ button {
 }
 
 :focus-visible { outline: 2px solid var(--pen); outline-offset: 2px; }
-
-.tabular { font-variant-numeric: tabular-nums; }
 
 @keyframes rise { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
 @keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
