@@ -1,0 +1,34 @@
+// Overlap 팔레트: 모눈 노트 + 볼펜(파랑) + 형광펜(초록/노랑) + 빨간 펜
+$light: (
+  paper: #f4f6f3, sheet: #ffffff, ink: #1b2230, ink-2: #556071,
+  rule: #d7dcd4, rule-2: #e9ece6, cell: #eef1ec, weekend: #e8ebe6,
+  pen: #2c3fb8, pen-ink: #ffffff,
+  yes: #1f9a68, maybe: #f1b80a, no: #d9472f,
+  yes-soft: #cdeedb, maybe-soft: #fbeaa8, no-soft: #f6d3cb,
+);
+$dark: (
+  paper: #13161b, sheet: #1a1e25, ink: #e6e9ee, ink-2: #9aa3b0,
+  rule: #2e343e, rule-2: #252a33, cell: #222831, weekend: #1d2229,
+  pen: #8c9cff, pen-ink: #10142a,
+  yes: #35c48a, maybe: #f5c534, no: #f0705a,
+  yes-soft: #163a2a, maybe-soft: #3b3214, no-soft: #41221c,
+);
+
+@mixin palette($map) {
+  @each $name, $value in $map {
+    --#{$name}: #{$value};
+  }
+}
+
+:root {
+  @include palette($light);
+  --ease: cubic-bezier(.23, 1, .32, 1);
+  color-scheme: light;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    @include palette($dark);
+    color-scheme: dark;
+  }
+}

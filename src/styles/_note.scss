@@ -1,0 +1,22 @@
+// "이 시간 어때요?" 쪽지: 왼쪽 여백선이 있는 노트 한 장
+.note {
+  position: relative;
+  background-color: var(--sheet);
+  background-image: linear-gradient(90deg, transparent 21px, var(--no-soft) 21px, var(--no-soft) 22px, transparent 22px);
+  border: 1px solid var(--rule);
+  border-radius: 4px;
+  padding: 18px 18px 16px 30px;
+  box-shadow: 0 1px 0 var(--rule), 0 10px 24px -18px rgba(20, 30, 50, .45);
+
+  &.swap .when, &.swap .att { animation: rise .24s var(--ease); }
+}
+
+.tok {
+  &.y .avatar { background: var(--yes); color: #fff; }
+  &.m .avatar { background: var(--maybe); color: #2a2100; }
+  &.n { text-decoration: line-through; text-decoration-color: var(--no); color: var(--ink-2); }
+  &.n .avatar { background: var(--no); color: #fff; }
+  &.u { border-style: dashed; color: var(--ink-2); }
+}
+
+.hero-em { font-style: normal; background: linear-gradient(transparent 58%, var(--maybe-soft) 58%); }

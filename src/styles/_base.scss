@@ -1,0 +1,40 @@
+html {
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+body {
+  margin: 0;
+  word-break: keep-all;
+  overflow-wrap: anywhere;
+  background-color: var(--paper);
+  color: var(--ink);
+  font-size: 14px;
+  line-height: 1.5;
+  // 모눈종이 배경
+  background-image:
+    linear-gradient(var(--rule-2) 1px, transparent 1px),
+    linear-gradient(90deg, var(--rule-2) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+
+[hidden] { display: none !important; }
+
+button {
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: transform .1s var(--ease), background-color .15s var(--ease), border-color .15s var(--ease);
+  &:active:not(:disabled) { transform: scale(.97); }
+  &:disabled { opacity: .5; cursor: default; }
+}
+
+:focus-visible { outline: 2px solid var(--pen); outline-offset: 2px; }
+
+.tabular { font-variant-numeric: tabular-nums; }
+
+@keyframes rise { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: none; } }
+@keyframes toast-in { from { opacity: 0; transform: translate(-50%, 8px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
