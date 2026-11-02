@@ -4,6 +4,8 @@ import { useToast } from '../hooks/useToast'
 import { useMedia } from '../hooks/useMedia'
 import { GOOGLE_CLIENT_ID, requestCalendarToken } from '../lib/googleCalendar'
 import { copyText } from '../lib/copy'
+import { myRequests, requestFriend, resultText } from '../lib/friends'
+import { supabase } from '../lib/supabase'
 import { BRUSH_LABEL, dayLabel, durText, evaluate, md, nDays, nSlots, summary, tm } from '../lib/schedule'
 import CalendarImport from './CalendarImport'
 import InvitePanel from './InvitePanel'
@@ -30,6 +32,25 @@ export default function Board({ mid, session }) {
   const [calToken, setCalToken] = useState(null)
   const [calOpen, setCalOpen] = useState(false)
   const [announce, setAnnounce] = useState('')
+  // 다른 참여자와의 관계: user_id → 'friend' | 'pending'(내가 신청함) | 'incoming'(받은 신청)
+  const [rel, setRel] = useState({})
+  useEffect(() => {
+    Promise.all([supabase.rpc('my_friends'), myRequests()]).then(([f, reqs]) => {
+      const map = {}
+      for (const x of f.data || []) map[x.user_id] = 'friend'
+      for (const r of reqs) if (!map[r.user_id]) map[r.user_id] = r.direction === 'out' ? 'pending' : 'incoming'
+      setRel(map)
+    })
+  }, [mid])
+  async function addFriend(p) {
+    try {
+      const result = await requestFriend(p.user_id)
+      setRel((m) => ({ ...m, [p.user_id]: result === 'sent' || result === 'pending' ? 'pending' : 'friend' }))
+      toast(resultText(result, p.name))
+    } catch (e) {
+      toast(e.message)
+    }
+  }
   // 모바일·터치는 하단 고정 바, 데스크톱은 시간표 위 도구 막대를 써요.
   const lockable = useMedia('(max-width: 767px), (pointer: coarse)')
   // 내 일정 편집: '내 일정 등록/수정'을 눌러야 시작하고, 칠한 내용은 저장 전까지 화면에만 있어요(draft).
@@ -230,6 +251,8 @@ export default function Board({ mid, session }) {
               setEditing(null)
               if (byId[pid] && byId[pid].name !== name) updatePerson(pid, { name })
             }}
+            relation={(userId) => (rel[userId] === 'friend' ? 'friend' : rel[userId] === 'pending' ? 'pending' : 'none')}
+            onFriend={addFriend}
           />
 
           {paintOn ? (

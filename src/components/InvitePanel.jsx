@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { md, nDays } from '../lib/schedule'
 import { copyText } from '../lib/copy'
+import { KAKAO_BTN, canKakaoShare, shareKakao } from '../lib/kakao'
 import { useToast } from '../hooks/useToast'
 import Avatar from './Avatar'
 import { AddFriend } from './Friends'
@@ -77,13 +78,31 @@ export default function InvitePanel({ mid, cfg, link, onClose }) {
         {addOpen ? (
           <AddFriend autoFocus onAdded={() => { setAddOpen(false); load() }} />
         ) : (
-          <button className="btn-ghost btn-sm self-start" onClick={() => setAddOpen(true)}>+ 코드로 친구 추가</button>
+          <button className="btn-ghost btn-sm self-start" onClick={() => setAddOpen(true)}>+ 코드로 친구 신청</button>
         )}
       </div>
 
       {/* 링크 */}
       <div className="flex flex-col gap-2 border-t border-rule2 pt-4">
-        <span className="text-[15px] font-semibold">링크로 초대</span>
+        <span className="text-[15px] font-semibold">카카오톡·링크로 초대</span>
+        {canKakaoShare() && (
+          <button
+            className={`btn btn-lg w-full ${KAKAO_BTN}`}
+            onClick={() =>
+              shareKakao({
+                title: `${cfg.title} 언제 만날까요?`,
+                description: `${md(cfg, 0)}–${md(cfg, nDays(cfg) - 1)} 중 되는 시간을 칠해 주세요`,
+                url: link,
+                button: '시간 칠하러 가기',
+              }).catch((e) => toast(e.message))
+            }
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="#000" d="M12 3C6.48 3 2 6.48 2 10.78c0 2.78 1.86 5.22 4.66 6.6l-.95 3.48c-.08.3.26.54.52.37l4.15-2.74c.53.07 1.07.11 1.62.11 5.52 0 10-3.48 10-7.82S17.52 3 12 3Z" />
+            </svg>
+            카카오톡으로 초대 보내기
+          </button>
+        )}
         <div className="flex items-center gap-2 rounded-[14px] bg-rule2 p-1.5 pl-3.5">
           <span className="min-w-0 flex-1 truncate text-[13px] text-ink2">{link.replace(/^https?:\/\//, '')}</span>
           <button className="btn-primary btn-sm" onClick={async () => toast((await copyText(inviteText)) ? '초대 문구를 복사했어요' : '복사하지 못했어요')}>복사</button>

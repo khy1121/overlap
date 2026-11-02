@@ -40,7 +40,7 @@ function NameEditor({ person, onSave, onCancel }) {
 }
 
 /** 참여자 목록. 일정은 각자 본인 것만 입력할 수 있어서, 고칠 수 있는 건 내 이름뿐이에요. */
-export default function PeopleBar({ people, myPid, target, mode, n, canEdit, editing, setEditing, onSelect, onRename }) {
+export default function PeopleBar({ people, myPid, target, mode, n, canEdit, editing, setEditing, onSelect, onRename, relation, onFriend }) {
   const done = people.filter((p) => Object.keys(p.cells).length > 0)
   return (
     <>
@@ -70,9 +70,11 @@ export default function PeopleBar({ people, myPid, target, mode, n, canEdit, edi
           const active = p.id === target && mode === 'edit'
           const entered = Object.keys(p.cells).length > 0
           const editable = canEdit(p.id)
+          // 같은 약속의 다른 가입자: 친구가 아니면 '+ 친구'로 신청
+          const rel = p.user_id && p.id !== myPid && relation ? relation(p.user_id) : null
           return (
+            <span key={p.id} className="inline-flex items-center gap-1">
             <button
-              key={p.id}
               aria-pressed={active}
               title={entered ? '입력함' : '아직 입력 안 함'}
               className={`inline-flex min-h-[34px] items-center gap-[7px] rounded-full border py-[5px] pl-1.5 pr-3 text-[13px] ${
@@ -103,6 +105,17 @@ export default function PeopleBar({ people, myPid, target, mode, n, canEdit, edi
                 </span>
               )}
             </button>
+            {rel === 'none' && (
+              <button
+                className="btn-soft btn-sm !min-h-[30px] !px-2.5 !text-[12px]"
+                aria-label={`${p.name || '이름 없음'}에게 친구 신청`}
+                onClick={() => onFriend(p)}
+              >
+                + 친구
+              </button>
+            )}
+            {rel === 'pending' && <span className="px-1 text-[12px] text-ink2">신청함</span>}
+            </span>
           )
         })}
       </div>

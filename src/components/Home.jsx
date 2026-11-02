@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { displayName } from '../lib/auth'
 import { DAYS } from '../lib/schedule'
 import { confirmedTime, fetchMyMeetings, hm, meetingSpan } from '../lib/meetings'
+import { myRequests } from '../lib/friends'
 import InstallApp from './InstallApp'
 import KakaoLink from './KakaoLink'
 
@@ -28,7 +29,7 @@ const ACTIONS = [
   {
     href: '/?page=friends',
     title: '친구',
-    desc: '코드로 친구를 추가하고 목록을 봐요',
+    desc: '친구 신청을 주고받고 목록을 봐요',
     tone: 'bg-maybe-soft text-ink',
     icon: (
       <>
@@ -42,7 +43,11 @@ const ACTIONS = [
 /** 홈: 큰 동작 버튼 3개 + 다가오는 회의 + 조율 중인 회의 */
 export default function Home({ session }) {
   const [list, setList] = useState(null)
-  useEffect(() => { fetchMyMeetings().then(setList) }, [])
+  const [incoming, setIncoming] = useState(0)
+  useEffect(() => {
+    fetchMyMeetings().then(setList)
+    myRequests().then((reqs) => setIncoming(reqs.filter((r) => r.direction === 'in').length))
+  }, [])
 
   const now = useMemo(() => new Date(), [])
   const upcoming = useMemo(
@@ -69,7 +74,12 @@ export default function Home({ session }) {
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{a.icon}</svg>
             </span>
             <span className="min-w-0 flex-1">
-              <span className="block text-[17px] font-bold">{a.title}</span>
+              <span className="flex items-center gap-1.5 text-[17px] font-bold">
+                {a.title}
+                {a.href === '/?page=friends' && incoming > 0 && (
+                  <span className="rounded-full bg-no px-2 text-[12px] font-bold leading-5 text-white" aria-label={`받은 친구 신청 ${incoming}개`}>{incoming}</span>
+                )}
+              </span>
               <span className="block text-[13px] text-ink2">{a.desc}</span>
             </span>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-ink2 sm:hidden" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
