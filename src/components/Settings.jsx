@@ -52,11 +52,18 @@ export default function Settings({ session }) {
   const [push, setPush] = useState(null) // pushState 결과
   const [prefs, setPrefs] = useState(null)
   const [busy, setBusy] = useState(false)
+  const [inboxNew, setInboxNew] = useState(null) // 관리자면 새 의견 수, 아니면 null
   const nameLogin = user.identities?.some((i) => i.provider === 'email')
 
   useEffect(() => {
     pushState().then(setPush).catch(() => setPush('unsupported'))
     loadPrefs().then(setPrefs)
+    // 관리자에게만 의견함 메뉴 (서버가 관리자인지 확인)
+    supabase.rpc('is_app_admin').then(async ({ data }) => {
+      if (data !== true) return
+      const { data: c } = await supabase.rpc('admin_feedback_counts')
+      setInboxNew(Number((c || []).find((r) => r.status === 'new')?.n || 0))
+    })
     supabase.rpc('my_profile').then(({ data }) => {
       const n = data?.[0]?.name
       if (n) { setName(n); setSavedName(n) }
@@ -193,6 +200,19 @@ export default function Settings({ session }) {
 
       <section>
         <h2 className="m-0 mb-1 text-[13px] font-semibold text-ink2">도움</h2>
+        {inboxNew !== null && (
+          <a href="/?page=inbox" className="sheet mb-2 flex items-center gap-3 text-ink no-underline transition-transform active:scale-[.99]">
+            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-maybe-soft text-[20px]" aria-hidden="true">📥</span>
+            <span className="min-w-0 flex-1">
+              <span className="flex items-center gap-1.5 text-[15px] font-semibold">
+                의견함 <span className="text-[12px] font-medium text-ink2">관리자</span>
+                {inboxNew > 0 && <span className="rounded-full bg-no px-2 text-[12px] font-bold leading-5 text-white">{inboxNew}</span>}
+              </span>
+              <span className="block text-[13px] text-ink2">사용자가 보낸 버그 신고와 아이디어를 확인해요.</span>
+            </span>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-ink2" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+          </a>
+        )}
         <a href="/?page=feedback" className="sheet flex items-center gap-3 text-ink no-underline transition-transform active:scale-[.99]">
           <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-pen-soft text-[20px]" aria-hidden="true">💬</span>
           <span className="min-w-0 flex-1">

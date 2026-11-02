@@ -13,11 +13,12 @@ import Settings from './components/Settings'
 import UpdateBanner from './components/UpdateBanner'
 import Privacy from './components/Privacy'
 import Feedback from './components/Feedback'
+import Inbox from './components/Inbox'
 
 const params = new URLSearchParams(window.location.search)
 const MID = params.get('m')
-// 로그인 후 하위 페이지: /?page=new | schedule | friends | settings | feedback
-const PAGES = { new: NewMeeting, schedule: MySchedule, friends: Friends, settings: Settings, feedback: Feedback }
+// 로그인 후 하위 페이지: /?page=new | schedule | friends | settings | feedback | inbox(관리자)
+const PAGES = { new: NewMeeting, schedule: MySchedule, friends: Friends, settings: Settings, feedback: Feedback, inbox: Inbox }
 const Page = PAGES[params.get('page')]
 
 export default function App() {
