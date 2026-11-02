@@ -5,12 +5,12 @@ const STEPS = [
   '초대 링크를 보내거나, 초대 코드로 친구를 맺어 두고 바로 회의에 불러요.',
   '각자 가능·조율 가능·불가를 칠하거나 Google 캘린더에서 바쁜 시간을 가져오면, 겹치는 시간이 실시간으로 계산돼요.',
 ]
-const DEMO = '....a....b.a..bca..b.a....a.......a....b.a..bca..'.split('')
+const DEMO = '....a....b.a..bca..b.a....a.......a....b.a..bca...'.split('')
 const DEMO_CLASS = {
   '.': 'bg-cell',
-  a: 'bg-yes-soft',
+  a: 'bg-yes',
   b: 'bg-maybe',
-  c: 'bg-yes shadow-[inset_0_0_0_2px_var(--pen)]',
+  c: 'bg-yes shadow-[inset_0_0_0_2px_var(--pen-strong)]',
 }
 const LEGEND = [
   ['가능', 'bg-yes-soft', 'bg-yes'],
