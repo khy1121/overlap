@@ -16,6 +16,7 @@ export default {
         cell: v('cell'),
         weekend: v('weekend'),
         pen: v('pen'),
+        'pen-strong': v('pen-strong'),
         'pen-ink': v('pen-ink'),
         'pen-soft': v('pen-soft'),
         pink: v('pink'),

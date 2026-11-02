@@ -1,16 +1,17 @@
 // Overlap 팔레트: 말랑 파스텔 (Figma "Overlap — 말랑 파스텔 디자인" Color 컬렉션과 같은 값)
 // 기존 토큰 이름(paper, sheet, ink, pen …)은 그대로 두고 값만 바꿔 화면 전체에 적용해요.
+// pen-strong: 글자가 올라가는 버튼 배경·작은 링크 글자용. 라이트에서 흰 글자 대비 5.6:1 (pen은 4.2:1이라 본문 크기엔 부족).
 $light: (
   paper: #faf7f2, sheet: #ffffff, ink: #2a2838, ink-2: #6e6a80,
   rule: #ece6dc, rule-2: #f3eee6, cell: #f3eee6, weekend: #eee8de,
-  pen: #5b6cff, pen-ink: #ffffff, pen-soft: #e6e8ff, pink: #ff8fb1,
+  pen: #5b6cff, pen-strong: #4353ea, pen-ink: #ffffff, pen-soft: #e6e8ff, pink: #ff8fb1,
   yes: #3ccb9a, maybe: #ffc94d, no: #ff7a6b,
   yes-soft: #d6f5ea, maybe-soft: #fff1cc, no-soft: #ffe1dc,
 );
 $dark: (
   paper: #15141a, sheet: #1e1d25, ink: #f1eff7, ink-2: #a9a5ba,
   rule: #302e3a, rule-2: #24232c, cell: #24232c, weekend: #1b1a21,
-  pen: #8c98ff, pen-ink: #14152e, pen-soft: #262a52, pink: #ff9dbb,
+  pen: #8c98ff, pen-strong: #8c98ff, pen-ink: #14152e, pen-soft: #262a52, pink: #ff9dbb,
   yes: #4fd8a8, maybe: #ffd36b, no: #ff8e81,
   yes-soft: #173a30, maybe-soft: #3d3317, no-soft: #41231f,
 );

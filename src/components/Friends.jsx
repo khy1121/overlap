@@ -103,11 +103,11 @@ export default function Friends() {
             {confirming === f.user_id ? (
               <>
                 <span className="small">친구를 끊을까요?</span>
-                <button className="btn min-h-[30px] px-2.5 py-0.5 text-xs text-no" onClick={() => remove(f)}>끊기</button>
-                <button className="btn min-h-[30px] px-2.5 py-0.5 text-xs" onClick={() => setConfirming(null)}>취소</button>
+                <button className="btn btn-sm text-no" onClick={() => remove(f)}>끊기</button>
+                <button className="btn-ghost btn-sm" onClick={() => setConfirming(null)}>취소</button>
               </>
             ) : (
-              <button className="link-btn text-ink2" onClick={() => setConfirming(f.user_id)}>친구 끊기</button>
+              <button className="btn-ghost btn-sm" onClick={() => setConfirming(f.user_id)}>친구 끊기</button>
             )}
           </li>
         ))}

@@ -71,7 +71,7 @@ export default function AuthForm({ initial = 'login', onDone }) {
           </label>
         )}
         {error && <div className="rounded-md bg-no-soft px-4 py-3 text-[13px] text-ink" role="alert">{error}</div>}
-        <button className="btn-primary mt-1 min-h-[52px] text-[15px]" type="submit" disabled={busy}>
+        <button className="btn-primary btn-lg mt-1" type="submit" disabled={busy}>
           {busy ? '잠시만요…' : signup ? '가입하고 시작하기' : '로그인'}
         </button>
         <p className="small m-0">

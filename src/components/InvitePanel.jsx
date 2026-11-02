@@ -53,7 +53,7 @@ export default function InvitePanel({ mid, cfg, link, onClose }) {
             <li key={f.user_id} className="flex items-center gap-2 px-0.5 py-1 text-[13px]">
               <Avatar name={f.name} />
               <span className="min-w-0 flex-1 truncate">{f.name || '이름 없음'}</span>
-              {f.in_meeting ? <span className="small">참여 중</span> : <button className="btn min-h-[30px] px-2.5 py-0.5 text-xs" onClick={() => add(f)}>초대</button>}
+              {f.in_meeting ? <span className="small">참여 중</span> : <button className="btn-soft btn-sm" onClick={() => add(f)}>초대</button>}
             </li>
           ))}
         </ul>

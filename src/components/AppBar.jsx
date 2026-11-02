@@ -19,7 +19,7 @@ export default function AppBar({ session }) {
             <Avatar name={displayName(user)} size={28} />
             <span className="hidden truncate sm:inline">{displayName(user)}</span>
             <button
-              className="btn shrink-0 whitespace-nowrap"
+              className="btn-ghost btn-sm"
               onClick={async () => {
                 await supabase.auth.signOut()
                 window.location.href = '/'

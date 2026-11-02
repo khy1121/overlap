@@ -85,7 +85,7 @@ export default function Home({ session }) {
               <option value={6}>3시간</option>
             </select>
           </label>
-          <button className="btn-primary min-h-[42px] text-sm" type="submit" disabled={busy}>
+          <button className="btn-primary btn-lg" type="submit" disabled={busy}>
             회의 만들고 사람들 초대하기
           </button>
         </form>

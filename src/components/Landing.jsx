@@ -75,7 +75,7 @@ export default function Landing() {
 
         <div className="relative max-md:hidden">
           <Mascot className="relative z-10 -mb-3 ml-2 w-[240px]" />
-          <div className="absolute right-0 top-[64px] z-20 rounded-md bg-pen px-[18px] py-3.5 text-pen-ink shadow-float">
+          <div className="absolute right-0 top-[64px] z-20 rounded-md bg-pen-strong px-[18px] py-3.5 text-pen-ink shadow-float">
             <b className="block text-sm font-semibold">이 시간 어때요?</b>
             <span className="text-xs opacity-90">목요일 오후 3:00 – 4:00 · 4명 모두 가능</span>
           </div>
@@ -94,7 +94,7 @@ export default function Landing() {
         <ol className="m-0 grid list-none gap-3 p-0 md:grid-cols-3 md:gap-6">
           {STEPS.map((s, i) => (
             <li key={i} className="grid grid-cols-[28px_minmax(0,1fr)] items-start gap-3 rounded-lg bg-[color-mix(in_oklab,var(--sheet)_82%,transparent)] p-5 shadow-soft backdrop-blur md:p-6">
-              <b className="grid h-7 w-7 place-items-center rounded-full bg-pen-soft text-sm font-semibold text-pen">{i + 1}</b>
+              <b className="grid h-7 w-7 place-items-center rounded-full bg-pen-soft text-sm font-semibold text-pen-strong">{i + 1}</b>
               <span className="text-[15px] leading-relaxed text-ink2">{s}</span>
             </li>
           ))}

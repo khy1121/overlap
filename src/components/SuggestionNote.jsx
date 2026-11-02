@@ -48,7 +48,7 @@ export default function SuggestionNote({ cfg, result, list, cand, byId, onNext, 
       </div>
       <div className="mt-3.5 flex flex-wrap gap-1.5">
         <button className="btn-primary" onClick={() => onPick(w)}>이 시간으로 확정</button>
-        {list.length > 1 && <button className="btn" onClick={onNext}>다른 시간 {(cand % list.length) + 1}/{list.length}</button>}
+        {list.length > 1 && <button className="btn-soft" onClick={onNext}>다른 시간 {(cand % list.length) + 1}/{list.length}</button>}
         <button className="btn" onClick={() => onCopy(w)}>제안 문구 복사</button>
       </div>
     </div>

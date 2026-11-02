@@ -172,14 +172,14 @@ export default function Board({ mid, session }) {
       {inviteOpen && <InvitePanel mid={mid} cfg={cfg} link={link} onClose={() => setInviteOpen(false)} />}
 
       {picked && (
-        <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-md bg-pen px-4 py-3 text-pen-ink">
+        <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-md bg-pen-strong px-4 py-3 text-pen-ink">
           <div>
             <div className="text-xs opacity-85">확정된 회의 시간</div>
             <strong className="font-display text-xl font-extrabold">{dayLabel(cfg, picked.d)} {tm(cfg, picked.s)}–{tm(cfg, picked.s + picked.dur)}</strong>
           </div>
           <div className="flex flex-wrap gap-1.5">
-            <button className="rounded border border-current px-2.5 py-1 text-xs" onClick={() => copy(noticeText(picked, picked.dur, true))}>공지 문구 복사</button>
-            <button className="rounded border border-current px-2.5 py-1 text-xs" onClick={() => updateCfg({ picked: null })}>확정 취소</button>
+            <button className="btn btn-sm bg-[color-mix(in_oklab,var(--pen-ink)_18%,transparent)] text-pen-ink hover:bg-[color-mix(in_oklab,var(--pen-ink)_28%,transparent)]" onClick={() => copy(noticeText(picked, picked.dur, true))}>공지 문구 복사</button>
+            <button className="btn btn-sm bg-transparent text-pen-ink hover:bg-[color-mix(in_oklab,var(--pen-ink)_18%,transparent)]" onClick={() => updateCfg({ picked: null })}>확정 취소</button>
           </div>
         </div>
       )}
@@ -219,12 +219,12 @@ export default function Board({ mid, session }) {
           />
 
           <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2.5">
-            <div className="inline-flex overflow-hidden rounded-md border border-rule bg-sheet" role="group" aria-label="보기">
-              {[['edit', '시간 입력'], ['all', '전체 겹쳐 보기']].map(([k, label], i) => (
+            <div className="inline-flex gap-1 rounded-full bg-rule2 p-1" role="group" aria-label="보기">
+              {[['edit', '시간 입력'], ['all', '전체 겹쳐 보기']].map(([k, label]) => (
                 <button
                   key={k}
                   aria-pressed={mode === k}
-                  className={`min-h-[36px] px-3 py-1.5 text-[13px] ${i ? 'border-l border-rule' : ''} ${mode === k ? 'bg-ink text-sheet' : 'hover:bg-cell'}`}
+                  className={`min-h-[34px] rounded-full border-0 px-3.5 text-[13px] font-semibold ${mode === k ? 'bg-sheet text-ink shadow-soft' : 'bg-transparent text-ink2 hover:text-ink'}`}
                   onClick={() => setMode(k)}
                 >
                   {label}
