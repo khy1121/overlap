@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { nextMonday } from '../lib/schedule'
 import { useToast } from '../hooks/useToast'
+import Friends from './Friends'
 
 const HOURS = Array.from({ length: 25 }, (_, h) => h)
 
@@ -90,6 +91,7 @@ export default function Home({ session }) {
         </form>
       </section>
 
+      <div className="flex min-w-0 flex-col gap-5">
       <section className="sheet">
         <h2 className="mb-3 mt-0 font-display text-lg font-extrabold">내 회의</h2>
         <ul className="m-0 list-none border-t border-rule p-0">
@@ -108,6 +110,8 @@ export default function Home({ session }) {
           ))}
         </ul>
       </section>
+      <Friends />
+      </div>
     </div>
   )
 }

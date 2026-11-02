@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMeeting } from '../hooks/useMeeting'
 import { useToast } from '../hooks/useToast'
-import { CAL_SCOPE, signInWithGoogle } from '../lib/auth'
+import { GOOGLE_CLIENT_ID, requestCalendarToken } from '../lib/googleCalendar'
 import { copyText } from '../lib/copy'
 import { BRUSH_LABEL, DUR_LABEL, dayLabel, evaluate, md, nSlots, summary, tm } from '../lib/schedule'
 import CalendarImport from './CalendarImport'
@@ -12,8 +12,6 @@ import SettingsBar from './SettingsBar'
 import SlotList from './SlotList'
 import SuggestionNote from './SuggestionNote'
 import TimeGrid from './TimeGrid'
-
-const CAL_FLAG = 'overlap-cal'
 
 export default function Board({ mid, session }) {
   const toast = useToast()
@@ -47,7 +45,7 @@ export default function Board({ mid, session }) {
     return Boolean(p && pid !== myPid && (!p.user_id || isOwner))
   }, [byId, myPid, isOwner])
 
-  // 처음 열렸을 때: 새 회의면 초대 창, 캘린더 로그인에서 돌아왔으면 가져오기
+  // 처음 열렸을 때: 새 회의면 초대 창
   useEffect(() => {
     if (m.status !== 'ready') return
     const params = new URLSearchParams(window.location.search)
@@ -55,15 +53,6 @@ export default function Board({ mid, session }) {
       window.history.replaceState(null, '', `/?m=${mid}`)
       setInviteOpen(true)
       toast('회의를 만들었어요. 사람들을 초대해 보세요.')
-    }
-    let flag = null
-    try { flag = sessionStorage.getItem(CAL_FLAG) } catch { /* 저장소를 못 쓰는 브라우저 */ }
-    if (flag === mid) {
-      try { sessionStorage.removeItem(CAL_FLAG) } catch { /* noop */ }
-      if (session.provider_token) {
-        setCalToken(session.provider_token)
-        setCalOpen(true)
-      } else toast('캘린더 권한을 받지 못했어요. 다시 시도해 주세요.')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [m.status])
@@ -134,11 +123,11 @@ export default function Board({ mid, session }) {
 
   async function startCalendar() {
     if (calToken) return setCalOpen(true)
-    try { sessionStorage.setItem(CAL_FLAG, mid) } catch { /* noop */ }
     try {
-      await signInWithGoogle(link, { scopes: CAL_SCOPE, queryParams: { include_granted_scopes: 'true', prompt: 'consent' } })
+      setCalToken(await requestCalendarToken())
+      setCalOpen(true)
     } catch (e) {
-      toast(`캘린더 연결을 시작하지 못했어요: ${e.message}`)
+      toast(e.message)
     }
   }
 
@@ -276,7 +265,7 @@ export default function Board({ mid, session }) {
                 />
               )}
               <div className="mb-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink2">
-                {tgt === myPid && (
+                {tgt === myPid && GOOGLE_CLIENT_ID && (
                   <button className="btn" onClick={startCalendar}>
                     <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
                       <rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" strokeWidth="2" />

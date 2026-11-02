@@ -13,7 +13,7 @@ export default function AppBar({ session }) {
       </a>
       {user && (
         <div className="flex items-center gap-2 text-[13px] text-ink2">
-          <Avatar name={displayName(user)} url={user.user_metadata?.avatar_url} size={28} />
+          <Avatar name={displayName(user)} size={28} />
           <span className="hidden sm:inline">{displayName(user)}</span>
           <button
             className="btn"

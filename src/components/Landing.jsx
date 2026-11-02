@@ -1,8 +1,8 @@
-import GoogleButton from './GoogleButton'
+import AuthForm from './AuthForm'
 
 const STEPS = [
   '회의 이름, 기간, 시간대, 회의 길이를 정하고 회의를 만들어요.',
-  '초대 링크나 이메일로 사람들을 불러요. 받은 사람은 Google로 로그인만 하면 바로 참여해요.',
+  '초대 링크를 보내거나, 초대 코드로 친구를 맺어 두고 바로 회의에 불러요.',
   '각자 가능·조율 가능·불가를 칠하거나 Google 캘린더에서 바쁜 시간을 가져오면, 겹치는 시간이 실시간으로 계산돼요.',
 ]
 const DEMO = '....a....b.a..bca..b.a....a.......a....b.a..bca..'.slice(0, 45).split('')
@@ -23,8 +23,7 @@ export default function Landing() {
         <p className="mb-[22px] mt-3.5 max-w-[34em] text-base text-ink2">
           일주일 시간표에 각자 되는 시간을 칠하면, Overlap이 전원이 가능한 시간과 가장 많이 되는 시간을 골라 "이 시간 어때요?" 하고 제안해요.
         </p>
-        <GoogleButton />
-        <p className="mt-2.5 text-[13px] text-ink2">Google 계정으로 로그인해요. 이름과 프로필 사진만 사용해요.</p>
+        <AuthForm />
         <ol className="mt-6 flex max-w-[30em] list-none flex-col gap-2.5 p-0">
           {STEPS.map((s, i) => (
             <li key={i} className="grid grid-cols-[28px_minmax(0,1fr)] items-start gap-2.5">
@@ -34,7 +33,7 @@ export default function Landing() {
           ))}
         </ol>
       </div>
-      <div className="grid grid-cols-5 gap-[3px] rounded-md border border-rule bg-sheet p-3.5" aria-hidden="true">
+      <div className="grid grid-cols-5 gap-[3px] self-start rounded-md border border-rule bg-sheet p-3.5 max-md:order-first" aria-hidden="true">
         {['월', '화', '수', '목', '금'].map((d) => (
           <div key={d} className="text-center font-mono text-[11px] text-ink2">{d}</div>
         ))}

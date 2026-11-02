@@ -113,7 +113,7 @@ export default function PeopleBar({ people, myPid, target, mode, n, canEdit, can
         })}
         <button
           className="min-h-[34px] rounded-full border border-dashed border-ink2 bg-transparent px-3 py-1 text-xs text-ink2"
-          title="Google 계정이 없는 사람 대신 시간을 입력할 때 써요"
+          title="가입하지 않은 사람 대신 시간을 입력할 때 써요"
           onClick={onAddGuest}
         >
           + 계정 없는 사람 추가

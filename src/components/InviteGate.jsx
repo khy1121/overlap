@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import GoogleButton from './GoogleButton'
+import AuthForm from './AuthForm'
 
 export default function InviteGate({ mid }) {
   const [info, setInfo] = useState(undefined)
@@ -20,8 +20,8 @@ export default function InviteGate({ mid }) {
           <p className="small">
             {Number(info.start_date.slice(5, 7))}/{Number(info.start_date.slice(8, 10))}부터 일주일 · 지금 {info.joined}명 참여 중
           </p>
-          <p className="my-3.5">Google로 로그인하면 바로 참여해서 되는 시간을 칠할 수 있어요.</p>
-          <GoogleButton label="Google로 로그인하고 참여하기" />
+          <p className="my-3.5">로그인하거나 이름·생년월일·비밀번호로 가입하면 바로 참여해서 되는 시간을 칠할 수 있어요.</p>
+          <AuthForm initial="signup" />
         </>
       ) : (
         <>
