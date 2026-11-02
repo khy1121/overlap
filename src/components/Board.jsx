@@ -9,6 +9,7 @@ import CalendarImport from './CalendarImport'
 import InvitePanel from './InvitePanel'
 import Palette from './Palette'
 import PeopleBar from './PeopleBar'
+import { BackButton } from './PageHeader'
 import SettingsBar from './SettingsBar'
 import SlotList from './SlotList'
 import SuggestionNote from './SuggestionNote'
@@ -161,6 +162,7 @@ export default function Board({ mid, session }) {
 
   return (
     <div className={`flex flex-col gap-[18px] ${lockable ? (paintOn ? 'pb-36' : 'pb-24') : ''}`}>
+      <BackButton className="-mb-3 self-start" />
       <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
         <div className="min-w-0 flex-[1_1_320px]">
           <input
