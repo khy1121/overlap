@@ -12,7 +12,8 @@ $hatch-cell: repeating-linear-gradient(135deg, transparent 0 5px, rgba(255,255,2
 
 .timegrid {
   display: grid;
-  grid-template-columns: 48px repeat(7, minmax(40px, 1fr));
+  // 열 수 = 약속 기간(--days, 기본 7일)
+  grid-template-columns: 48px repeat(var(--days, 7), minmax(40px, 1fr));
   min-width: 340px;
   user-select: none;
   -webkit-user-select: none;
@@ -23,8 +24,10 @@ $hatch-cell: repeating-linear-gradient(135deg, transparent 0 5px, rgba(255,255,2
   &:focus-visible { outline-offset: 4px; }
 
   @media (max-width: 520px) {
-    grid-template-columns: 38px repeat(7, minmax(0, 1fr));
+    grid-template-columns: 38px repeat(var(--days, 7), minmax(0, 1fr));
     min-width: 0;
+    // 8일 이상은 좁은 화면에서 칸이 너무 작아져서 가로로 넘겨 봐요
+    &.wide { grid-template-columns: 38px repeat(var(--days), 36px); min-width: max-content; }
     .tl { padding-right: 4px; font-size: 10px; }
   }
 

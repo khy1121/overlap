@@ -2,7 +2,6 @@
 // 칸 키는 "요일인덱스-30분칸인덱스" (예: "1-10" = 둘째 날 from+5시간)
 
 export const DAYS = ['일', '월', '화', '수', '목', '금', '토']
-export const DUR_LABEL = { 1: '30분', 2: '1시간', 3: '1시간 30분', 4: '2시간', 6: '3시간' }
 export const BRUSH_LABEL = { y: '가능', m: '조율 가능', n: '불가' }
 
 export const iso = (d) =>
@@ -16,6 +15,10 @@ export function nextMonday() {
 }
 
 export const nSlots = (cfg) => (cfg.to - cfg.from) * 2
+/** 약속 기간(일). 예전 약속은 7일 */
+export const nDays = (cfg) => cfg.days || 7
+/** 만나는 시간(30분 칸 수) → '1시간 30분' */
+export const durText = (dur) => [Math.floor(dur / 2) && `${Math.floor(dur / 2)}시간`, dur % 2 && '30분'].filter(Boolean).join(' ')
 
 export function dayOf(cfg, i) {
   const [y, m, d] = cfg.start.split('-').map(Number)
@@ -61,7 +64,7 @@ export function evaluate(cfg, people) {
   if (!entered) return { all: [], rec: [], entered: 0, n }
 
   const out = []
-  for (let d = 0; d < 7; d++) {
+  for (let d = 0; d < nDays(cfg); d++) {
     for (let s = 0; s + cfg.dur <= nSlots(cfg); s++) {
       const g = { y: [], m: [], n: [], u: [] }
       people.forEach((p) => g[windowStatus(p.cells || {}, d, s, cfg.dur)].push(p.id))

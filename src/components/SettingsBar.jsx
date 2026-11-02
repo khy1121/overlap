@@ -1,24 +1,56 @@
-const HOURS = Array.from({ length: 25 }, (_, h) => h)
-const field = 'flex items-center gap-2 border-b border-rule2 px-3.5 py-2.5 text-[13px] text-ink2 max-sm:flex-[1_1_50%] sm:border-b-0 sm:border-r sm:last:border-r-0'
-const input = 'rounded border border-rule bg-paper px-2 py-1 font-mono text-[13px] text-ink max-sm:text-base'
+import { iso, nDays } from '../lib/schedule'
+import DurationPicker from './DurationPicker'
 
+const HOURS = Array.from({ length: 25 }, (_, h) => h)
+const MAX_DAYS = 14
+const field = 'flex flex-wrap items-center gap-2 border-b border-rule2 px-3.5 py-2.5 text-[13px] text-ink2 last:border-b-0'
+const input = 'rounded-[10px] border-0 bg-rule2 px-2.5 py-1.5 text-[13px] text-ink max-sm:text-base'
+const parse = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d) }
+const shift = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return iso(d) }
+
+/** 약속 설정: 인원, 기간(시작~종료), 하루 시간대, 만나는 시간 */
 export default function SettingsBar({ cfg, onChange, onInvalid }) {
+  const days = nDays(cfg)
+  const end = shift(cfg.start, days - 1)
   return (
-    <section className="flex flex-wrap items-stretch rounded-md border border-rule bg-sheet" aria-label="약속 설정">
+    <section className="flex flex-col rounded-[20px] bg-sheet shadow-soft" aria-label="약속 설정">
       <div className={field}>
-        <span id="countLbl">예상 인원</span>
-        <span className="inline-flex items-center rounded border border-rule bg-paper" role="group" aria-labelledby="countLbl">
-          <button className="h-8 w-8 hover:bg-cell" aria-label="인원 줄이기" onClick={() => cfg.count > 1 && onChange({ count: cfg.count - 1 })}>−</button>
-          <output className="min-w-[30px] text-center font-mono font-semibold text-ink" aria-live="polite">{cfg.count}</output>
-          <button className="h-8 w-8 hover:bg-cell" aria-label="인원 늘리기" onClick={() => cfg.count < 50 && onChange({ count: cfg.count + 1 })}>+</button>
+        <span id="countLbl" className="w-[72px] shrink-0">예상 인원</span>
+        <span className="inline-flex items-center rounded-[10px] bg-rule2" role="group" aria-labelledby="countLbl">
+          <button className="h-8 w-8 rounded-[10px] border-0 bg-transparent" aria-label="인원 줄이기" onClick={() => cfg.count > 1 && onChange({ count: cfg.count - 1 })}>−</button>
+          <output className="min-w-[30px] text-center font-semibold text-ink tabular" aria-live="polite">{cfg.count}</output>
+          <button className="h-8 w-8 rounded-[10px] border-0 bg-transparent" aria-label="인원 늘리기" onClick={() => cfg.count < 50 && onChange({ count: cfg.count + 1 })}>+</button>
         </span>
       </div>
+      <div className={field}>
+        <span className="w-[72px] shrink-0">기간</span>
+        <input
+          className={input}
+          type="date"
+          aria-label="시작일"
+          value={cfg.start}
+          onChange={(e) => e.target.value && onChange({ start: e.target.value, picked: null })}
+        />
+        ~
+        <input
+          className={input}
+          type="date"
+          aria-label="종료일"
+          min={cfg.start}
+          max={shift(cfg.start, MAX_DAYS - 1)}
+          value={end}
+          onChange={(e) => {
+            if (!e.target.value) return
+            const n = Math.round((parse(e.target.value) - parse(cfg.start)) / 86400000) + 1
+            if (n < 1) return onInvalid('종료일은 시작일과 같거나 뒤여야 해요')
+            if (n > MAX_DAYS) return onInvalid(`기간은 최대 ${MAX_DAYS}일까지예요`)
+            onChange({ days: n, picked: null })
+          }}
+        />
+        <span className="font-semibold text-accent">{days}일</span>
+      </div>
       <label className={field}>
-        시작일
-        <input className={input} type="date" value={cfg.start} onChange={(e) => e.target.value && onChange({ start: e.target.value, picked: null })} />
-      </label>
-      <label className={field}>
-        시간대
+        <span className="w-[72px] shrink-0">하루 시간대</span>
         <select
           className={input}
           value={cfg.from}
@@ -42,16 +74,10 @@ export default function SettingsBar({ cfg, onChange, onInvalid }) {
           {HOURS.slice(1).map((h) => <option key={h} value={h}>{h}시</option>)}
         </select>
       </label>
-      <label className={field}>
-        만나는 시간
-        <select className={input} value={cfg.dur} onChange={(e) => onChange({ dur: Number(e.target.value) })}>
-          <option value={1}>30분</option>
-          <option value={2}>1시간</option>
-          <option value={3}>1시간 30분</option>
-          <option value={4}>2시간</option>
-          <option value={6}>3시간</option>
-        </select>
-      </label>
+      <div className={field}>
+        <span className="w-[72px] shrink-0">만나는 시간</span>
+        <DurationPicker compact value={cfg.dur} max={Math.min(24, (cfg.to - cfg.from) * 2)} onChange={(dur) => onChange({ dur, picked: null })} />
+      </div>
     </section>
   )
 }

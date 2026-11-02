@@ -1,6 +1,7 @@
 import { supabase } from './supabase'
 
-const COLS = 'id,title,start_date,from_hour,to_hour,dur,picked,owner,created_at,participants(count)'
+// '*'로 읽어서, 새 칸(days)이 DB에 아직 없어도 깨지지 않게
+const COLS = '*,participants(count)'
 
 /** 내가 만들었거나 참여한 회의 (RLS가 멤버인 회의만 돌려줘요) */
 export async function fetchMyMeetings() {
@@ -16,16 +17,16 @@ const startOf = (m) => {
 /** 확정된 회의 시간 → { start, end } (확정 전이면 null) */
 export function confirmedTime(m) {
   const p = m.picked
-  if (!p || p.d > 6) return null
+  if (!p || p.d >= (m.days || 7)) return null
   const day = startOf(m)
   const start = new Date(day.getFullYear(), day.getMonth(), day.getDate() + p.d, 0, m.from_hour * 60 + p.s * 30)
   return { start, end: new Date(start.getTime() + p.dur * 30 * 60000) }
 }
 
-/** 조율 중인 회의의 기간(7일) */
+/** 조율 중인 약속의 기간(시작일~종료일) */
 export function meetingSpan(m) {
   const s = startOf(m)
-  return { start: s, end: new Date(s.getFullYear(), s.getMonth(), s.getDate() + 6) }
+  return { start: s, end: new Date(s.getFullYear(), s.getMonth(), s.getDate() + (m.days || 7) - 1) }
 }
 
 export const hm = (d) => `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`

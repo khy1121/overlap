@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { DAYS, dayLabel, dayOf, md, nSlots, tm } from '../lib/schedule'
+import { DAYS, dayLabel, dayOf, md, nDays, nSlots, tm } from '../lib/schedule'
 
 /**
  * 주간 시간표.
@@ -13,6 +13,7 @@ export default function TimeGrid({ cfg, people, mode, cells, canPaint, brush, se
   const drag = useRef(null) // { val, cells }
   const [cur, setCur] = useState({ d: 0, s: 0 })
   const slots = nSlots(cfg)
+  const days = nDays(cfg)
   const shown = draft || cells
   const n = Math.max(cfg.count, people.length)
   const picked = cfg.picked
@@ -88,7 +89,7 @@ export default function TimeGrid({ cfg, people, mode, cells, canPaint, brush, se
     const mv = { ArrowLeft: [-1, 0], ArrowRight: [1, 0], ArrowUp: [0, -1], ArrowDown: [0, 1] }[e.key]
     if (mv) {
       e.preventDefault()
-      const next = { d: Math.max(0, Math.min(6, cur.d + mv[0])), s: Math.max(0, Math.min(slots - 1, cur.s + mv[1])) }
+      const next = { d: Math.max(0, Math.min(days - 1, cur.d + mv[0])), s: Math.max(0, Math.min(slots - 1, cur.s + mv[1])) }
       setCur(next)
       if (mode === 'all') onSelect(next)
       else if (e.shiftKey && canPaint && brush) onCommit({ ...cells, [`${next.d}-${next.s}`]: brush })
@@ -102,10 +103,10 @@ export default function TimeGrid({ cfg, people, mode, cells, canPaint, brush, se
     }
   }
 
-  const weekend = Array.from({ length: 7 }, (_, d) => [0, 6].includes(dayOf(cfg, d).getDay()))
+  const weekend = Array.from({ length: days }, (_, d) => [0, 6].includes(dayOf(cfg, d).getDay()))
   const out = [<div key="corner" />]
 
-  for (let d = 0; d < 7; d++) {
+  for (let d = 0; d < days; d++) {
     const head = (
       <>
         <b className={`block font-display text-[15px] font-extrabold ${weekend[d] ? 'text-no' : ''}`}>{DAYS[dayOf(cfg, d).getDay()]}</b>
@@ -141,7 +142,7 @@ export default function TimeGrid({ cfg, people, mode, cells, canPaint, brush, se
             aria-label={`${tm(cfg, s)}–${tm(cfg, s + 2)} 일주일 전체 칠하기`}
             onClick={() => {
               const keys = []
-              for (let d = 0; d < 7; d++) {
+              for (let d = 0; d < days; d++) {
                 keys.push(`${d}-${s}`)
                 if (s + 1 < slots) keys.push(`${d}-${s + 1}`)
               }
@@ -155,7 +156,7 @@ export default function TimeGrid({ cfg, people, mode, cells, canPaint, brush, se
         ) : null}
       </div>,
     )
-    for (let d = 0; d < 7; d++) {
+    for (let d = 0; d < days; d++) {
       const k = `${d}-${s}`
       let cls = `c ${hour ? 'hr' : 'hh'}${weekend[d] ? ' we' : ''}`
       let style
@@ -192,7 +193,8 @@ export default function TimeGrid({ cfg, people, mode, cells, canPaint, brush, se
         tabIndex={0}
         role="application"
         aria-label="주간 시간표. 방향키로 이동하고 스페이스로 칠합니다."
-        className={`timegrid ${mode === 'all' ? 'view' : 'edit'}${mode === 'edit' && canPaint ? ' paint' : ''}`}
+        style={{ '--days': days }}
+        className={`timegrid ${days > 7 ? 'wide ' : ''}${mode === 'all' ? 'view' : 'edit'}${mode === 'edit' && canPaint ? ' paint' : ''}`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onKeyDown={onKeyDown}

@@ -4,7 +4,7 @@ import { useToast } from '../hooks/useToast'
 import { useMedia } from '../hooks/useMedia'
 import { GOOGLE_CLIENT_ID, requestCalendarToken } from '../lib/googleCalendar'
 import { copyText } from '../lib/copy'
-import { BRUSH_LABEL, DUR_LABEL, dayLabel, evaluate, md, nSlots, summary, tm } from '../lib/schedule'
+import { BRUSH_LABEL, dayLabel, durText, evaluate, md, nDays, nSlots, summary, tm } from '../lib/schedule'
 import CalendarImport from './CalendarImport'
 import InvitePanel from './InvitePanel'
 import Palette from './Palette'
@@ -66,7 +66,8 @@ export default function Board({ mid, session }) {
     if (params.get('new')) {
       window.history.replaceState(null, '', `/?m=${mid}`)
       setInviteOpen(true)
-      toast('약속을 만들었어요. 함께할 사람들을 초대해 보세요.')
+      const invited = Number(params.get('invited')) || 0
+      toast(invited ? `약속을 만들고 친구 ${invited}명을 초대했어요` : '약속을 만들었어요. 함께할 사람들을 초대해 보세요.')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [m.status])
@@ -155,7 +156,7 @@ export default function Board({ mid, session }) {
     }
   }
 
-  const picked = cfg.picked && cfg.picked.d <= 6 && cfg.picked.s + cfg.picked.dur <= nSlots(cfg) ? cfg.picked : null
+  const picked = cfg.picked && cfg.picked.d < nDays(cfg) && cfg.picked.s + cfg.picked.dur <= nSlots(cfg) ? cfg.picked : null
   const selDetail = mode === 'all' && sel
     ? ['y', 'm', 'n', 'u'].map((k) => [k, people.filter((p) => (p.cells[`${sel.d}-${sel.s}`] || 'u') === k)]).filter(([, ps]) => ps.length)
     : null
@@ -178,8 +179,8 @@ export default function Board({ mid, session }) {
             onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
           />
           <div className="mt-0.5 text-sm text-ink2">
-            <span className="tabular font-mono text-ink">{md(cfg, 0)} – {md(cfg, 6)}</span>
-            {` · ${cfg.count}명 예상 · ${DUR_LABEL[cfg.dur] || `${cfg.dur * 30}분`} · `}
+            <span className="tabular font-mono text-ink">{md(cfg, 0)} – {md(cfg, nDays(cfg) - 1)}</span>
+            {` · ${cfg.count}명 예상 · ${durText(cfg.dur)} · `}
             <span className="tabular font-mono text-ink">{String(cfg.from).padStart(2, '0')}:00–{String(cfg.to).padStart(2, '0')}:00</span>
           </div>
         </div>

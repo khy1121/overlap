@@ -2,10 +2,10 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 const PERSON_COLS = 'id,user_id,name,avatar_url,cells,created_at'
-const CFG_COLS = { title: 'title', start: 'start_date', from: 'from_hour', to: 'to_hour', dur: 'dur', count: 'expected', picked: 'picked' }
+const CFG_COLS = { title: 'title', start: 'start_date', days: 'days', from: 'from_hour', to: 'to_hour', dur: 'dur', count: 'expected', picked: 'picked' }
 
 const fromRow = (m) => ({
-  title: m.title, start: m.start_date, from: m.from_hour, to: m.to_hour,
+  title: m.title, start: m.start_date, days: m.days || 7, from: m.from_hour, to: m.to_hour,
   dur: m.dur, count: m.expected, picked: m.picked, owner: m.owner,
 })
 const toPerson = (r) => ({

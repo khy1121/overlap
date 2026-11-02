@@ -121,7 +121,7 @@ export default function Home({ session }) {
                     <span className="min-w-0">
                       <span className="block truncate text-[15px] font-semibold">{m.title}</span>
                       <span className="text-[13px] text-ink2">
-                        {s.start.getMonth() + 1}/{s.start.getDate()}부터 7일 · {m.participants?.[0]?.count ?? 0}명 참여{m.owner === session.user.id ? ' · 내가 만듦' : ''}
+                        {s.start.getMonth() + 1}/{s.start.getDate()}–{s.end.getMonth() + 1}/{s.end.getDate()} · {m.participants?.[0]?.count ?? 0}명 참여{m.owner === session.user.id ? ' · 내가 만듦' : ''}
                       </span>
                     </span>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-ink2" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
