@@ -176,17 +176,76 @@ export default function Settings({ session }) {
             <KakaoLink user={user} />
           )}
           <InstallApp />
-          <button
-            className="btn-ghost self-start text-no hover:text-no"
-            onClick={async () => {
-              await supabase.auth.signOut()
-              window.location.href = '/'
-            }}
-          >
-            로그아웃
-          </button>
+          <div className="flex flex-wrap items-center gap-2">
+            <button
+              className="btn-ghost"
+              onClick={async () => {
+                await supabase.auth.signOut()
+                window.location.href = '/'
+              }}
+            >
+              로그아웃
+            </button>
+            <a href="/?page=privacy" className="btn-ghost no-underline">개인정보처리방침</a>
+          </div>
         </div>
       </section>
+
+      <Withdraw />
     </div>
+  )
+}
+
+/** 회원 탈퇴: '탈퇴'를 직접 입력해야 진행돼요 */
+function Withdraw() {
+  const toast = useToast()
+  const [open, setOpen] = useState(false)
+  const [text, setText] = useState('')
+  const [busy, setBusy] = useState(false)
+
+  async function withdraw() {
+    setBusy(true)
+    const { error } = await supabase.functions.invoke('delete-account', { body: { confirm: text.trim() } })
+    if (error) {
+      setBusy(false)
+      let message = '탈퇴를 처리하지 못했어요. 잠시 후 다시 시도해 주세요.'
+      try { message = (await error.context.json())?.message || message } catch { /* 본문 없음 */ }
+      if (error.context?.status === 404) message = '탈퇴 기능이 아직 서버에 준비되지 않았어요.'
+      return toast(message)
+    }
+    await supabase.auth.signOut().catch(() => {})
+    window.location.href = '/'
+  }
+
+  return (
+    <section>
+      <h2 className="m-0 mb-1 text-[13px] font-semibold text-ink2">회원 탈퇴</h2>
+      <div className="sheet flex flex-col gap-3">
+        {!open ? (
+          <div className="flex items-center gap-3">
+            <p className="m-0 min-w-0 flex-1 text-[13px] text-ink2">계정과 개인정보를 모두 삭제해요.</p>
+            <button className="btn-ghost text-no hover:text-no" onClick={() => setOpen(true)}>탈퇴하기</button>
+          </div>
+        ) : (
+          <>
+            <ul className="m-0 flex flex-col gap-1 pl-5 text-[14px]">
+              <li>프로필, 입력한 시간, 친구·친구 신청, 알림 설정이 <b>바로 삭제되고 되돌릴 수 없어요.</b></li>
+              <li>내가 만든 약속은 다른 참여자에게 넘어가고, 혼자인 약속은 삭제돼요.</li>
+              <li>카카오로 가입했다면 카카오 계정 설정의 ‘연결된 서비스 관리’에서 연결도 끊을 수 있어요.</li>
+            </ul>
+            <label className="flex flex-col gap-1.5 text-[13px] font-medium text-ink2">
+              계속하려면 ‘탈퇴’를 입력해 주세요
+              <input className="field-input" value={text} onChange={(e) => setText(e.target.value)} placeholder="탈퇴" />
+            </label>
+            <div className="flex gap-2">
+              <button className="btn flex-1" onClick={() => { setOpen(false); setText('') }} disabled={busy}>취소</button>
+              <button className="btn flex-1 bg-no text-white hover:bg-no" onClick={withdraw} disabled={busy || text.trim() !== '탈퇴'}>
+                {busy ? '처리 중…' : '탈퇴하기'}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </section>
   )
 }
