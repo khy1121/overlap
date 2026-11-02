@@ -34,17 +34,22 @@ $dark: (
   :root { --bg-art: url('/brand/bg-desktop.webp'); }
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    @include palette($dark);
-    --shadow-soft: 0 4px 16px rgba(0, 0, 0, .35);
-    --shadow-float: 0 12px 32px -4px rgba(0, 0, 0, .5);
-    // 다크 모드: 크림 이미지를 어둡게 덮으면 탁해져서, 같은 자리에 파스텔 빛 번짐만 그려요.
-    --bg-art:
-      radial-gradient(38% 42% at 72% 10%, rgba(140, 152, 255, .34), transparent 70%),
-      radial-gradient(30% 40% at 98% 38%, rgba(79, 216, 168, .24), transparent 70%),
-      radial-gradient(38% 40% at 92% 92%, rgba(255, 157, 187, .22), transparent 70%),
-      radial-gradient(34% 34% at 45% 85%, rgba(255, 211, 107, .14), transparent 70%);
-    color-scheme: dark;
-  }
+// 다크 값 묶음. 시스템이 다크일 때(사용자가 라이트를 고르지 않았으면)와 직접 다크를 골랐을 때 둘 다 써요.
+@mixin dark-theme {
+  @include palette($dark);
+  --shadow-soft: 0 4px 16px rgba(0, 0, 0, .35);
+  --shadow-float: 0 12px 32px -4px rgba(0, 0, 0, .5);
+  // 다크 모드: 크림 이미지를 어둡게 덮으면 탁해져서, 같은 자리에 파스텔 빛 번짐만 그려요.
+  --bg-art:
+    radial-gradient(38% 42% at 72% 10%, rgba(140, 152, 255, .34), transparent 70%),
+    radial-gradient(30% 40% at 98% 38%, rgba(79, 216, 168, .24), transparent 70%),
+    radial-gradient(38% 40% at 92% 92%, rgba(255, 157, 187, .22), transparent 70%),
+    radial-gradient(34% 34% at 45% 85%, rgba(255, 211, 107, .14), transparent 70%);
+  color-scheme: dark;
 }
+
+// 테마 전환: <html data-theme="light|dark">가 있으면 그 값, 없으면 시스템 설정을 따라요.
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) { @include dark-theme; }
+}
+:root[data-theme='dark'] { @include dark-theme; }

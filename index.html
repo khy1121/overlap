@@ -10,6 +10,16 @@
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <meta name="theme-color" content="#faf7f2" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#15141a" media="(prefers-color-scheme: dark)" />
+    <script>
+      // 저장된 테마를 첫 페인트 전에 적용해 깜빡임을 막아요 (src/lib/theme.js와 같은 키).
+      try {
+        var t = localStorage.getItem('overlap-theme')
+        if (t === 'light' || t === 'dark') {
+          document.documentElement.dataset.theme = t
+          document.querySelectorAll('meta[name="theme-color"]').forEach(function (m) { m.content = t === 'dark' ? '#15141a' : '#faf7f2' })
+        }
+      } catch (e) {}
+    </script>
     <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin />
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css" />
     <link rel="preload" as="image" href="/brand/mascot.webp" />
