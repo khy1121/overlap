@@ -26,23 +26,23 @@ export default function AuthForm({ initial = 'login', onDone }) {
     }
   }
 
-  const label = 'flex flex-col gap-1 text-[13px] text-ink2'
+  const label = 'flex flex-col gap-1.5 text-left text-xs font-medium text-ink2'
   return (
-    <div className="w-full max-w-[380px] rounded-md border border-rule bg-sheet p-4">
-      <div className="mb-3.5 grid grid-cols-2 overflow-hidden rounded-md border border-rule" role="tablist">
-        {[['login', '로그인'], ['signup', '처음이에요 (가입)']].map(([k, t], i) => (
+    <div className="w-full max-w-[420px] rounded-lg bg-sheet p-5 text-left shadow-float sm:p-6">
+      <div className="mb-4 grid grid-cols-2 gap-1 rounded-full bg-rule2 p-1" role="tablist">
+        {[['login', '로그인'], ['signup', '처음이에요 (가입)']].map(([k, t]) => (
           <button
             key={k}
             role="tab"
             aria-selected={tab === k}
-            className={`min-h-[38px] text-[13px] ${i ? 'border-l border-rule' : ''} ${tab === k ? 'bg-ink font-semibold text-sheet' : 'hover:bg-cell'}`}
+            className={`min-h-[40px] rounded-full border-0 text-sm font-semibold ${tab === k ? 'bg-sheet text-ink shadow-soft' : 'bg-transparent text-ink2 hover:text-ink'}`}
             onClick={() => { setTab(k); setError('') }}
           >
             {t}
           </button>
         ))}
       </div>
-      <form className="flex flex-col gap-3" onSubmit={submit}>
+      <form className="flex flex-col gap-4" onSubmit={submit}>
         <label className={label}>
           이름
           <input className="field-input" required maxLength={20} autoComplete="name" placeholder="홍길동" value={form.name} onChange={set('name')} />
@@ -70,8 +70,8 @@ export default function AuthForm({ initial = 'login', onDone }) {
             <input className="field-input" type="password" required minLength={6} autoComplete="new-password" value={form.confirm} onChange={set('confirm')} />
           </label>
         )}
-        {error && <div className="rounded-md bg-no-soft px-3 py-2.5 text-[13px] text-ink" role="alert">{error}</div>}
-        <button className="btn-primary min-h-[42px] text-sm" type="submit" disabled={busy}>
+        {error && <div className="rounded-md bg-no-soft px-4 py-3 text-[13px] text-ink" role="alert">{error}</div>}
+        <button className="btn-primary mt-1 min-h-[52px] text-[15px]" type="submit" disabled={busy}>
           {busy ? '잠시만요…' : signup ? '가입하고 시작하기' : '로그인'}
         </button>
         <p className="small m-0">
