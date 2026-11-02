@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { displayName } from '../lib/auth'
 import { DAYS } from '../lib/schedule'
 import { confirmedTime, fetchMyMeetings, hm, meetingSpan } from '../lib/meetings'
+import InstallApp from './InstallApp'
 
 const ACTIONS = [
   {
@@ -75,6 +76,8 @@ export default function Home({ session }) {
         ))}
       </nav>
 
+      <InstallApp />
+
       <div className="grid items-start gap-4 md:grid-cols-2">
         <section className="sheet">
           <div className="flex items-center justify-between">
@@ -87,7 +90,7 @@ export default function Home({ session }) {
             {upcoming.map(({ m, t }) => (
               <li key={m.id} className="border-b border-rule2 last:border-0">
                 <a href={`/?m=${m.id}`} className="flex items-center gap-3 py-2.5 text-ink no-underline">
-                  <span className="grid w-12 shrink-0 place-items-center rounded-[12px] bg-pen-soft py-1 leading-tight text-pen-strong">
+                  <span className="grid w-12 shrink-0 place-items-center rounded-[12px] bg-pen-soft py-1 leading-tight text-accent">
                     <span className="text-[11px] font-semibold">{t.start.getMonth() + 1}월</span>
                     <span className="text-[18px] font-extrabold">{t.start.getDate()}</span>
                   </span>
@@ -107,7 +110,7 @@ export default function Home({ session }) {
             {list === null && <li className="py-2 text-[13px] text-ink2">불러오는 중…</li>}
             {list !== null && !ongoing.length && (
               <li className="py-2 text-[13px] text-ink2">
-                조율 중인 회의가 없어요. <a href="/?page=new" className="font-semibold text-pen-strong">새 회의 만들기</a>
+                조율 중인 회의가 없어요. <a href="/?page=new" className="font-semibold text-accent">새 회의 만들기</a>
               </li>
             )}
             {ongoing.slice(0, 6).map((m) => {
