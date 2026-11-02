@@ -5,8 +5,9 @@ import { DAYS, dayLabel, dayOf, md, nSlots, tm } from '../lib/schedule'
  * 주간 시간표.
  * edit 모드: 누르거나 드래그해서 칠함(놓을 때 onCommit 한 번), 요일/시간 머리글로 줄 전체 칠하기.
  * all 모드: 가능한 사람 수를 진하기로 보여 주고 칸을 누르면 onSelect.
+ * canPaint가 false면 칠하지 않고 스크롤만 돼요. 이때 칸을 탭하면 onLockedTap.
  */
-export default function TimeGrid({ cfg, people, mode, cells, canPaint, brush, sel, onSelect, onCommit, onFill, onAnnounce }) {
+export default function TimeGrid({ cfg, people, mode, cells, canPaint, brush, sel, onSelect, onCommit, onFill, onAnnounce, onLockedTap }) {
   const gridRef = useRef(null)
   const [draft, setDraft] = useState(null)
   const drag = useRef(null) // { val, cells }
@@ -106,7 +107,7 @@ export default function TimeGrid({ cfg, people, mode, cells, canPaint, brush, se
     )
     out.push(
       <div key={`h${d}`} className="pb-2 pt-0.5 text-center leading-tight">
-        {mode === 'edit' ? (
+        {mode === 'edit' && canPaint ? (
           <button
             className="w-full rounded p-0 hover:bg-cell"
             title={`${dayLabel(cfg, d)} 하루 전체 칠하기`}
@@ -126,7 +127,7 @@ export default function TimeGrid({ cfg, people, mode, cells, canPaint, brush, se
     const hour = s % 2 === 0
     out.push(
       <div key={`t${s}`} className="tl">
-        {hour && mode === 'edit' ? (
+        {hour && mode === 'edit' && canPaint ? (
           <button
             className="h-full w-full rounded-[3px] p-0 text-right hover:bg-cell"
             title={`${tm(cfg, s)}–${tm(cfg, s + 2)} 일주일 전체 칠하기`}
@@ -184,10 +185,11 @@ export default function TimeGrid({ cfg, people, mode, cells, canPaint, brush, se
         tabIndex={0}
         role="application"
         aria-label="주간 시간표. 방향키로 이동하고 스페이스로 칠합니다."
-        className={`timegrid ${mode === 'all' ? 'view' : 'edit'}`}
+        className={`timegrid ${mode === 'all' ? 'view' : 'edit'}${mode === 'edit' && canPaint ? ' paint' : ''}`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onKeyDown={onKeyDown}
+        onClick={(e) => { if (mode === 'edit' && !canPaint && e.target.dataset?.k) onLockedTap?.() }}
       >
         {out}
       </div>

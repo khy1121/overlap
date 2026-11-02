@@ -16,9 +16,10 @@ $hatch-cell: repeating-linear-gradient(135deg, transparent 0 5px, rgba(255,255,2
   min-width: 340px;
   user-select: none;
   -webkit-user-select: none;
-  touch-action: none;
+  // 기본은 세로 스크롤 허용. 칠하는 중(.paint)에도 칸만 막아서, 시간 눈금을 잡으면 스크롤돼요.
+  touch-action: pan-y;
   border-radius: 4px;
-  &.view { touch-action: pan-y; }
+  &.paint .c { touch-action: none; }
   &:focus-visible { outline-offset: 4px; }
 
   @media (max-width: 520px) {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { useMeeting } from '../hooks/useMeeting'
 import { useToast } from '../hooks/useToast'
+import { useMedia } from '../hooks/useMedia'
 import { GOOGLE_CLIENT_ID, requestCalendarToken } from '../lib/googleCalendar'
 import { copyText } from '../lib/copy'
 import { BRUSH_LABEL, DUR_LABEL, dayLabel, evaluate, md, nSlots, summary, tm } from '../lib/schedule'
@@ -28,6 +29,10 @@ export default function Board({ mid, session }) {
   const [calToken, setCalToken] = useState(null)
   const [calOpen, setCalOpen] = useState(false)
   const [announce, setAnnounce] = useState('')
+  // 모바일·터치: 스크롤하다 칸이 칠해지지 않게 '내 시간 입력'을 눌러야 칠할 수 있어요.
+  const lockable = useMedia('(max-width: 767px), (pointer: coarse)')
+  const [painting, setPainting] = useState(false)
+  const paintOn = !lockable || painting
 
   const link = `${window.location.origin}/?m=${mid}`
   const uid = session.user.id
@@ -66,11 +71,11 @@ export default function Board({ mid, session }) {
     const onKey = (e) => {
       if (e.target.closest?.('input,select,textarea')) return
       const b = { 1: 'y', 2: 'm', 3: 'n', 0: '' }[e.key]
-      if (b !== undefined && mode === 'edit') setBrush(b)
+      if (b !== undefined && mode === 'edit' && paintOn) setBrush(b)
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [mode])
+  }, [mode, paintOn])
 
   const commitCells = useCallback((next) => {
     if (tgt) updatePerson(tgt, { cells: next })
@@ -137,7 +142,7 @@ export default function Board({ mid, session }) {
     : null
 
   return (
-    <div className="flex flex-col gap-[18px]">
+    <div className={`flex flex-col gap-[18px] ${lockable ? 'pb-24' : ''}`}>
       <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
         <div className="min-w-0 flex-[1_1_320px]">
           <input
@@ -225,15 +230,15 @@ export default function Board({ mid, session }) {
                   key={k}
                   aria-pressed={mode === k}
                   className={`min-h-[34px] rounded-full border-0 px-3.5 text-[13px] font-semibold ${mode === k ? 'bg-sheet text-ink shadow-soft' : 'bg-transparent text-ink2 hover:text-ink'}`}
-                  onClick={() => setMode(k)}
+                  onClick={() => { setMode(k); if (k === 'all') setPainting(false) }}
                 >
                   {label}
                 </button>
               ))}
             </div>
-            {mode === 'edit' && targetPerson && Object.keys(targetPerson.cells).length > 0 && canEdit(tgt) && (
+            {mode === 'edit' && paintOn && targetPerson && Object.keys(targetPerson.cells).length > 0 && canEdit(tgt) && (
               <button
-                className="link-btn"
+                className="btn-ghost btn-sm text-no hover:text-no"
                 onClick={() => {
                   const prev = targetPerson.cells
                   const pid = tgt
@@ -246,9 +251,13 @@ export default function Board({ mid, session }) {
             )}
           </div>
 
+          {mode === 'edit' && !lockable && (
+            <div className="sticky z-[5] mb-1 bg-sheet py-2" style={{ top: 'env(safe-area-inset-top, 0px)' }}>
+              <Palette brush={brush} setBrush={setBrush} />
+            </div>
+          )}
           {mode === 'edit' && (
             <>
-              <Palette brush={brush} setBrush={setBrush} />
               {calOpen && calToken && (
                 <CalendarImport
                   cfg={cfg}
@@ -275,7 +284,13 @@ export default function Board({ mid, session }) {
                   </button>
                 )}
                 <span>{tgt === myPid ? '내 시간을 입력하는 중이에요.' : `${targetPerson?.name || '이름 없음'}님 대신 입력하는 중이에요.`}</span>
-                <span>칸을 누르거나 드래그해서 칠해요. 요일·시간을 누르면 그 줄 전체가 칠해져요.</span>
+                <span>
+                  {paintOn
+                    ? lockable
+                      ? '칸을 누르거나 드래그해서 칠해요. 스크롤은 왼쪽 시간 눈금을 잡고 하세요.'
+                      : '칸을 누르거나 드래그해서 칠해요. 요일·시간을 누르면 그 줄 전체가 칠해져요.'
+                    : '아래 ‘입력’ 버튼을 누르면 칠할 수 있어요. 그 전에는 마음껏 스크롤해도 돼요.'}
+                </span>
               </div>
             </>
           )}
@@ -285,7 +300,8 @@ export default function Board({ mid, session }) {
             people={people}
             mode={mode}
             cells={targetPerson?.cells || {}}
-            canPaint={canEdit(tgt)}
+            canPaint={canEdit(tgt) && paintOn}
+            onLockedTap={canEdit(tgt) ? () => toast('아래 ‘입력’ 버튼을 누르면 칠할 수 있어요') : undefined}
             brush={brush}
             sel={sel}
             onSelect={setSel}
@@ -338,7 +354,7 @@ export default function Board({ mid, session }) {
           )}
         </section>
 
-        <aside className="flex flex-col gap-5">
+        <aside id="suggest" className="flex scroll-mt-4 flex-col gap-5">
           <SuggestionNote
             cfg={cfg}
             result={result}
@@ -386,7 +402,58 @@ export default function Board({ mid, session }) {
           />
         </aside>
       </div>
+      {lockable && (
+        <MobileBar
+          painting={painting}
+          who={tgt === myPid ? '내 시간' : `${targetPerson?.name || '이름 없음'}님 시간`}
+          canPaint={canEdit(tgt)}
+          brush={brush}
+          setBrush={setBrush}
+          best={result.entered && list.length ? list[cand % list.length] : null}
+          bestText={(w) => `${dayLabel(cfg, w.d)} ${tm(cfg, w.s)}`}
+          bestCount={(w) => `${w.g.y.length + w.g.m.length}/${n}명`}
+          onStart={() => { setMode('edit'); setPainting(true) }}
+          onDone={() => { setPainting(false); toast('저장했어요') }}
+          onBest={() => document.getElementById('suggest')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+        />
+      )}
       <div className="sr-only" aria-live="polite">{announce}</div>
+    </div>
+  )
+}
+
+/** 모바일 하단 고정 바: 평소엔 추천 시간 + '시간 입력', 입력 중엔 칠하기 도구 + '완료'. */
+function MobileBar({ painting, who, canPaint, brush, setBrush, best, bestText, bestCount, onStart, onDone, onBest }) {
+  return (
+    <div
+      className="fixed inset-x-0 bottom-0 z-30 border-t border-rule bg-[color-mix(in_oklab,var(--sheet)_92%,transparent)] px-3 pt-2.5 shadow-[0_-8px_24px_-12px_rgba(42,40,56,.18)] backdrop-blur"
+      style={{ paddingBottom: 'max(10px, env(safe-area-inset-bottom, 0px))' }}
+    >
+      {painting ? (
+        <div className="mx-auto flex max-w-[560px] items-center gap-2">
+          <Palette brush={brush} setBrush={setBrush} compact className="min-w-0 flex-1" />
+          <button type="button" className="btn-primary min-h-[44px] px-4" onClick={onDone}>완료</button>
+        </div>
+      ) : (
+        <div className="mx-auto flex max-w-[560px] items-center gap-2">
+          {best ? (
+            <button type="button" className="btn-ghost min-h-[44px] min-w-0 flex-1 justify-start px-2 text-left" onClick={onBest}>
+              <span className="min-w-0">
+                <span className="block text-[11px] font-medium text-ink2">추천 시간</span>
+                <span className="block truncate text-sm text-ink">{bestText(best)} <span className="text-ink2">· {bestCount(best)}</span></span>
+              </span>
+            </button>
+          ) : (
+            <span className="min-w-0 flex-1 px-2 text-[13px] text-ink2">되는 시간을 칠하면 추천해 드려요</span>
+          )}
+          {canPaint && (
+            <button type="button" className="btn-primary min-h-[44px] px-4" onClick={onStart}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M12 20h9" /><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z" /></svg>
+              {who} 입력
+            </button>
+          )}
+        </div>
+      )}
     </div>
   )
 }
