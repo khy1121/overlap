@@ -6,7 +6,9 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { sendPush } from './webpush.ts'
 
 const ALLOWED_ORIGINS = ['https://overlap-liard.vercel.app', 'http://localhost:5179']
-const KINDS = ['upcoming', 'confirmed', 'friend', 'invite', 'updates']
+const KINDS = ['upcoming', 'confirmed', 'friend', 'invite', 'updates', 'feedback']
+// 사용자가 끌 수 없는 종류 (관리자용 의견 알림·테스트)
+const ALWAYS = ['test', 'feedback']
 
 const cors = (origin: string | null) => ({
   'Access-Control-Allow-Origin': origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0],
@@ -103,7 +105,7 @@ Deno.serve(async (req) => {
 
   // 종류별 알림을 끈 사람은 빼요 (설정이 없으면 모두 켜짐)
   let targets = userIds
-  if (kind !== 'test') {
+  if (!ALWAYS.includes(kind)) {
     const { data: off } = await admin.from('notification_prefs').select('user_id').in('user_id', userIds).eq(kind, false)
     const offIds = new Set((off || []).map((r: { user_id: string }) => r.user_id))
     targets = userIds.filter((id) => !offIds.has(id))

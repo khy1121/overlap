@@ -191,6 +191,18 @@ export default function Settings({ session }) {
         </div>
       </section>
 
+      <section>
+        <h2 className="m-0 mb-1 text-[13px] font-semibold text-ink2">도움</h2>
+        <a href="/?page=feedback" className="sheet flex items-center gap-3 text-ink no-underline transition-transform active:scale-[.99]">
+          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-pen-soft text-[20px]" aria-hidden="true">💬</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[15px] font-semibold">의견 보내기</span>
+            <span className="block text-[13px] text-ink2">버그나 고치면 좋을 점을 알려 주세요. 익명으로도 보낼 수 있어요.</span>
+          </span>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-ink2" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+        </a>
+      </section>
+
       <Withdraw />
     </div>
   )

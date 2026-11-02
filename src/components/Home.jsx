@@ -144,6 +144,10 @@ export default function Home({ session }) {
           </ul>
         </section>
       </div>
+      <div className="flex justify-center gap-4 pb-2 text-[13px] text-ink2">
+        <a href="/?page=feedback" className="text-ink2 underline underline-offset-2 hover:text-ink">의견 보내기</a>
+        <a href="/?page=privacy" className="text-ink2 underline underline-offset-2 hover:text-ink">개인정보처리방침</a>
+      </div>
     </div>
   )
 }

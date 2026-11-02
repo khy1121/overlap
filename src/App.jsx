@@ -12,11 +12,12 @@ import Friends from './components/Friends'
 import Settings from './components/Settings'
 import UpdateBanner from './components/UpdateBanner'
 import Privacy from './components/Privacy'
+import Feedback from './components/Feedback'
 
 const params = new URLSearchParams(window.location.search)
 const MID = params.get('m')
-// 로그인 후 하위 페이지: /?page=new | schedule | friends | settings
-const PAGES = { new: NewMeeting, schedule: MySchedule, friends: Friends, settings: Settings }
+// 로그인 후 하위 페이지: /?page=new | schedule | friends | settings | feedback
+const PAGES = { new: NewMeeting, schedule: MySchedule, friends: Friends, settings: Settings, feedback: Feedback }
 const Page = PAGES[params.get('page')]
 
 export default function App() {
