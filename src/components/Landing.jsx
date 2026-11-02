@@ -30,7 +30,7 @@ const FEATURES = [
 /** 첫 화면: 토스 톤(단색 배경·왼쪽 정렬)으로 마스코트, 한 줄 소개, 로그인, 앱 설치, 특징 3가지 */
 export default function Landing() {
   return (
-    <div className="mx-auto grid w-full max-w-[960px] gap-6 pb-6 pt-2 md:grid-cols-[minmax(0,1fr)_400px] md:items-start md:gap-14 md:pt-12">
+    <div className="mx-auto grid w-full max-w-[960px] grid-cols-1 gap-6 pb-6 pt-2 md:grid-cols-[minmax(0,1fr)_400px] md:items-start md:gap-14 md:pt-12">
       <section className="flex flex-col items-start">
         <img
           src="/brand/mascot.webp"

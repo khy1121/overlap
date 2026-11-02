@@ -19,13 +19,19 @@ export default function AppBar({ session }) {
             <Avatar name={displayName(user)} size={28} />
             <span className="hidden truncate sm:inline">{displayName(user)}</span>
             <button
-              className="btn-ghost btn-sm"
+              className="btn-ghost btn-sm max-sm:!px-2"
+              aria-label="로그아웃"
+              title="로그아웃"
               onClick={async () => {
                 await supabase.auth.signOut()
                 window.location.href = '/'
               }}
             >
-              로그아웃
+              {/* 모바일은 아이콘만 (큰 글자 설정에서도 상단 바가 넘치지 않게) */}
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" className="sm:hidden">
+                <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9" />
+              </svg>
+              <span className="max-sm:hidden">로그아웃</span>
             </button>
           </>
         )}

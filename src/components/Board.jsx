@@ -213,7 +213,7 @@ export default function Board({ mid, session }) {
         </div>
       )}
 
-      <div className="grid items-start gap-5 min-[920px]:grid-cols-[minmax(0,1fr)_340px]">
+      <div className="grid grid-cols-1 items-start gap-5 min-[920px]:grid-cols-[minmax(0,1fr)_340px]">
         <section className="sheet" aria-label="시간 입력">
           <PeopleBar
             people={people}

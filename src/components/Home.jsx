@@ -61,7 +61,7 @@ export default function Home({ session }) {
         어떤 걸 해 볼까요?
       </h1>
 
-      <nav className="grid gap-3 sm:grid-cols-3" aria-label="바로가기">
+      <nav className="grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label="바로가기">
         {ACTIONS.map((a) => (
           <a key={a.href} href={a.href} className="sheet flex items-center gap-4 text-ink no-underline transition-transform active:scale-[.98] sm:flex-col sm:items-start">
             <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-[14px] ${a.tone}`}>
@@ -78,7 +78,7 @@ export default function Home({ session }) {
 
       <InstallApp />
 
-      <div className="grid items-start gap-4 md:grid-cols-2">
+      <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
         <section className="sheet">
           <div className="flex items-center justify-between">
             <h2 className="m-0 text-[17px] font-bold">다가오는 회의</h2>

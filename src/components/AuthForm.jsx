@@ -29,7 +29,7 @@ function BirthInput({ value, onChange }) {
       autoComplete="bday"
       required
       maxLength={10}
-      placeholder="예: 19990315 또는 990315"
+      placeholder="예: 990315"
       value={value}
       onChange={(e) => {
         const next = e.target.value
@@ -75,7 +75,7 @@ export default function AuthForm({ initial = 'login', onDone }) {
   return (
     <div className="w-full rounded-[20px] bg-sheet p-5 text-left shadow-soft sm:p-6">
       <div className="mb-4 grid grid-cols-2 gap-1 rounded-full bg-rule2 p-1" role="tablist">
-        {[['login', '로그인'], ['signup', '처음이에요 (가입)']].map(([k, t]) => (
+        {[['login', '로그인'], ['signup', '회원가입']].map(([k, t]) => (
           <button
             key={k}
             role="tab"

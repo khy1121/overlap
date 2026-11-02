@@ -92,7 +92,7 @@ export default function MySchedule() {
         )}
       </PageHeader>
 
-      <div className="grid items-start gap-4 md:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-[minmax(0,1fr)_320px]">
         <section className="sheet !p-3 sm:!p-5" aria-label="달력">
           <div className="mb-3 flex items-center justify-between">
             <button className="btn-ghost btn-sm !px-2" aria-label="이전 달" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}>

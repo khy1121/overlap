@@ -1,4 +1,7 @@
 html {
+  // 카카오톡 등 인앱 브라우저·삼성 인터넷이 글자를 임의로 키우지 않게
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
 }
@@ -15,6 +18,8 @@ body {
   letter-spacing: -0.003em;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
+  // 안전망: 글자 크기를 키운 브라우저에서 무엇이 넘치더라도 화면이 옆으로 밀리지 않게
+  overflow-x: clip;
 }
 
 // 숫자는 Pretendard 고정폭 숫자로 (시간표·시각 표시)

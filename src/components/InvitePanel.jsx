@@ -40,7 +40,7 @@ export default function InvitePanel({ mid, cfg, link, onClose }) {
 
   const h3 = 'm-0 mb-1 font-display text-[15px] font-extrabold'
   return (
-    <section className="relative grid gap-[18px] rounded-md border border-rule bg-sheet px-[18px] py-4 lg:grid-cols-3" aria-label="초대하기">
+    <section className="relative grid grid-cols-1 gap-[18px] rounded-md border border-rule bg-sheet px-[18px] py-4 lg:grid-cols-3" aria-label="초대하기">
       <button className="absolute right-2 top-2 h-8 w-8 rounded text-lg text-ink2 hover:bg-cell" aria-label="초대 창 닫기" onClick={onClose}>×</button>
 
       <div className="flex min-w-0 flex-col gap-2">
