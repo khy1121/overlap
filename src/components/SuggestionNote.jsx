@@ -8,7 +8,7 @@ export default function SuggestionNote({ cfg, result, list, cand, byId, onNext, 
   if (!entered || !list.length) {
     return (
       <div className="note">
-        <div className="font-hand text-[30px] leading-none text-pen">이 시간 어때요?</div>
+        <div className="font-display text-[22px] font-extrabold leading-tight tracking-[-.02em] text-pen">이 시간 어때요?</div>
         <div className="mt-2 font-display text-[19px] font-extrabold leading-tight">
           {entered ? '아직 겹치는 시간이 없어요' : '아직 아무도 입력하지 않았어요'}
         </div>
@@ -23,7 +23,7 @@ export default function SuggestionNote({ cfg, result, list, cand, byId, onNext, 
   const w = list[cand % list.length]
   return (
     <div className="note swap" key={swapKey}>
-      <div className="font-hand text-[30px] leading-none text-pen">{w.all ? '이 시간 어때요? 다 돼요!' : '이 시간 어때요?'}</div>
+      <div className="font-display text-[22px] font-extrabold leading-tight tracking-[-.02em] text-pen">{w.all ? '이 시간 어때요? 다 돼요!' : '이 시간 어때요?'}</div>
       <div className="when mt-2 text-balance font-display text-[25px] font-extrabold leading-tight">
         {dayLabel(cfg, w.d)}
         <br />

@@ -8,20 +8,24 @@
 @import 'note';
 
 @layer components {
+  // 버튼: 알약 모양. Primary = 라벤더 블루 + 떠 있는 그림자
   .btn {
-    @apply inline-flex items-center justify-center gap-2 rounded-md border border-rule bg-sheet px-3 py-1.5 text-[13px] min-h-[36px] hover:border-ink2;
+    @apply inline-flex min-h-[38px] items-center justify-center gap-2 rounded-full border-[1.5px] border-rule bg-sheet px-4 py-1.5 text-[13px] font-semibold text-ink hover:border-pen hover:text-pen;
   }
   .btn-primary {
-    @apply btn border-ink bg-ink font-semibold text-sheet hover:border-ink;
+    @apply btn border-pen bg-pen text-pen-ink shadow-float hover:border-pen hover:bg-[color-mix(in_oklab,var(--pen)_88%,black)] hover:text-pen-ink;
+  }
+  .btn-soft {
+    @apply btn border-transparent bg-pen-soft text-pen hover:border-transparent;
   }
   .sheet {
-    @apply min-w-0 rounded-md border border-rule bg-sheet p-4 sm:p-[18px];
+    @apply min-w-0 rounded-lg bg-sheet p-4 shadow-soft sm:p-6;
   }
   .link-btn {
-    @apply border-0 bg-transparent p-0 text-xs text-pen underline underline-offset-2;
+    @apply border-0 bg-transparent p-0 text-xs font-semibold text-pen underline underline-offset-2;
   }
   .field-input {
-    @apply rounded border border-rule bg-paper px-2.5 py-2 text-base text-ink;
+    @apply min-h-[48px] rounded-md border-[1.5px] border-transparent bg-rule2 px-4 py-2.5 text-base text-ink outline-none transition-colors placeholder:text-ink2 focus:border-pen focus:bg-sheet;
   }
   .small {
     @apply text-xs text-ink2;
