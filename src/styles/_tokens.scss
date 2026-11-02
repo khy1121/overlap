@@ -39,7 +39,12 @@ $dark: (
     @include palette($dark);
     --shadow-soft: 0 4px 16px rgba(0, 0, 0, .35);
     --shadow-float: 0 12px 32px -4px rgba(0, 0, 0, .5);
-    --bg-art: none;
+    // 다크 모드: 크림 이미지를 어둡게 덮으면 탁해져서, 같은 자리에 파스텔 빛 번짐만 그려요.
+    --bg-art:
+      radial-gradient(38% 42% at 72% 10%, rgba(140, 152, 255, .34), transparent 70%),
+      radial-gradient(30% 40% at 98% 38%, rgba(79, 216, 168, .24), transparent 70%),
+      radial-gradient(38% 40% at 92% 92%, rgba(255, 157, 187, .22), transparent 70%),
+      radial-gradient(34% 34% at 45% 85%, rgba(255, 211, 107, .14), transparent 70%);
     color-scheme: dark;
   }
 }
