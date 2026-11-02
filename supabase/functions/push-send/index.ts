@@ -15,6 +15,20 @@ const cors = (origin: string | null) => ({
   Vary: 'Origin',
 })
 
+// 비밀값의 비공개 키(JWK) 읽기. 붙여 넣을 때 바깥 { } 가 빠져도 받아들이고, 잘못된 값이면 null (함수가 멈추지 않게)
+function readJwk(raw: string) {
+  let s = raw.trim()
+  if (!s) return null
+  if (!s.startsWith('{')) s = `{${s}`
+  if (!s.endsWith('}')) s = `${s.replace(/,\s*$/, '')}}`
+  try {
+    const j = JSON.parse(s)
+    return j && j.kty === 'EC' && j.d && j.x && j.y ? j : null
+  } catch {
+    return null
+  }
+}
+
 // 길이가 같을 때도 시간 차로 값이 새지 않게 비교
 function safeEqual(a: string, b: string) {
   if (!a || !b || a.length !== b.length) return false
@@ -34,11 +48,21 @@ Deno.serve(async (req) => {
     auth: { persistSession: false, autoRefreshToken: false },
   })
   const vapid = {
-    publicKey: Deno.env.get('VAPID_PUBLIC_KEY') || '',
-    privateJwk: JSON.parse(Deno.env.get('VAPID_PRIVATE_JWK') || 'null'),
+    publicKey: (Deno.env.get('VAPID_PUBLIC_KEY') || '').trim(),
+    privateJwk: readJwk(Deno.env.get('VAPID_PRIVATE_JWK') || ''),
     subject: 'https://overlap-liard.vercel.app',
   }
-  if (!vapid.publicKey || !vapid.privateJwk) return json(500, { error: 'not_configured' })
+  if (!vapid.publicKey || !vapid.privateJwk) {
+    // 값은 절대 내보내지 않고, 무엇이 빠졌는지만 알려요
+    const raw = (Deno.env.get('VAPID_PRIVATE_JWK') || '').trim()
+    return json(500, {
+      error: 'not_configured',
+      check: {
+        public_key: vapid.publicKey ? `ok(${vapid.publicKey.length}자)` : 'missing',
+        private_jwk: vapid.privateJwk ? 'ok' : raw ? `invalid(${raw.length}자, 필요 항목 kty·crv·x·y·d: ${['kty', 'crv', 'x', 'y', 'd'].map((k) => (raw.includes(`"${k}"`) ? k : `${k}없음`)).join(',')})` : 'missing',
+      },
+    })
+  }
 
   let input: Record<string, unknown> = {}
   try {
