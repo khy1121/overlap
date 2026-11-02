@@ -26,7 +26,7 @@ export default function InvitePanel({ mid, cfg, link, onClose }) {
     if (!list.length) return setEmailNote('이메일 주소를 입력해 주세요.')
     if (bad.length) return setEmailNote(`주소를 확인해 주세요: ${bad.join(', ')}`)
     const subject = `[Overlap] ${cfg.title} 시간 맞추기`
-    const body = `안녕하세요!\n\n"${cfg.title}" 회의 시간을 정하려고 해요.\n${md(cfg, 0)}부터 일주일 중 되는 시간을 칠해 주세요.\n\n${link}\n\n이름·생년월일·비밀번호로 간단히 가입하면 바로 참여할 수 있어요.`
+    const body = `안녕하세요!\n\n"${cfg.title}" 시간을 정하려고 해요.\n${md(cfg, 0)}부터 일주일 중 되는 시간을 칠해 주세요.\n\n${link}\n\n이름·생년월일·비밀번호로 간단히 가입하면 바로 참여할 수 있어요.`
     window.location.href = `mailto:?bcc=${encodeURIComponent(list.join(','))}&subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
     setEmailNote('메일 앱이 열리지 않으면 링크를 복사해서 직접 보내 주세요.')
   }
@@ -35,7 +35,7 @@ export default function InvitePanel({ mid, cfg, link, onClose }) {
     const { error } = await supabase.rpc('invite_friend', { mid, target: f.user_id })
     if (error) return toast(`추가하지 못했어요: ${error.message}`)
     setFriends((list) => list.map((x) => (x.user_id === f.user_id ? { ...x, in_meeting: true } : x)))
-    toast(`${f.name || '친구'}님을 회의에 추가했어요`)
+    toast(`${f.name || '친구'}님을 약속에 추가했어요`)
   }
 
   const h3 = 'm-0 mb-1 font-display text-[15px] font-extrabold'
@@ -45,7 +45,7 @@ export default function InvitePanel({ mid, cfg, link, onClose }) {
 
       <div className="flex min-w-0 flex-col gap-2">
         <h3 className={h3}>친구 초대</h3>
-        <p className="small m-0">친구는 누르면 바로 이 회의에 들어와요. 친구 코드를 입력해서 새 친구를 맺을 수도 있어요.</p>
+        <p className="small m-0">친구는 누르면 바로 이 약속에 들어와요. 친구 코드를 입력해서 새 친구를 맺을 수도 있어요.</p>
         <ul className="m-0 flex max-h-[220px] list-none flex-col gap-1 overflow-auto p-0">
           {friends === null && <li className="small">불러오는 중…</li>}
           {friends?.length === 0 && <li className="small">아직 친구가 없어요. 아래에 친구 코드를 입력해 보세요.</li>}

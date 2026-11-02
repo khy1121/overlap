@@ -1,7 +1,7 @@
 {
   "name": "Overlap — 모두의 시간이 겹치는 순간",
   "short_name": "Overlap",
-  "description": "각자 되는 시간을 칠하면, 모두가 겹치는 회의 시간을 찾아 제안해 드려요.",
+  "description": "각자 되는 시간을 칠하면, 모두가 되는 약속 시간을 찾아 제안해 드려요.",
   "lang": "ko",
   "id": "/",
   "start_url": "/?source=pwa",

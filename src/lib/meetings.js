@@ -37,7 +37,7 @@ export function googleAddLink(m, t) {
     action: 'TEMPLATE',
     text: m.title,
     dates: `${f(t.start)}/${f(t.end)}`,
-    details: `Overlap에서 정한 회의예요.\n${window.location.origin}/?m=${m.id}`,
+    details: `Overlap에서 정한 약속이에요.\n${window.location.origin}/?m=${m.id}`,
   })
   return `https://calendar.google.com/calendar/render?${q}`
 }

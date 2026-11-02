@@ -7,15 +7,15 @@ import InstallApp from './InstallApp'
 const ACTIONS = [
   {
     href: '/?page=new',
-    title: '새 회의 만들기',
-    desc: '기간과 시간대를 정하고 사람들을 초대해요',
+    title: '새 약속 만들기',
+    desc: '회의도, 친구 모임도 시간 맞추기부터',
     tone: 'bg-pen-strong text-pen-ink',
     icon: <path d="M12 5v14M5 12h14" />,
   },
   {
     href: '/?page=schedule',
     title: '내 일정 보기',
-    desc: '확정된 회의를 달력으로 확인해요',
+    desc: '확정된 약속을 달력으로 확인해요',
     tone: 'bg-yes-soft text-ink',
     icon: (
       <>
@@ -81,12 +81,12 @@ export default function Home({ session }) {
       <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
         <section className="sheet">
           <div className="flex items-center justify-between">
-            <h2 className="m-0 text-[17px] font-bold">다가오는 회의</h2>
+            <h2 className="m-0 text-[17px] font-bold">다가오는 약속</h2>
             <a href="/?page=schedule" className="text-[13px] font-semibold text-ink2 no-underline hover:text-ink">달력 보기</a>
           </div>
           <ul className="m-0 mt-2 list-none p-0">
             {list === null && <li className="py-2 text-[13px] text-ink2">불러오는 중…</li>}
-            {list !== null && !upcoming.length && <li className="py-2 text-[13px] text-ink2">확정된 회의가 아직 없어요.</li>}
+            {list !== null && !upcoming.length && <li className="py-2 text-[13px] text-ink2">확정된 약속이 아직 없어요.</li>}
             {upcoming.map(({ m, t }) => (
               <li key={m.id} className="border-b border-rule2 last:border-0">
                 <a href={`/?m=${m.id}`} className="flex items-center gap-3 py-2.5 text-ink no-underline">
@@ -110,7 +110,7 @@ export default function Home({ session }) {
             {list === null && <li className="py-2 text-[13px] text-ink2">불러오는 중…</li>}
             {list !== null && !ongoing.length && (
               <li className="py-2 text-[13px] text-ink2">
-                조율 중인 회의가 없어요. <a href="/?page=new" className="font-semibold text-accent">새 회의 만들기</a>
+                조율 중인 약속이 없어요. <a href="/?page=new" className="font-semibold text-accent">새 약속 만들기</a>
               </li>
             )}
             {ongoing.slice(0, 6).map((m) => {

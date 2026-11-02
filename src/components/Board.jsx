@@ -66,7 +66,7 @@ export default function Board({ mid, session }) {
     if (params.get('new')) {
       window.history.replaceState(null, '', `/?m=${mid}`)
       setInviteOpen(true)
-      toast('회의를 만들었어요. 사람들을 초대해 보세요.')
+      toast('약속을 만들었어요. 함께할 사람들을 초대해 보세요.')
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [m.status])
@@ -91,12 +91,12 @@ export default function Board({ mid, session }) {
 
   const onCalExpired = useCallback(() => setCalToken(null), [])
 
-  if (m.status === 'loading') return <div className="grid min-h-[40vh] place-items-center text-ink2">회의를 불러오는 중…</div>
+  if (m.status === 'loading') return <div className="grid min-h-[40vh] place-items-center text-ink2">약속을 불러오는 중…</div>
   if (m.status === 'error') {
-    const msg = m.error === 'not_found' ? '링크가 정확한지 확인해 주세요.' : m.error === 'deleted' ? '이 회의는 삭제됐어요.' : `잠시 후 다시 시도해 주세요. (${m.error})`
+    const msg = m.error === 'not_found' ? '링크가 정확한지 확인해 주세요.' : m.error === 'deleted' ? '이 약속은 삭제됐어요.' : `잠시 후 다시 시도해 주세요. (${m.error})`
     return (
       <section className="sheet mx-auto mt-6 max-w-[460px]">
-        <h1 className="mb-1 font-display text-[28px] font-extrabold">회의를 열 수 없어요</h1>
+        <h1 className="mb-1 font-display text-[28px] font-extrabold">약속을 열 수 없어요</h1>
         <p className="small">{msg} <a href="/" className="text-pen">홈으로</a></p>
       </section>
     )
@@ -140,7 +140,7 @@ export default function Board({ mid, session }) {
 
   function noticeText(w, dur, final) {
     const head = `${cfg.title} 시간 ${final ? '확정' : '제안'}\n${dayLabel(cfg, w.d)} ${tm(cfg, w.s)}–${tm(cfg, w.s + dur)}`
-    if (final) return `${head}\n이 시간으로 진행할게요!\n${link}`
+    if (final) return `${head}\n이 시간에 만나요!\n${link}`
     return `${head}\n(${summary(w, n)})\n이 시간 어때요?\n${link}`
   }
   const copy = async (text) => toast((await copyText(text)) ? '복사했어요' : '복사하지 못했어요')
@@ -167,19 +167,19 @@ export default function Board({ mid, session }) {
         <div className="min-w-0 flex-[1_1_320px]">
           <input
             key={cfg.title}
-            aria-label="회의 이름"
+            aria-label="약속 이름"
             maxLength={40}
             defaultValue={cfg.title}
             className="w-full max-w-[560px] border-0 border-b-2 border-transparent bg-transparent p-0 font-display text-[clamp(26px,4.4vw,36px)] font-extrabold tracking-tight hover:border-rule focus:border-rule focus-visible:border-pen focus-visible:outline-none"
             onBlur={(e) => {
-              const v = e.target.value.trim() || '우리 회의 언제?'
+              const v = e.target.value.trim() || '우리 언제 만나?'
               if (v !== cfg.title) updateCfg({ title: v })
             }}
             onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
           />
           <div className="mt-0.5 text-sm text-ink2">
             <span className="tabular font-mono text-ink">{md(cfg, 0)} – {md(cfg, 6)}</span>
-            {` · ${cfg.count}명 예상 · ${DUR_LABEL[cfg.dur] || `${cfg.dur * 30}분`} 회의 · `}
+            {` · ${cfg.count}명 예상 · ${DUR_LABEL[cfg.dur] || `${cfg.dur * 30}분`} · `}
             <span className="tabular font-mono text-ink">{String(cfg.from).padStart(2, '0')}:00–{String(cfg.to).padStart(2, '0')}:00</span>
           </div>
         </div>
@@ -203,7 +203,7 @@ export default function Board({ mid, session }) {
       {picked && (
         <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-md bg-pen-strong px-4 py-3 text-pen-ink">
           <div>
-            <div className="text-xs opacity-85">확정된 회의 시간</div>
+            <div className="text-xs opacity-85">확정된 약속 시간</div>
             <strong className="font-display text-xl font-extrabold">{dayLabel(cfg, picked.d)} {tm(cfg, picked.s)}–{tm(cfg, picked.s + picked.dur)}</strong>
           </div>
           <div className="flex flex-wrap gap-1.5">

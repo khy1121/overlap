@@ -28,18 +28,18 @@ export default function NewMeeting() {
       p_expected: Math.max(1, Math.min(50, Number(form.count) || 4)),
     })
     setBusy(false)
-    if (error) return toast(`회의를 만들지 못했어요: ${error.message}`)
+    if (error) return toast(`약속을 만들지 못했어요: ${error.message}`)
     window.location.href = `/?m=${data}&new=1`
   }
 
   const label = 'flex flex-col gap-1.5 text-[13px] font-medium text-ink2'
   return (
     <div className="mx-auto flex w-full max-w-[560px] flex-col gap-4">
-      <PageHeader title="새 회의 만들기" sub="기간과 시간대를 정하면, 사람들이 되는 시간을 칠할 시간표가 만들어져요." />
+      <PageHeader title="새 약속 만들기" sub="팀 회의도, 친구 모임도 좋아요. 기간과 시간대를 정하면 함께 칠할 시간표가 만들어져요." />
       <form className="sheet flex flex-col gap-4" onSubmit={create}>
         <label className={label}>
-          회의 이름
-          <input className="field-input" maxLength={40} placeholder="예: 3주차 팀 회의" required autoFocus value={form.title} onChange={set('title')} />
+          약속 이름
+          <input className="field-input" maxLength={40} placeholder="예: 금요일 저녁 모임, 3주차 팀 회의" required autoFocus value={form.title} onChange={set('title')} />
         </label>
         <div className="grid grid-cols-2 gap-3">
           <label className={label}>
@@ -66,7 +66,7 @@ export default function NewMeeting() {
           </label>
         </div>
         <label className={label}>
-          회의 길이
+          얼마나 만날까요
           <select className="field-input" value={form.dur} onChange={set('dur')}>
             <option value={1}>30분</option>
             <option value={2}>1시간</option>
@@ -76,7 +76,7 @@ export default function NewMeeting() {
           </select>
         </label>
         <button className="btn-primary btn-lg mt-1" type="submit" disabled={busy}>
-          {busy ? '만드는 중…' : '회의 만들고 사람들 초대하기'}
+          {busy ? '만드는 중…' : '약속 만들고 초대하기'}
         </button>
       </form>
     </div>

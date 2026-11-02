@@ -80,7 +80,7 @@ export default function MySchedule() {
 
   return (
     <div className="flex flex-col gap-4">
-      <PageHeader title="내 일정" sub="확정된 회의를 달력으로 보고, Google 캘린더의 바쁜 시간도 함께 확인해요.">
+      <PageHeader title="내 일정" sub="확정된 약속을 달력으로 보고, Google 캘린더의 바쁜 시간도 함께 확인해요.">
         {gToken ? (
           <span className="inline-flex items-center gap-1.5 text-[13px] text-ink2">
             <i className="h-2 w-2 rounded-full bg-yes" /> {gLoading ? 'Google 캘린더 불러오는 중…' : 'Google 캘린더 연결됨'}
@@ -148,7 +148,7 @@ export default function MySchedule() {
                       </span>
                     ))}
                     {ev.length > 3 && <span className="px-1 text-[11px] text-ink2">+{ev.length - 3}</span>}
-                    {pend > 0 && <span className="mt-0.5 h-1 rounded-full bg-maybe" title="시간 조율 중인 회의 기간" />}
+                    {pend > 0 && <span className="mt-0.5 h-1 rounded-full bg-maybe" title="시간 조율 중인 약속 기간" />}
                   </span>
                   <span className="flex justify-center gap-0.5 md:hidden" aria-hidden="true">
                     {ev.slice(0, 3).map((e, i) => <i key={i} className={`h-1.5 w-1.5 rounded-full ${e.kind === 'meet' ? 'bg-pen-strong' : 'bg-ink2'}`} />)}
@@ -159,7 +159,7 @@ export default function MySchedule() {
             })}
           </div>
           <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink2">
-            <span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-[3px] bg-pen-strong" />확정된 회의</span>
+            <span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-[3px] bg-pen-strong" />확정된 약속</span>
             <span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-[3px] bg-maybe" />시간 조율 중</span>
             <span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-[3px] bg-ink2" />Google 캘린더(바쁨)</span>
           </div>
@@ -198,9 +198,9 @@ export default function MySchedule() {
           </section>
 
           <section className="sheet">
-            <h2 className="m-0 text-[17px] font-bold">시간 조율 중인 회의</h2>
+            <h2 className="m-0 text-[17px] font-bold">시간 조율 중인 약속</h2>
             <ul className="m-0 mt-2 list-none p-0">
-              {meetings !== null && !pending.length && <li className="py-2 text-[13px] text-ink2">조율 중인 회의가 없어요.</li>}
+              {meetings !== null && !pending.length && <li className="py-2 text-[13px] text-ink2">조율 중인 약속이 없어요.</li>}
               {pending.slice(0, 20).map((m) => {
                 const s = meetingSpan(m)
                 return (

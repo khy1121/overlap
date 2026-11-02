@@ -163,7 +163,7 @@ export default function Friends() {
   const fmt = (d) => { const [, m, day] = d.split('-').map(Number); return `${m}/${day}` }
   return (
     <div className="mx-auto flex w-full max-w-[640px] flex-col gap-4">
-      <PageHeader title="친구" sub={recent ? '최근에 함께 회의를 잡은 친구부터 보여요.' : '친구 목록이에요.'}>
+      <PageHeader title="친구" sub={recent ? '최근에 함께 약속을 잡은 친구부터 보여요.' : '친구 목록이에요.'}>
         <button className="btn-primary" onClick={() => setDialog(true)}>
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
           코드로 친구 추가
@@ -188,7 +188,7 @@ export default function Friends() {
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[15px] font-semibold">{f.name || '이름 없음'}</div>
                 <div className="truncate text-[13px] text-ink2">
-                  {f.last_date ? `최근 함께: ${fmt(f.last_date)} · ${f.last_title}` : recent ? '아직 함께한 회의가 없어요' : ''}
+                  {f.last_date ? `최근 함께: ${fmt(f.last_date)} · ${f.last_title}` : recent ? '아직 함께한 약속이 없어요' : ''}
                 </div>
               </div>
               {confirming === f.user_id ? (

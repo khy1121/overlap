@@ -15,7 +15,7 @@ export default function InviteGate({ mid }) {
     <section className="sheet mx-auto mt-6 max-w-[460px]">
       {info ? (
         <>
-          <div className="small">회의 초대</div>
+          <div className="small">약속 초대</div>
           <h1 className="mb-1 mt-1.5 text-balance font-display text-[28px] font-extrabold">{info.title}</h1>
           <p className="small">
             {Number(info.start_date.slice(5, 7))}/{Number(info.start_date.slice(8, 10))}부터 일주일 · 지금 {info.joined}명 참여 중
@@ -25,8 +25,8 @@ export default function InviteGate({ mid }) {
         </>
       ) : (
         <>
-          <h1 className="mb-1 font-display text-[28px] font-extrabold">회의를 찾을 수 없어요</h1>
-          <p className="small">링크가 정확한지 확인하거나, 회의를 만든 사람에게 새 링크를 받아 주세요.</p>
+          <h1 className="mb-1 font-display text-[28px] font-extrabold">약속을 찾을 수 없어요</h1>
+          <p className="small">링크가 정확한지 확인하거나, 약속을 만든 사람에게 새 링크를 받아 주세요.</p>
         </>
       )}
     </section>

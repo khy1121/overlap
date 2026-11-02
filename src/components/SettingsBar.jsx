@@ -4,7 +4,7 @@ const input = 'rounded border border-rule bg-paper px-2 py-1 font-mono text-[13p
 
 export default function SettingsBar({ cfg, onChange, onInvalid }) {
   return (
-    <section className="flex flex-wrap items-stretch rounded-md border border-rule bg-sheet" aria-label="회의 설정">
+    <section className="flex flex-wrap items-stretch rounded-md border border-rule bg-sheet" aria-label="약속 설정">
       <div className={field}>
         <span id="countLbl">예상 인원</span>
         <span className="inline-flex items-center rounded border border-rule bg-paper" role="group" aria-labelledby="countLbl">
@@ -43,7 +43,7 @@ export default function SettingsBar({ cfg, onChange, onInvalid }) {
         </select>
       </label>
       <label className={field}>
-        회의 길이
+        만나는 시간
         <select className={input} value={cfg.dur} onChange={(e) => onChange({ dur: Number(e.target.value) })}>
           <option value={1}>30분</option>
           <option value={2}>1시간</option>
