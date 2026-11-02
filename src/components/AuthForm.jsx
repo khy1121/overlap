@@ -1,7 +1,50 @@
 import { useState } from 'react'
 import { signIn, signUp } from '../lib/auth'
 
-const MAX_BIRTH = new Date().toISOString().slice(0, 10)
+// 생년월일: 달력 대신 숫자로 입력 (8자리 19990315 또는 6자리 990315). 입력하는 동안 1999.03.15처럼 점을 찍어요.
+const dotted = (digits) => [digits.slice(0, 4), digits.slice(4, 6), digits.slice(6, 8)].filter(Boolean).join('.')
+
+/** 입력값 → 'YYYY-MM-DD' (잘못된 날짜면 null) */
+export function parseBirth(value) {
+  let d = value.replace(/\D/g, '')
+  if (d.length === 6) {
+    const yy = Number(d.slice(0, 2))
+    const now = new Date().getFullYear() % 100
+    d = `${yy > now ? 19 : 20}${d}`
+  }
+  if (d.length !== 8) return null
+  const [y, m, day] = [Number(d.slice(0, 4)), Number(d.slice(4, 6)), Number(d.slice(6, 8))]
+  const date = new Date(y, m - 1, day)
+  if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== day) return null
+  if (y < 1900 || date > new Date()) return null
+  return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`
+}
+
+function BirthInput({ value, onChange }) {
+  return (
+    <input
+      className="field-input tabular tracking-wide"
+      type="text"
+      inputMode="numeric"
+      autoComplete="bday"
+      required
+      maxLength={10}
+      placeholder="예: 19990315 또는 990315"
+      value={value}
+      onChange={(e) => {
+        const next = e.target.value
+        let digits = next.replace(/\D/g, '').slice(0, 8)
+        // 점(.)을 지우려고 하면 그 앞 숫자를 지워요
+        if (next.length < value.length && digits === value.replace(/\D/g, '')) digits = digits.slice(0, -1)
+        onChange(dotted(digits))
+      }}
+      onBlur={() => {
+        const iso = parseBirth(value)
+        if (iso) onChange(iso.replaceAll('-', '.'))
+      }}
+    />
+  )
+}
 
 export default function AuthForm({ initial = 'login', onDone }) {
   const [tab, setTab] = useState(initial)
@@ -14,10 +57,12 @@ export default function AuthForm({ initial = 'login', onDone }) {
   async function submit(e) {
     e.preventDefault()
     setError('')
+    const birth = parseBirth(form.birth)
+    if (!birth) return setError('생년월일을 8자리(19990315)나 6자리(990315)로 입력해 주세요.')
     if (signup && form.password !== form.confirm) return setError('비밀번호가 서로 달라요.')
     setBusy(true)
     try {
-      await (signup ? signUp(form) : signIn(form))
+      await (signup ? signUp({ ...form, birth }) : signIn({ ...form, birth }))
       onDone?.()
     } catch (err) {
       setError(err.message)
@@ -49,7 +94,7 @@ export default function AuthForm({ initial = 'login', onDone }) {
         </label>
         <label className={label}>
           생년월일
-          <input className="field-input" type="date" required min="1900-01-01" max={MAX_BIRTH} value={form.birth} onChange={set('birth')} />
+          <BirthInput value={form.birth} onChange={(birth) => setForm((f) => ({ ...f, birth }))} />
         </label>
         <label className={label}>
           비밀번호
