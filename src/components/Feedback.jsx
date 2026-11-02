@@ -106,9 +106,10 @@ export default function Feedback() {
             placeholder={current.hint}
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            required
           />
-          <span className="self-end text-[12px] text-ink2">{message.length}/2000</span>
+          <span className={`self-end text-[12px] ${message.trim().length < 5 ? 'text-ink2' : 'text-accent'}`}>
+            {message.trim().length < 5 ? `최소 5자 · ` : ''}{message.length}/2000
+          </span>
         </label>
 
         <label className="flex cursor-pointer items-start gap-2.5 rounded-[12px] bg-rule2 px-3.5 py-3">
@@ -124,7 +125,8 @@ export default function Feedback() {
           <a href="/?page=privacy" className="text-accent underline underline-offset-2">개인정보처리방침</a>을 확인해 주세요.
         </p>
 
-        <button className="btn-primary btn-lg" type="submit" disabled={busy || message.trim().length < 5}>
+        {/* 짧아도 버튼은 눌리게 하고 이유를 알려 줘요 (비활성화만 하면 고장처럼 보여요) */}
+        <button className="btn-primary btn-lg" type="submit" disabled={busy}>
           {busy ? '보내는 중…' : '보내기'}
         </button>
       </form>
