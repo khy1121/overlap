@@ -24,7 +24,8 @@ export default function App() {
     const err = params.get('error_description')
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
-      if (params.get('code') || err) window.history.replaceState(null, '', MID ? `/?m=${MID}` : '/')
+      const back = MID ? `/?m=${MID}` : params.get('page') ? `/?${new URLSearchParams({ page: params.get('page'), ...(params.get('kakao_friends') ? { kakao_friends: '1' } : {}) })}` : '/'
+      if (params.get('code') || err) window.history.replaceState(null, '', back)
       if (err) toast(/already linked/i.test(err) ? '이 카카오 계정은 이미 다른 Overlap 계정에 연결돼 있어요.' : `로그인하지 못했어요: ${err}`)
       else if (params.get('linked') === 'kakao') {
         window.history.replaceState(null, '', '/')

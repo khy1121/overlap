@@ -6,6 +6,7 @@ import { KAKAO_BTN, canKakaoShare, shareKakao } from '../lib/kakao'
 import { useToast } from '../hooks/useToast'
 import Avatar from './Avatar'
 import PageHeader from './PageHeader'
+import KakaoFriends from './KakaoFriends'
 
 const PAGE = 10
 export const formatCode = (c) => (c ? `${c.slice(0, 4)}-${c.slice(4)}` : '')
@@ -144,7 +145,7 @@ async function fetchFriends(offset) {
 }
 
 /** 친구 페이지 (/?page=friends) */
-export default function Friends() {
+export default function Friends({ session }) {
   const toast = useToast()
   const [rows, setRows] = useState(null)
   const [total, setTotal] = useState(0)
@@ -208,6 +209,8 @@ export default function Friends() {
           코드로 친구 신청
         </button>
       </PageHeader>
+
+      <KakaoFriends user={session?.user} onChanged={reload} />
 
       {incoming.length > 0 && (
         <section className="sheet !py-2" aria-label="받은 친구 신청">
