@@ -20,6 +20,19 @@
     <meta name="theme-color" content="#f2f4f6" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#17171c" media="(prefers-color-scheme: dark)" />
     <script>
+      // 새 배포 직후 예전 화면이 남아 앱 파일(/assets)을 못 불러오면 한 번만 새로고침해서 새 버전을 받아요
+      window.addEventListener('error', function (e) {
+        var t = e.target
+        if (!t || (t.tagName !== 'SCRIPT' && t.tagName !== 'LINK')) return
+        if (!/\/assets\//.test(t.src || t.href || '')) return
+        try {
+          if (sessionStorage.getItem('overlap-reloaded')) return
+          sessionStorage.setItem('overlap-reloaded', '1')
+        } catch (_) { return }
+        location.reload()
+      }, true)
+    </script>
+    <script>
       // 저장된 테마를 첫 페인트 전에 적용해 깜빡임을 막아요 (src/lib/theme.js와 같은 키).
       try {
         var t = localStorage.getItem('overlap-theme')

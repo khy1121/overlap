@@ -2,7 +2,8 @@
 // - 페이지 이동: 네트워크 먼저, 끊기면 저장해 둔 첫 화면
 // - 빌드 파일(/assets)·아이콘·이미지: 한 번 받으면 캐시에서
 // - Supabase·Google 등 다른 주소 요청은 건드리지 않아요.
-const CACHE = 'overlap-v1'
+// v2: 예전 버전이 HTML을 JS로 잘못 저장했을 수 있어 캐시를 새로 시작해요
+const CACHE = 'overlap-v2'
 const SHELL = ['/', '/manifest.webmanifest', '/icons/icon-192.png', '/brand/mascot.webp']
 
 self.addEventListener('install', (e) => {
@@ -42,7 +43,9 @@ self.addEventListener('fetch', (e) => {
         (hit) =>
           hit ||
           fetch(req).then((res) => {
-            if (res.ok) {
+            // 서버가 없는 파일 대신 HTML을 준 경우는 저장하지 않아요 (흰 화면 방지)
+            const type = res.headers.get('content-type') || ''
+            if (res.ok && !type.includes('text/html')) {
               const copy = res.clone()
               caches.open(CACHE).then((c) => c.put(req, copy))
             }
