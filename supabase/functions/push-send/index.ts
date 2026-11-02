@@ -6,7 +6,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { sendPush } from './webpush.ts'
 
 const ALLOWED_ORIGINS = ['https://overlap-liard.vercel.app', 'http://localhost:5179']
-const KINDS = ['upcoming', 'confirmed', 'friend', 'invite']
+const KINDS = ['upcoming', 'confirmed', 'friend', 'invite', 'updates']
 
 const cors = (origin: string | null) => ({
   'Access-Control-Allow-Origin': origin && ALLOWED_ORIGINS.includes(origin) ? origin : ALLOWED_ORIGINS[0],

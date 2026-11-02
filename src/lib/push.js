@@ -10,6 +10,7 @@ export const KINDS = [
   { key: 'confirmed', label: '약속 시간 확정', desc: '참여한 약속의 시간이 정해지면' },
   { key: 'invite', label: '약속 초대', desc: '친구가 나를 약속에 초대하면' },
   { key: 'friend', label: '친구 신청', desc: '친구 신청이 오거나 내 신청이 수락되면' },
+  { key: 'updates', label: '앱 업데이트 소식', desc: '새 기능이 나오면 가끔 알려 드려요' },
 ]
 
 const toBytes = (b64) => Uint8Array.from(atob(b64.replace(/-/g, '+').replace(/_/g, '/') + '==='.slice((b64.length + 3) % 4)), (c) => c.charCodeAt(0))
@@ -61,10 +62,16 @@ export async function disablePush() {
   await sub.unsubscribe()
 }
 
-/** 종류별 설정 { upcoming, confirmed, friend, invite } (없으면 모두 켜짐) */
+/** 종류별 설정 { upcoming, confirmed, friend, invite, updates } (없으면 모두 켜짐) */
 export async function loadPrefs() {
-  const { data } = await supabase.from('notification_prefs').select('upcoming,confirmed,friend,invite').maybeSingle()
-  return data || { upcoming: true, confirmed: true, friend: true, invite: true }
+  const all = { upcoming: true, confirmed: true, friend: true, invite: true, updates: true }
+  const { data, error } = await supabase.from('notification_prefs').select('upcoming,confirmed,friend,invite,updates').maybeSingle()
+  if (error) {
+    // 서버에 '업데이트 소식' 칸이 아직 없으면 나머지만 읽어요
+    const old = await supabase.from('notification_prefs').select('upcoming,confirmed,friend,invite').maybeSingle()
+    return { ...all, ...(old.data || {}) }
+  }
+  return { ...all, ...(data || {}) }
 }
 
 export async function savePrefs(prefs) {
