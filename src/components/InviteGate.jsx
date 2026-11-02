@@ -18,9 +18,9 @@ export default function InviteGate({ mid }) {
           <div className="small">약속 초대</div>
           <h1 className="mb-1 mt-1.5 text-balance font-display text-[28px] font-extrabold">{info.title}</h1>
           <p className="small">
-            {Number(info.start_date.slice(5, 7))}/{Number(info.start_date.slice(8, 10))}부터 일주일 · 지금 {info.joined}명 참여 중
+            {Number(info.start_date.slice(5, 7))}/{Number(info.start_date.slice(8, 10))}부터 · 지금 {info.joined}명 참여 중
           </p>
-          <p className="my-3.5">로그인하거나 이름·생년월일·비밀번호로 가입하면 바로 참여해서 되는 시간을 칠할 수 있어요.</p>
+          <p className="my-3.5">카카오로 시작하거나 이름·생년월일로 가입하면 바로 참여해서 되는 시간을 칠할 수 있어요.</p>
           <AuthForm initial="signup" />
         </>
       ) : (

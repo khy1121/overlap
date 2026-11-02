@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { signIn, signUp } from '../lib/auth'
+import { signIn, signInWithKakao, signUp } from '../lib/auth'
 
 // 생년월일: 달력 대신 숫자로 입력 (8자리 19990315 또는 6자리 990315). 입력하는 동안 1999.03.15처럼 점을 찍어요.
 const dotted = (digits) => [digits.slice(0, 4), digits.slice(4, 6), digits.slice(6, 8)].filter(Boolean).join('.')
@@ -71,9 +71,26 @@ export default function AuthForm({ initial = 'login', onDone }) {
     }
   }
 
+  async function kakao() {
+    setError('')
+    setBusy(true)
+    try {
+      await signInWithKakao() // 카카오 로그인 화면으로 이동해요
+    } catch (err) {
+      setError(err.message)
+      setBusy(false)
+    }
+  }
+
   const label = 'flex flex-col gap-1.5 text-left text-[13px] font-medium text-ink2'
   return (
     <div className="w-full rounded-[20px] bg-sheet p-5 text-left shadow-soft sm:p-6">
+      <KakaoButton onClick={kakao} disabled={busy} />
+      <div className="my-4 flex items-center gap-3 text-[13px] text-ink2">
+        <span className="h-px flex-1 bg-rule" />
+        또는 이름·생년월일로
+        <span className="h-px flex-1 bg-rule" />
+      </div>
       <div className="mb-4 grid grid-cols-2 gap-1 rounded-full bg-rule2 p-1" role="tablist">
         {[['login', '로그인'], ['signup', '회원가입']].map(([k, t]) => (
           <button
@@ -126,5 +143,22 @@ export default function AuthForm({ initial = 'login', onDone }) {
         </p>
       </form>
     </div>
+  )
+}
+
+/** 카카오 로그인 버튼 (카카오 디자인 가이드: #FEE500 배경, 검정 말풍선 심볼, 85% 검정 글자) */
+export function KakaoButton({ onClick, disabled, label = '카카오로 시작하기' }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      disabled={disabled}
+      className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-[14px] border-0 bg-[#FEE500] text-[15px] font-semibold text-black/85 hover:bg-[#F5DC00]"
+    >
+      <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
+        <path fill="#000" d="M12 3C6.48 3 2 6.48 2 10.78c0 2.78 1.86 5.22 4.66 6.6l-.95 3.48c-.08.3.26.54.52.37l4.15-2.74c.53.07 1.07.11 1.62.11 5.52 0 10-3.48 10-7.82S17.52 3 12 3Z" />
+      </svg>
+      {label}
+    </button>
   )
 }

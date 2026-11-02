@@ -3,6 +3,7 @@ import { displayName } from '../lib/auth'
 import { DAYS } from '../lib/schedule'
 import { confirmedTime, fetchMyMeetings, hm, meetingSpan } from '../lib/meetings'
 import InstallApp from './InstallApp'
+import KakaoLink from './KakaoLink'
 
 const ACTIONS = [
   {
@@ -77,6 +78,7 @@ export default function Home({ session }) {
       </nav>
 
       <InstallApp />
+      <KakaoLink user={session.user} />
 
       <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
         <section className="sheet">

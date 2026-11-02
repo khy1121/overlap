@@ -25,7 +25,11 @@ export default function App() {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
       if (params.get('code') || err) window.history.replaceState(null, '', MID ? `/?m=${MID}` : '/')
-      if (err) toast(`로그인하지 못했어요: ${err}`)
+      if (err) toast(/already linked/i.test(err) ? '이 카카오 계정은 이미 다른 Overlap 계정에 연결돼 있어요.' : `로그인하지 못했어요: ${err}`)
+      else if (params.get('linked') === 'kakao') {
+        window.history.replaceState(null, '', '/')
+        toast('카카오 계정을 연결했어요. 이제 카카오로도 로그인할 수 있어요.')
+      }
     })
     const { data } = supabase.auth.onAuthStateChange((_ev, s) => setSession(s))
     return () => data.subscription.unsubscribe()
