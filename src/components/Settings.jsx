@@ -18,9 +18,10 @@ function Switch({ on, onChange, disabled, label }) {
       aria-label={label}
       disabled={disabled}
       onClick={() => onChange(!on)}
-      className={`relative h-[30px] w-[50px] shrink-0 rounded-full border-0 p-0 transition-colors ${on ? 'bg-pen-strong' : 'bg-rule'}`}
+      className={`flex h-[30px] w-[50px] shrink-0 items-center justify-start rounded-full border-0 p-[3px] transition-colors active:!scale-100 ${on ? 'bg-pen-strong' : 'bg-rule'}`}
     >
-      <span className={`absolute top-[3px] h-6 w-6 rounded-full bg-white shadow-soft transition-transform ${on ? 'translate-x-[23px]' : 'translate-x-[3px]'}`} />
+      {/* 동그라미는 안쪽 여백(3px) 안에서만 움직여요: 꺼짐 = 왼쪽, 켜짐 = 오른쪽(50 - 3·2 - 24 = 20px 이동) */}
+      <span className={`block h-6 w-6 rounded-full bg-white shadow-[0_1px_3px_rgba(0,0,0,.25)] transition-transform duration-200 ${on ? 'translate-x-5' : 'translate-x-0'}`} />
     </button>
   )
 }

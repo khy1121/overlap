@@ -76,7 +76,16 @@ export async function savePrefs(prefs) {
 /** 내 기기로 테스트 알림 */
 export async function sendTestPush() {
   const { data, error } = await supabase.functions.invoke('push-send', { body: { test: true } })
-  if (error) throw new Error('테스트 알림을 보내지 못했어요. 잠시 후 다시 시도해 주세요.')
+  if (error) {
+    let code = ''
+    try {
+      code = (await error.context.json())?.error || ''
+    } catch {
+      /* 본문 없음 */
+    }
+    if (code === 'not_configured') throw new Error('알림 서버 설정(알림 키 등록)이 아직 끝나지 않았어요.')
+    throw new Error('테스트 알림을 보내지 못했어요. 잠시 후 다시 시도해 주세요.')
+  }
   if (!data.sent) throw new Error('알림을 받을 기기가 없어요. 알림을 다시 켜 주세요.')
   return data
 }
