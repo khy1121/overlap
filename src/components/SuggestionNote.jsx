@@ -3,12 +3,12 @@ import Avatar from './Avatar'
 
 const STATUS_TITLE = { y: '가능', m: '조율 필요', n: '불가', u: '미입력' }
 
-export default function SuggestionNote({ cfg, result, list, cand, byId, onNext, onPick, onCopy, swapKey }) {
+export default function SuggestionNote({ cfg, result, list, cand, byId, onNext, onPick, onCopy, onInvite, swapKey }) {
   const { entered, n } = result
   if (!entered || !list.length) {
     return (
       <div className="note">
-        <div className="font-display text-[22px] font-extrabold leading-tight tracking-[-.02em] text-pen">이 시간 어때요?</div>
+        <div className="font-display text-[22px] font-extrabold leading-tight tracking-[-.02em] text-pen-strong">이 시간 어때요?</div>
         <div className="mt-2 font-display text-[19px] font-extrabold leading-tight">
           {entered ? '아직 겹치는 시간이 없어요' : '아직 아무도 입력하지 않았어요'}
         </div>
@@ -21,9 +21,16 @@ export default function SuggestionNote({ cfg, result, list, cand, byId, onNext, 
     )
   }
   const w = list[cand % list.length]
+  // 입력한 사람이 절반 미만이면 확정보다 초대를 먼저 권해요.
+  const early = entered * 2 < n
   return (
     <div className="note swap" key={swapKey}>
-      <div className="font-display text-[22px] font-extrabold leading-tight tracking-[-.02em] text-pen">{w.all ? '이 시간 어때요? 다 돼요!' : '이 시간 어때요?'}</div>
+      <div className="font-display text-[22px] font-extrabold leading-tight tracking-[-.02em] text-pen-strong">{w.all ? '이 시간 어때요? 다 돼요!' : '이 시간 어때요?'}</div>
+      {early && (
+        <p className="m-0 mt-2 rounded-[12px] bg-maybe-soft px-3 py-2 text-[13px] text-ink">
+          아직 {n}명 중 {entered}명만 입력했어요. 더 모이면 추천이 바뀔 수 있어요.
+        </p>
+      )}
       <div className="when mt-2 text-balance font-display text-[25px] font-extrabold leading-tight">
         {dayLabel(cfg, w.d)}
         <br />
@@ -47,9 +54,19 @@ export default function SuggestionNote({ cfg, result, list, cand, byId, onNext, 
         {w.missing > 0 && <span className="tok u rounded-full border border-rule px-2.5 py-0.5 text-xs">아직 안 들어온 {w.missing}명</span>}
       </div>
       <div className="mt-3.5 flex flex-wrap gap-1.5">
-        <button className="btn-primary" onClick={() => onPick(w)}>이 시간으로 확정</button>
-        {list.length > 1 && <button className="btn-soft" onClick={onNext}>다른 시간 {(cand % list.length) + 1}/{list.length}</button>}
-        <button className="btn" onClick={() => onCopy(w)}>제안 문구 복사</button>
+        {early ? (
+          <>
+            <button className="btn-primary" onClick={onInvite}>사람들 초대하기</button>
+            {list.length > 1 && <button className="btn-soft" onClick={onNext}>다른 시간 {(cand % list.length) + 1}/{list.length}</button>}
+            <button className="btn-ghost" onClick={() => onPick(w)}>그래도 이 시간으로 확정</button>
+          </>
+        ) : (
+          <>
+            <button className="btn-primary" onClick={() => onPick(w)}>이 시간으로 확정</button>
+            {list.length > 1 && <button className="btn-soft" onClick={onNext}>다른 시간 {(cand % list.length) + 1}/{list.length}</button>}
+            <button className="btn" onClick={() => onCopy(w)}>제안 문구 복사</button>
+          </>
+        )}
       </div>
     </div>
   )

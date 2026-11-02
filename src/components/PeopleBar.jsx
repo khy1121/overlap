@@ -86,7 +86,7 @@ export default function PeopleBar({ people, myPid, target, mode, n, canEdit, edi
                 className={active ? '!bg-sheet !text-ink' : entered ? '!bg-yes-soft !text-ink' : ''}
               />
               {p.name || '이름 없음'}
-              {p.id === myPid && <span className="rounded-[3px] bg-pen px-1.5 text-[10px] font-semibold text-pen-ink">나</span>}
+              {p.id === myPid && <span className="rounded-[3px] bg-pen-strong px-1.5 text-[10px] font-semibold text-pen-ink">나</span>}
               {!p.user_id && <span className="rounded-[3px] border border-current px-1.5 text-[10px] font-semibold opacity-70">계정 없음</span>}
               {editable && (
                 <span

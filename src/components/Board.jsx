@@ -159,7 +159,7 @@ export default function Board({ mid, session }) {
             <span className={`h-[7px] w-[7px] rounded-full ${live === 'live' ? 'bg-yes shadow-[0_0_0_3px_var(--yes-soft)]' : live === 'off' ? 'bg-no' : 'bg-ink2'}`} />
             {live === 'live' ? '실시간 공유 중' : live === 'off' ? '연결 끊김 · 새로고침해 주세요' : '연결 중…'}
           </span>
-          <button className="btn-primary" onClick={() => setInviteOpen((o) => !o)}>초대하기</button>
+          <button className="btn-soft" onClick={() => setInviteOpen((o) => !o)}>초대하기</button>
         </div>
       </header>
 
@@ -342,6 +342,7 @@ export default function Board({ mid, session }) {
               toast('확정했어요. 모두에게 보여요.')
             }}
             onCopy={(w) => copy(noticeText(w, cfg.dur, false))}
+            onInvite={() => { setInviteOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
           />
           <SlotList
             title="모두 가능한 시간"
