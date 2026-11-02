@@ -1,116 +1,133 @@
-import { useEffect, useState } from 'react'
-import { supabase } from '../lib/supabase'
-import { nextMonday } from '../lib/schedule'
-import { useToast } from '../hooks/useToast'
-import Friends from './Friends'
+import { useEffect, useMemo, useState } from 'react'
+import { displayName } from '../lib/auth'
+import { DAYS } from '../lib/schedule'
+import { confirmedTime, fetchMyMeetings, hm, meetingSpan } from '../lib/meetings'
 
-const HOURS = Array.from({ length: 25 }, (_, h) => h)
+const ACTIONS = [
+  {
+    href: '/?page=new',
+    title: '새 회의 만들기',
+    desc: '기간과 시간대를 정하고 사람들을 초대해요',
+    tone: 'bg-pen-strong text-pen-ink',
+    icon: <path d="M12 5v14M5 12h14" />,
+  },
+  {
+    href: '/?page=schedule',
+    title: '내 일정 보기',
+    desc: '확정된 회의를 달력으로 확인해요',
+    tone: 'bg-yes-soft text-ink',
+    icon: (
+      <>
+        <rect x="3" y="5" width="18" height="16" rx="3" />
+        <path d="M3 10h18M8 3v4M16 3v4" />
+      </>
+    ),
+  },
+  {
+    href: '/?page=friends',
+    title: '친구',
+    desc: '코드로 친구를 추가하고 목록을 봐요',
+    tone: 'bg-maybe-soft text-ink',
+    icon: (
+      <>
+        <circle cx="9" cy="8" r="3.5" />
+        <path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6" />
+      </>
+    ),
+  },
+]
 
+/** 홈: 큰 동작 버튼 3개 + 다가오는 회의 + 조율 중인 회의 */
 export default function Home({ session }) {
-  const toast = useToast()
-  const [form, setForm] = useState({ title: '', start: nextMonday(), count: 4, from: 9, to: 21, dur: 2 })
-  const [busy, setBusy] = useState(false)
   const [list, setList] = useState(null)
-  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }))
+  useEffect(() => { fetchMyMeetings().then(setList) }, [])
 
-  useEffect(() => {
-    supabase
-      .from('meetings')
-      .select('id,title,start_date,owner,created_at,participants(count)')
-      .order('created_at', { ascending: false })
-      .limit(30)
-      .then(({ data, error }) => setList(error ? [] : data))
-  }, [])
+  const now = useMemo(() => new Date(), [])
+  const upcoming = useMemo(
+    () => (list || []).map((m) => ({ m, t: confirmedTime(m) })).filter((x) => x.t && x.t.end > now).sort((a, b) => a.t.start - b.t.start).slice(0, 3),
+    [list, now],
+  )
+  const ongoing = useMemo(
+    () => (list || []).filter((m) => !confirmedTime(m) && meetingSpan(m).end >= new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)),
+    [list, now],
+  )
 
-  async function create(e) {
-    e.preventDefault()
-    const from = Number(form.from)
-    const to = Number(form.to)
-    if (from >= to) return toast('끝 시간은 시작 시간보다 늦어야 해요')
-    setBusy(true)
-    const { data, error } = await supabase.rpc('create_meeting', {
-      p_title: form.title,
-      p_start: form.start,
-      p_from: from,
-      p_to: to,
-      p_dur: Number(form.dur),
-      p_expected: Math.max(1, Math.min(50, Number(form.count) || 4)),
-    })
-    setBusy(false)
-    if (error) return toast(`회의를 만들지 못했어요: ${error.message}`)
-    window.location.href = `/?m=${data}&new=1`
-  }
-
-  const label = 'flex flex-col gap-1 text-[13px] text-ink2'
   return (
-    <div className="grid items-start gap-5 md:grid-cols-2">
-      <section className="sheet">
-        <h2 className="mb-3 mt-0 font-display text-lg font-extrabold">새 회의 만들기</h2>
-        <form className="flex flex-col gap-3" onSubmit={create}>
-          <label className={label}>
-            회의 이름
-            <input className="field-input" maxLength={40} placeholder="예: 3주차 팀 회의" required value={form.title} onChange={set('title')} />
-          </label>
-          <div className="grid grid-cols-2 gap-2.5">
-            <label className={label}>
-              시작일 (7일간)
-              <input className="field-input" type="date" required value={form.start} onChange={set('start')} />
-            </label>
-            <label className={label}>
-              예상 인원
-              <input className="field-input" type="number" min={1} max={50} inputMode="numeric" value={form.count} onChange={set('count')} />
-            </label>
-          </div>
-          <div className="grid grid-cols-2 gap-2.5">
-            <label className={label}>
-              시작 시간
-              <select className="field-input" value={form.from} onChange={set('from')}>
-                {HOURS.slice(0, 24).map((h) => <option key={h} value={h}>{h}시</option>)}
-              </select>
-            </label>
-            <label className={label}>
-              끝 시간
-              <select className="field-input" value={form.to} onChange={set('to')}>
-                {HOURS.slice(1).map((h) => <option key={h} value={h}>{h}시</option>)}
-              </select>
-            </label>
-          </div>
-          <label className={label}>
-            회의 길이
-            <select className="field-input" value={form.dur} onChange={set('dur')}>
-              <option value={1}>30분</option>
-              <option value={2}>1시간</option>
-              <option value={3}>1시간 30분</option>
-              <option value={4}>2시간</option>
-              <option value={6}>3시간</option>
-            </select>
-          </label>
-          <button className="btn-primary btn-lg" type="submit" disabled={busy}>
-            회의 만들고 사람들 초대하기
-          </button>
-        </form>
-      </section>
+    <div className="flex flex-col gap-6">
+      <h1 className="m-0 mt-2 text-[26px] font-extrabold leading-snug tracking-[-.02em]">
+        {displayName(session.user)}님,
+        <br />
+        어떤 걸 해 볼까요?
+      </h1>
 
-      <div className="flex min-w-0 flex-col gap-5">
-      <section className="sheet">
-        <h2 className="mb-3 mt-0 font-display text-lg font-extrabold">내 회의</h2>
-        <ul className="m-0 list-none border-t border-rule p-0">
-          {list === null && <li className="px-1 py-2.5 text-[13px] text-ink2">불러오는 중…</li>}
-          {list?.length === 0 && <li className="px-1 py-2.5 text-[13px] text-ink2">아직 회의가 없어요. 왼쪽에서 첫 회의를 만들어 보세요.</li>}
-          {list?.map((m) => (
-            <li key={m.id} className="border-b border-rule2">
-              <a href={`/?m=${m.id}`} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-2.5 gap-y-0.5 px-1 py-2.5 text-ink no-underline hover:bg-paper">
-                <span className="font-semibold">{m.title}</span>
-                <span className="font-mono text-[11px] text-ink2">{m.owner === session.user.id ? '내가 만듦' : '참여 중'}</span>
-                <span className="col-span-2 text-xs text-ink2">
-                  {Number(m.start_date.slice(5, 7))}/{Number(m.start_date.slice(8, 10))}부터 7일 · {m.participants?.[0]?.count ?? 0}명 참여
-                </span>
-              </a>
-            </li>
-          ))}
-        </ul>
-      </section>
-      <Friends />
+      <nav className="grid gap-3 sm:grid-cols-3" aria-label="바로가기">
+        {ACTIONS.map((a) => (
+          <a key={a.href} href={a.href} className="sheet flex items-center gap-4 text-ink no-underline transition-transform active:scale-[.98] sm:flex-col sm:items-start">
+            <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-[14px] ${a.tone}`}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{a.icon}</svg>
+            </span>
+            <span className="min-w-0 flex-1">
+              <span className="block text-[17px] font-bold">{a.title}</span>
+              <span className="block text-[13px] text-ink2">{a.desc}</span>
+            </span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-ink2 sm:hidden" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+          </a>
+        ))}
+      </nav>
+
+      <div className="grid items-start gap-4 md:grid-cols-2">
+        <section className="sheet">
+          <div className="flex items-center justify-between">
+            <h2 className="m-0 text-[17px] font-bold">다가오는 회의</h2>
+            <a href="/?page=schedule" className="text-[13px] font-semibold text-ink2 no-underline hover:text-ink">달력 보기</a>
+          </div>
+          <ul className="m-0 mt-2 list-none p-0">
+            {list === null && <li className="py-2 text-[13px] text-ink2">불러오는 중…</li>}
+            {list !== null && !upcoming.length && <li className="py-2 text-[13px] text-ink2">확정된 회의가 아직 없어요.</li>}
+            {upcoming.map(({ m, t }) => (
+              <li key={m.id} className="border-b border-rule2 last:border-0">
+                <a href={`/?m=${m.id}`} className="flex items-center gap-3 py-2.5 text-ink no-underline">
+                  <span className="grid w-12 shrink-0 place-items-center rounded-[12px] bg-pen-soft py-1 leading-tight text-pen-strong">
+                    <span className="text-[11px] font-semibold">{t.start.getMonth() + 1}월</span>
+                    <span className="text-[18px] font-extrabold">{t.start.getDate()}</span>
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate text-[15px] font-semibold">{m.title}</span>
+                    <span className="text-[13px] text-ink2">({DAYS[t.start.getDay()]}) {hm(t.start)}–{hm(t.end)}</span>
+                  </span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </section>
+
+        <section className="sheet">
+          <h2 className="m-0 text-[17px] font-bold">시간 조율 중</h2>
+          <ul className="m-0 mt-2 list-none p-0">
+            {list === null && <li className="py-2 text-[13px] text-ink2">불러오는 중…</li>}
+            {list !== null && !ongoing.length && (
+              <li className="py-2 text-[13px] text-ink2">
+                조율 중인 회의가 없어요. <a href="/?page=new" className="font-semibold text-pen-strong">새 회의 만들기</a>
+              </li>
+            )}
+            {ongoing.slice(0, 6).map((m) => {
+              const s = meetingSpan(m)
+              return (
+                <li key={m.id} className="border-b border-rule2 last:border-0">
+                  <a href={`/?m=${m.id}`} className="flex items-center justify-between gap-2 py-2.5 text-ink no-underline">
+                    <span className="min-w-0">
+                      <span className="block truncate text-[15px] font-semibold">{m.title}</span>
+                      <span className="text-[13px] text-ink2">
+                        {s.start.getMonth() + 1}/{s.start.getDate()}부터 7일 · {m.participants?.[0]?.count ?? 0}명 참여{m.owner === session.user.id ? ' · 내가 만듦' : ''}
+                      </span>
+                    </span>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-ink2" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+                  </a>
+                </li>
+              )
+            })}
+          </ul>
+        </section>
       </div>
     </div>
   )

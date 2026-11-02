@@ -6,9 +6,15 @@ import Landing from './components/Landing'
 import Home from './components/Home'
 import InviteGate from './components/InviteGate'
 import Board from './components/Board'
+import NewMeeting from './components/NewMeeting'
+import MySchedule from './components/MySchedule'
+import Friends from './components/Friends'
 
 const params = new URLSearchParams(window.location.search)
 const MID = params.get('m')
+// 로그인 후 하위 페이지: /?page=new | schedule | friends
+const PAGES = { new: NewMeeting, schedule: MySchedule, friends: Friends }
+const Page = PAGES[params.get('page')]
 
 export default function App() {
   const [session, setSession] = useState(undefined) // undefined = 아직 모름
@@ -28,7 +34,8 @@ export default function App() {
   let view
   if (session === undefined) view = <Center>불러오는 중…</Center>
   else if (MID) view = session ? <Board key={MID} mid={MID} session={session} /> : <InviteGate mid={MID} />
-  else view = session ? <Home session={session} /> : <Landing />
+  else if (!session) view = <Landing />
+  else view = Page ? <Page session={session} /> : <Home session={session} />
 
   return (
     <div className="wrap">
