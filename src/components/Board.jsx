@@ -25,6 +25,7 @@ export default function Board({ mid, session }) {
   const [cand, setCand] = useState(0)
   const [editing, setEditing] = useState(null)
   const [inviteOpen, setInviteOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
   const [calToken, setCalToken] = useState(null)
   const [calOpen, setCalOpen] = useState(false)
   const [announce, setAnnounce] = useState('')
@@ -159,11 +160,15 @@ export default function Board({ mid, session }) {
             <span className={`h-[7px] w-[7px] rounded-full ${live === 'live' ? 'bg-yes shadow-[0_0_0_3px_var(--yes-soft)]' : live === 'off' ? 'bg-no' : 'bg-ink2'}`} />
             {live === 'live' ? '실시간 공유 중' : live === 'off' ? '연결 끊김 · 새로고침해 주세요' : '연결 중…'}
           </span>
+          <button className="btn-ghost" aria-expanded={settingsOpen} onClick={() => setSettingsOpen((o) => !o)}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></svg>
+            설정
+          </button>
           <button className="btn-soft" onClick={() => setInviteOpen((o) => !o)}>초대하기</button>
         </div>
       </header>
 
-      <SettingsBar cfg={cfg} onChange={(patch) => { setCand(0); updateCfg(patch) }} onInvalid={toast} />
+      {settingsOpen && <SettingsBar cfg={cfg} onChange={(patch) => { setCand(0); updateCfg(patch) }} onInvalid={toast} />}
 
       {inviteOpen && <InvitePanel mid={mid} cfg={cfg} link={link} onClose={() => setInviteOpen(false)} />}
 

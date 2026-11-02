@@ -47,6 +47,8 @@ $hatch-cell: repeating-linear-gradient(135deg, transparent 0 5px, rgba(255,255,2
     &.y { background: var(--yes); }
     &.m { background: var(--maybe); }
     &.n { background-color: var(--no); background-image: $hatch-cell; }
+    // 칠한 칸 안에서는 30분 점선을 숨겨 한 덩어리로 보이게
+    &.hh.y, &.hh.m, &.hh.n { border-top-color: transparent; }
     &.sel { outline: 2px solid var(--ink); outline-offset: -2px; z-index: 2; }
 
     $p: var(--pen);
