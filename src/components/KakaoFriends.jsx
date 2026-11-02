@@ -11,12 +11,20 @@ export default function KakaoFriends({ user, onChanged }) {
   const [list, setList] = useState(null) // null: 아직 안 찾음
   const [busy, setBusy] = useState(false)
 
-  async function load() {
+  // afterConsent: 카카오 동의를 막 마치고 돌아온 경우 (또 동의 화면으로 보내지 않아요)
+  async function load(afterConsent = false) {
     setBusy(true)
     try {
-      const found = await fetchKakaoFriends()
-      if (found === null) return startKakaoFriends(user) // 카카오 동의가 필요하면 카카오로 이동
-      setList(found)
+      const res = await fetchKakaoFriends()
+      if (res.needConsent) {
+        if (afterConsent) {
+          toast('카카오톡 친구 목록 제공에 동의해야 찾을 수 있어요. 다시 눌러 동의해 주세요.')
+          return
+        }
+        await startKakaoFriends(user) // 카카오 동의 화면으로 이동 (페이지가 바뀌어요)
+        return
+      }
+      setList(res.friends)
     } catch (e) {
       toast(e.message)
     } finally {
@@ -28,7 +36,7 @@ export default function KakaoFriends({ user, onChanged }) {
   useEffect(() => {
     if (!RETURNED_FROM_KAKAO) return
     window.history.replaceState(null, '', '/?page=friends')
-    load()
+    load(true)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -53,7 +61,7 @@ export default function KakaoFriends({ user, onChanged }) {
       </div>
 
       {list === null ? (
-        <KakaoButton onClick={load} disabled={busy} label={busy ? '찾는 중…' : '카톡 친구 찾기'} />
+        <KakaoButton onClick={() => load()} disabled={busy} label={busy ? '찾는 중…' : '카톡 친구 찾기'} />
       ) : list.length === 0 ? (
         <p className="m-0 rounded-[12px] bg-rule2 px-3.5 py-3 text-[13px] text-ink2">
           아직 Overlap을 쓰는 카톡 친구가 없어요. 약속 초대 창의 ‘카카오톡으로 초대 보내기’로 불러 보세요.

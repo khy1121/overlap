@@ -15,25 +15,28 @@ export async function startKakaoFriends(user) {
   if (error) throw new Error(`카카오로 이동하지 못했어요: ${error.message}`)
 }
 
+// 카카오 동의를 (다시) 받아야 해결되는 경우: 토큰이 없음 / 만료 / 친구 목록 권한 없이 받은 토큰
+const NEEDS_CONSENT = new Set(['friends_consent', 'kakao_token'])
+
 /**
  * 서버 함수(kakao-friends)가 카카오에 직접 확인한 '이 앱을 쓰는 카톡 친구' 목록.
- * [{ user_id, name, relation: 'none'|'pending'|'incoming'|'friend' }]
- * 카카오 토큰이 없으면 null (다시 동의 받아야 함)
+ * - { friends: [{ user_id, name, relation }] }
+ * - { needConsent: true }  → 카카오 동의 화면으로 보내야 해요
  */
 export async function fetchKakaoFriends() {
   const { data } = await supabase.auth.getSession()
   const token = data.session?.provider_token
-  if (!token) return null
+  if (!token) return { needConsent: true }
   const { data: res, error } = await supabase.functions.invoke('kakao-friends', { body: { kakao_token: token } })
-  if (error) {
-    let message = '카톡 친구를 찾지 못했어요. 잠시 후 다시 시도해 주세요.'
-    try {
-      const body = await error.context.json()
-      if (body?.message) message = body.message
-    } catch {
-      if (error.context?.status === 404) message = '카톡 친구 찾기 기능이 아직 서버에 준비되지 않았어요.'
-    }
-    throw new Error(message)
+  if (!error) return { friends: res.friends || [] }
+
+  let body = null
+  try {
+    body = await error.context.json()
+  } catch {
+    /* 본문 없음 */
   }
-  return res.friends || []
+  if (NEEDS_CONSENT.has(body?.error)) return { needConsent: true }
+  if (error.context?.status === 404) throw new Error('카톡 친구 찾기 기능이 아직 서버에 준비되지 않았어요.')
+  throw new Error(body?.message || '카톡 친구를 찾지 못했어요. 잠시 후 다시 시도해 주세요.')
 }
