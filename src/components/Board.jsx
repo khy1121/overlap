@@ -7,7 +7,7 @@ import { copyText } from '../lib/copy'
 import { myRequests, requestFriend, resultText } from '../lib/friends'
 import { deleteMeeting, leaveMeeting } from '../lib/meetings'
 import { supabase } from '../lib/supabase'
-import { BRUSH_LABEL, dayLabel, durText, evaluate, md, nDays, nSlots, summary, timeText, tm } from '../lib/schedule'
+import { BRUSH_LABEL, dayLabel, durText, evaluate, nDays, nSlots, rangeText, summary, timeText, tm } from '../lib/schedule'
 import CalendarImport from './CalendarImport'
 import InvitePanel from './InvitePanel'
 import Palette from './Palette'
@@ -201,9 +201,9 @@ export default function Board({ mid, session }) {
             onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
           />
           <div className="mt-0.5 text-sm text-ink2">
-            <span className="tabular font-mono text-ink">{md(cfg, 0)} – {md(cfg, nDays(cfg) - 1)}</span>
-            {` · ${cfg.count}명 예상 · ${durText(cfg.dur)} · `}
-            <span className="tabular font-mono text-ink">{String(cfg.from).padStart(2, '0')}:00–{String(cfg.to).padStart(2, '0')}:00</span>
+            <span className="tabular font-mono text-ink">{rangeText(cfg)}</span>
+            {` · ${cfg.count}명 예상 · ${durText(cfg.dur)}`}
+            {nDays(cfg) > 2 && <> · 가운데 날은 <span className="tabular font-mono text-ink">{String(cfg.from).padStart(2, '0')}:00–{String(cfg.to).padStart(2, '0')}:00</span></>}
           </div>
         </div>
         <div className="flex flex-wrap items-center gap-2.5">

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { DAYS, dayLabel, dayOf, md, nDays, nSlots, tm } from '../lib/schedule'
+import { DAYS, blocked, dayLabel, dayOf, md, nDays, nSlots, tm } from '../lib/schedule'
 
 /**
  * 주간 시간표.
@@ -140,6 +140,7 @@ export default function TimeGrid({ cfg, people, mode, cells, canPaint, brush, se
     }
     if (e.key === ' ' || e.key === 'Enter') {
       e.preventDefault()
+      if (blocked(cfg, cur.d, cur.s)) return
       if (mode === 'all') return onSelect(cur)
       if (canPaint) toggle(`${cur.d}-${cur.s}`)
     }
@@ -162,7 +163,7 @@ export default function TimeGrid({ cfg, people, mode, cells, canPaint, brush, se
             className="w-full rounded p-0 hover:bg-cell"
             title={`${dayLabel(cfg, d)} 하루 전체 칠하기`}
             aria-label={`${dayLabel(cfg, d)} 하루 전체 칠하기`}
-            onClick={() => onFill(Array.from({ length: slots }, (_, s) => `${d}-${s}`))}
+            onClick={() => onFill(Array.from({ length: slots }, (_, s) => `${d}-${s}`).filter((k) => !blocked(cfg, d, Number(k.split('-')[1]))))}
           >
             {head}
           </button>
@@ -185,8 +186,8 @@ export default function TimeGrid({ cfg, people, mode, cells, canPaint, brush, se
             onClick={() => {
               const keys = []
               for (let d = 0; d < days; d++) {
-                keys.push(`${d}-${s}`)
-                if (s + 1 < slots) keys.push(`${d}-${s + 1}`)
+                if (!blocked(cfg, d, s)) keys.push(`${d}-${s}`)
+                if (s + 1 < slots && !blocked(cfg, d, s + 1)) keys.push(`${d}-${s + 1}`)
               }
               onFill(keys)
             }}
@@ -200,6 +201,11 @@ export default function TimeGrid({ cfg, people, mode, cells, canPaint, brush, se
     )
     for (let d = 0; d < days; d++) {
       const k = `${d}-${s}`
+      // 약속 범위 밖 칸: 칠할 수도 고를 수도 없어요 (data-k를 빼서 포인터가 무시하게)
+      if (blocked(cfg, d, s)) {
+        out.push(<div key={k} className={`c off ${hour ? 'hr' : 'hh'}`} aria-hidden="true" />)
+        continue
+      }
       let cls = `c ${hour ? 'hr' : 'hh'}${weekend[d] ? ' we' : ''}`
       let style
       let title

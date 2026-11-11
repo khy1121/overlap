@@ -33,7 +33,9 @@ export function confirmedTime(m) {
   const p = m.picked
   if (!p || p.d >= (m.days || 7)) return null
   const day = startOf(m)
-  const start = new Date(day.getFullYear(), day.getMonth(), day.getDate() + p.d, 0, m.from_hour * 60 + p.s * 30)
+  // 칸 인덱스는 시간표 첫 행 기준 (schedule.js rowFrom과 같은 규칙)
+  const first = Math.min(m.from_hour, m.start_hour ?? m.from_hour)
+  const start = new Date(day.getFullYear(), day.getMonth(), day.getDate() + p.d, 0, first * 60 + p.s * 30)
   return { start, end: new Date(start.getTime() + (p.dur || 2) * 30 * 60000), open: !p.dur }
 }
 

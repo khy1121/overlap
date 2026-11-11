@@ -1,6 +1,8 @@
-// 시간표 계산. cfg = { start: 'YYYY-MM-DD', days, from, to, dur, count }
+// 시간표 계산. cfg = { start: 'YYYY-MM-DD', days, from, to, dur, count, startHour?, endHour? }
 // dur: 만나는 시간(30분 칸 수). null이면 '미정' → 시작 시각만 정해요.
-// 칸 키는 "요일인덱스-30분칸인덱스" (예: "1-10" = 둘째 날 from+5시간)
+// from~to: 하루 시간대. startHour/endHour: 첫날 시작 시각·마지막 날 끝 시각(없으면 from/to).
+// 시간표 행은 rowFrom~rowTo(두 범위의 합집합)로 펼치고, 날마다 허용 범위 밖 칸은 blocked.
+// 칸 키는 "요일인덱스-30분칸인덱스" (예: "1-10" = 둘째 날 rowFrom+5시간)
 
 export const DAYS = ['일', '월', '화', '수', '목', '금', '토']
 export const BRUSH_LABEL = { y: '가능', m: '조율 가능', n: '불가' }
@@ -15,9 +17,44 @@ export function nextMonday() {
   return iso(d)
 }
 
-export const nSlots = (cfg) => (cfg.to - cfg.from) * 2
+/** 시간표 첫 행의 시각 (하루 시간대와 첫날 시작 시각 중 이른 쪽) */
+export const rowFrom = (cfg) => Math.min(cfg.from, cfg.startHour ?? cfg.from)
+/** 시간표 마지막 행의 끝 시각 (하루 시간대와 마지막 날 끝 시각 중 늦은 쪽) */
+export const rowTo = (cfg) => Math.max(cfg.to, cfg.endHour ?? cfg.to)
+export const nSlots = (cfg) => (rowTo(cfg) - rowFrom(cfg)) * 2
 /** 약속 기간(일). 예전 약속은 7일 */
 export const nDays = (cfg) => cfg.days || 7
+/** d번째 날에 칠할 수 있는 시각 범위 [시작, 끝). 첫날은 startHour부터, 마지막 날은 endHour까지, 그 사이는 하루 시간대 */
+export function dayRange(cfg, d) {
+  const last = nDays(cfg) - 1
+  return [d === 0 ? (cfg.startHour ?? cfg.from) : cfg.from, d === last ? (cfg.endHour ?? cfg.to) : cfg.to]
+}
+/** 그 칸이 약속 범위 밖이라 칠할 수 없는지 */
+export function blocked(cfg, d, s) {
+  const h = rowFrom(cfg) + s / 2
+  const [a, b] = dayRange(cfg, d)
+  return h < a || h >= b
+}
+export const MAX_DAYS = 14
+/** 기간·시간대 설정이 말이 되는지. 문제가 있으면 안내 문구, 없으면 null */
+export function rangeError(cfg) {
+  const days = nDays(cfg)
+  if (days < 1) return '끝 날짜는 시작 날짜와 같거나 뒤여야 해요'
+  if (days > MAX_DAYS) return `기간은 최대 ${MAX_DAYS}일까지 정할 수 있어요`
+  if (cfg.from >= cfg.to) return '하루 시간대의 끝은 시작보다 늦어야 해요'
+  const [a0, b0] = dayRange(cfg, 0)
+  if (a0 >= b0) return days === 1 ? '끝 시각은 시작 시각보다 늦어야 해요' : `첫날 시작 시각은 하루 시간대의 끝(${cfg.to}시)보다 빨라야 해요`
+  const [a1, b1] = dayRange(cfg, days - 1)
+  if (a1 >= b1) return `마지막 날 끝 시각은 하루 시간대의 시작(${cfg.from}시)보다 늦어야 해요`
+  if (cfg.dur && cfg.dur > nSlots(cfg)) return '만나는 시간이 시간대보다 길어요'
+  return null
+}
+/** 기간 양 끝 안내: '11/5 (수) 12:00 – 11/7 (금) 22:00' */
+export function rangeText(cfg) {
+  const last = nDays(cfg) - 1
+  const hh = (h) => `${String(h).padStart(2, '0')}:00`
+  return `${dayLabel(cfg, 0)} ${hh(dayRange(cfg, 0)[0])} – ${dayLabel(cfg, last)} ${hh(dayRange(cfg, last)[1])}`
+}
 /** 만나는 시간(30분 칸 수) → '1시간 30분'. 미정이면 '시간 미정' */
 export const durText = (dur) => (dur ? [Math.floor(dur / 2) && `${Math.floor(dur / 2)}시간`, dur % 2 && '30분'].filter(Boolean).join(' ') : '시간 미정')
 /** 만나는 시간이 미정인지 */
@@ -35,7 +72,7 @@ export const md = (cfg, i) => {
 }
 export const dayLabel = (cfg, i) => `${md(cfg, i)} (${DAYS[dayOf(cfg, i).getDay()]})`
 export function tm(cfg, s) {
-  const t = cfg.from * 60 + s * 30
+  const t = rowFrom(cfg) * 60 + s * 30
   return `${String(Math.floor(t / 60)).padStart(2, '0')}:${String(t % 60).padStart(2, '0')}`
 }
 /** '14:00–16:00' 또는 (미정) '14:00부터' */
@@ -62,7 +99,7 @@ export function startChoices(cfg, w) {
 /** 30분 칸의 실제 시각 범위(ms) */
 export function slotRange(cfg, d, s) {
   const day = dayOf(cfg, d)
-  const st = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, cfg.from * 60 + s * 30)
+  const st = new Date(day.getFullYear(), day.getMonth(), day.getDate(), 0, rowFrom(cfg) * 60 + s * 30)
   return [st.getTime(), st.getTime() + 30 * 60000]
 }
 
@@ -93,9 +130,14 @@ export function evaluate(cfg, people) {
   const dur = effDur(cfg)
   const slots = nSlots(cfg)
   const byId = Object.fromEntries(people.map((p) => [p.id, p.cells || {}]))
-  // 구간을 늘려도 '가능'인 사람은 계속 가능, '조율'인 사람은 계속 가능·조율이어야 같은 추천이에요
+  // 구간을 늘려도 '가능'인 사람은 계속 가능, '조율'인 사람은 계속 가능·조율이어야 같은 추천이에요. 막힌 칸으로는 못 늘려요
   const keeps = (w, d, s) =>
-    w.g.y.every((id) => byId[id][`${d}-${s}`] === 'y') && w.g.m.every((id) => ['y', 'm'].includes(byId[id][`${d}-${s}`]))
+    !blocked(cfg, d, s) && w.g.y.every((id) => byId[id][`${d}-${s}`] === 'y') && w.g.m.every((id) => ['y', 'm'].includes(byId[id][`${d}-${s}`]))
+  // 회의 길이 구간이 막힌 칸을 하나라도 지나면 후보가 아니에요
+  const fits = (d, s) => {
+    for (let k = 0; k < dur; k++) if (blocked(cfg, d, s + k)) return false
+    return true
+  }
   const groupsAt = (d, s) => {
     const g = { y: [], m: [], n: [], u: [] }
     people.forEach((p) => g[windowStatus(p.cells || {}, d, s, dur)].push(p.id))
@@ -114,6 +156,7 @@ export function evaluate(cfg, people) {
   const out = []
   for (let d = 0; d < nDays(cfg); d++) {
     for (let s = 0; s + dur <= slots; s++) {
+      if (!fits(d, s)) continue
       const g = groupsAt(d, s)
       out.push({ d, s, g, missing, score: g.y.length * 2 + g.m.length - g.n.length * 3, all: g.y.length === n })
     }
@@ -129,7 +172,7 @@ export function evaluate(cfg, people) {
     })
   }
   const byTime = (a, b) => a.d - b.d || a.s - b.s
-  const nearAfternoon = (w) => Math.abs(cfg.from * 60 + w.s * 30 - 14 * 60) // 오후 2시 근처 선호
+  const nearAfternoon = (w) => Math.abs(rowFrom(cfg) * 60 + w.s * 30 - 14 * 60) // 오후 2시 근처 선호
   const longer = (a, b) => (b.span.e - b.span.s) - (a.span.e - a.span.s)
 
   const all = distinct(out.filter((w) => w.all).map(withSpan).sort(byTime))

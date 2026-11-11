@@ -1,13 +1,12 @@
 import { useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { iso, nextMonday } from '../lib/schedule'
+import { MAX_DAYS, iso, nSlots, nextMonday, rangeError } from '../lib/schedule'
 import { useToast } from '../hooks/useToast'
 import Avatar from './Avatar'
 import DurationPicker from './DurationPicker'
 import PageHeader from './PageHeader'
 
 const HOURS = Array.from({ length: 25 }, (_, h) => h)
-const MAX_DAYS = 14
 const parse = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d) }
 const addDays = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return iso(d) }
 const daysBetween = (a, b) => Math.round((parse(b) - parse(a)) / 86400000) + 1
@@ -17,7 +16,8 @@ export default function NewMeeting() {
   const toast = useToast()
   const [form, setForm] = useState(() => {
     const start = nextMonday()
-    return { title: '', start, end: addDays(start, 6), count: 4, from: 9, to: 21, dur: 2 }
+    // startHour/endHour: 첫날 시작 시각·마지막 날 끝 시각. from/to: 이틀 이상일 때 그 사이 날의 시간대
+    return { title: '', start, end: addDays(start, 6), count: 4, from: 9, to: 21, startHour: 9, endHour: 21, dur: 2 }
   })
   const [busy, setBusy] = useState(false)
   const [friends, setFriends] = useState(null)
@@ -29,8 +29,12 @@ export default function NewMeeting() {
   }, [])
 
   const days = form.start && form.end ? daysBetween(form.start, form.end) : 0
-  const windowSlots = (Number(form.to) - Number(form.from)) * 2
-  const maxDur = Math.max(1, Math.min(24, windowSlots))
+  // schedule.js 계산 함수에 넣는 모양 (숫자로 맞춰서). 하루짜리는 시작·끝 시각이 곧 시간대예요
+  const startHour = Number(form.startHour)
+  const endHour = Number(form.endHour)
+  const one = days === 1
+  const cfg = { start: form.start, days, from: one ? startHour : Number(form.from), to: one ? endHour : Number(form.to), startHour, endHour, dur: form.dur }
+  const maxDur = Math.max(1, Math.min(24, nSlots(cfg)))
 
   function setStart(e) {
     const start = e.target.value
@@ -44,23 +48,21 @@ export default function NewMeeting() {
 
   async function create(e) {
     e.preventDefault()
-    const from = Number(form.from)
-    const to = Number(form.to)
-    if (days < 1) return toast('종료일은 시작일과 같거나 뒤여야 해요')
-    if (days > MAX_DAYS) return toast(`기간은 최대 ${MAX_DAYS}일까지 정할 수 있어요`)
-    if (from >= to) return toast('끝 시간은 시작 시간보다 늦어야 해요')
-    if (form.dur > windowSlots) return toast('만나는 시간이 하루 시간대보다 길어요')
+    if (!form.start || !form.end) return toast('날짜를 확인해 주세요')
+    const err = rangeError(cfg)
+    if (err) return toast(err)
     setBusy(true)
     const args = {
       p_title: form.title,
       p_start: form.start,
-      p_from: from,
-      p_to: to,
+      p_from: cfg.from,
+      p_to: cfg.to,
       p_dur: form.dur,
       p_expected: Math.max(1, Math.min(50, Number(form.count) || 4)),
+      p_days: days,
+      p_start_hour: cfg.startHour,
+      p_end_hour: cfg.endHour,
     }
-    // 7일이 아닐 때만 기간을 보내요 (서버 업데이트 전에도 기본 7일 약속은 만들 수 있게)
-    if (days !== 7) args.p_days = days
     const { data: mid, error } = await supabase.rpc('create_meeting', args)
     if (error) {
       setBusy(false)
@@ -94,33 +96,39 @@ export default function NewMeeting() {
                 {days >= 1 ? `${days}일` : '날짜를 확인해 주세요'}
               </span>
             </div>
-            {/* 좁은 화면에서는 날짜가 잘리지 않게 위아래로 */}
-            <div className="grid grid-cols-1 gap-2 min-[440px]:grid-cols-2">
-              <label className="flex items-center gap-2 text-[13px] text-ink2">
+            {/* 시작·끝을 날짜와 시각으로. 예: 11/5 12시 ~ 11/7 22시 */}
+            <div className="flex flex-col gap-2">
+              <div className="flex items-center gap-2 text-[13px] text-ink2">
                 <span className="w-8 shrink-0">시작</span>
-                <input className="field-input min-w-0 flex-1" type="date" aria-label="시작일" required value={form.start} onChange={setStart} />
-              </label>
-              <label className="flex items-center gap-2 text-[13px] text-ink2">
-                <span className="w-8 shrink-0">종료</span>
-                <input className="field-input min-w-0 flex-1" type="date" aria-label="종료일" required min={form.start} max={form.start ? addDays(form.start, MAX_DAYS - 1) : undefined} value={form.end} onChange={set('end')} />
-              </label>
+                <input className="field-input min-w-0 flex-1" type="date" aria-label="시작 날짜" required value={form.start} onChange={setStart} />
+                <select className="field-input w-[88px] shrink-0" aria-label="시작 시각" value={form.startHour} onChange={set('startHour')}>
+                  {HOURS.slice(0, 24).map((h) => <option key={h} value={h}>{h}시</option>)}
+                </select>
+              </div>
+              <div className="flex items-center gap-2 text-[13px] text-ink2">
+                <span className="w-8 shrink-0">끝</span>
+                <input className="field-input min-w-0 flex-1" type="date" aria-label="끝 날짜" required min={form.start} max={form.start ? addDays(form.start, MAX_DAYS - 1) : undefined} value={form.end} onChange={set('end')} />
+                <select className="field-input w-[88px] shrink-0" aria-label="끝 시각" value={form.endHour} onChange={set('endHour')}>
+                  {HOURS.slice(1).map((h) => <option key={h} value={h}>{h}시</option>)}
+                </select>
+              </div>
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
-            <label className={label}>
-              하루 중 시작
-              <select className="field-input" value={form.from} onChange={set('from')}>
-                {HOURS.slice(0, 24).map((h) => <option key={h} value={h}>{h}시</option>)}
-              </select>
-            </label>
-            <label className={label}>
-              하루 중 끝
-              <select className="field-input" value={form.to} onChange={set('to')}>
-                {HOURS.slice(1).map((h) => <option key={h} value={h}>{h}시</option>)}
-              </select>
-            </label>
-          </div>
+          {days >= 2 && (
+            <div className="flex flex-col gap-1.5">
+              <span className={head}>그 사이 날의 시간대</span>
+              <div className="grid grid-cols-2 gap-3">
+                <select className="field-input" aria-label="하루 시간대 시작" value={form.from} onChange={set('from')}>
+                  {HOURS.slice(0, 24).map((h) => <option key={h} value={h}>{h}시</option>)}
+                </select>
+                <select className="field-input" aria-label="하루 시간대 끝" value={form.to} onChange={set('to')}>
+                  {HOURS.slice(1).map((h) => <option key={h} value={h}>{h}시</option>)}
+                </select>
+              </div>
+              <p className="m-0 text-xs text-ink2">첫날은 시작 시각부터, 마지막 날은 끝 시각까지만 칠해요. 그 사이 날은 이 시간대예요.</p>
+            </div>
+          )}
 
           <div className="flex flex-col gap-1.5">
             <span className={head}>얼마나 만날까요</span>

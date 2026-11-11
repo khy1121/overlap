@@ -54,6 +54,12 @@ $x-mark: linear-gradient(to top right, $x-line), linear-gradient(to bottom right
     position: relative;
     transition: background-color .12s var(--ease);
     &.we { background: var(--weekend); }
+    // 약속 범위 밖(첫날 시작 전, 마지막 날 끝 후 등): 빗금으로 비워 둬요
+    &.off {
+      background: repeating-linear-gradient(135deg, transparent 0 4px, var(--rule-2) 4px 5px);
+      border-left-color: transparent;
+      cursor: default;
+    }
     &.hr { border-top: 1px solid var(--rule); }
     &.hh { border-top: 1px dashed var(--rule-2); }
     &.y { background: var(--yes); }
