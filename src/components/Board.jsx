@@ -547,7 +547,7 @@ export default function Board({ mid, session }) {
           }}
         />
       )}
-      {lockable && (
+      {lockable && !settingsOpen && (
         <MobileBar
           painting={paintOn}
           canPaint={canEdit(myPid)}
