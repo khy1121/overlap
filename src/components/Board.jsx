@@ -273,6 +273,24 @@ export default function Board({ mid, session }) {
         </div>
       )}
 
+      <PeopleBar
+        people={people}
+        myPid={myPid}
+        target={tgt}
+        mode={mode}
+        n={n}
+        canEdit={canEdit}
+        editing={editing}
+        setEditing={setEditing}
+        onSelect={selectPerson}
+        onRename={(pid, name) => {
+          setEditing(null)
+          if (byId[pid] && byId[pid].name !== name) updatePerson(pid, { name })
+        }}
+        relation={(userId) => (rel[userId] === 'friend' ? 'friend' : rel[userId] === 'pending' ? 'pending' : 'none')}
+        onFriend={addFriend}
+      />
+
       {narrow && !paintOn && (
         <nav
           ref={tabsRef}
@@ -313,23 +331,6 @@ export default function Board({ mid, session }) {
 
       <div className={`grid grid-cols-1 items-start gap-5 min-[920px]:grid-cols-[minmax(0,1fr)_340px] ${showPlace ? 'hidden' : ''}`}>
         <section className={`sheet ${showTime ? '' : 'hidden'}`} aria-label="시간 입력">
-          <PeopleBar
-            people={people}
-            myPid={myPid}
-            target={tgt}
-            mode={mode}
-            n={n}
-            canEdit={canEdit}
-            editing={editing}
-            setEditing={setEditing}
-            onSelect={selectPerson}
-            onRename={(pid, name) => {
-              setEditing(null)
-              if (byId[pid] && byId[pid].name !== name) updatePerson(pid, { name })
-            }}
-            relation={(userId) => (rel[userId] === 'friend' ? 'friend' : rel[userId] === 'pending' ? 'pending' : 'none')}
-            onFriend={addFriend}
-          />
 
           {paintOn ? (
             <div className="mb-1.5 flex min-h-[42px] flex-wrap items-center gap-2">
