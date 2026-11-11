@@ -2,7 +2,14 @@ import { useEffect, useState } from 'react'
 import { dayLabel, spanText, startChoices, summary, timeText, tm } from '../lib/schedule'
 import Avatar from './Avatar'
 
-const STATUS_TITLE = { y: '가능', m: '조율 필요', n: '불가', u: '미입력' }
+const STATUS_TITLE = { y: '가능', m: '조율', n: '불가', u: '미입력' }
+// 원형 아바타 테두리·배지
+const STATUS = {
+  y: { ring: 'bg-yes', badge: 'bg-yes', mark: '✓' },
+  m: { ring: 'bg-maybe', badge: 'bg-maybe', mark: '~' },
+  n: { ring: 'bg-no', badge: 'bg-no', mark: '✕' },
+  u: { ring: 'bg-rule', badge: '', mark: '' },
+}
 
 export default function SuggestionNote({ cfg, result, list, cand, byId, onNext, onPick, onCopy, onInvite, swapKey }) {
   const { entered, n } = result
@@ -57,20 +64,37 @@ export default function SuggestionNote({ cfg, result, list, cand, byId, onNext, 
         </label>
       )}
       <div className="mt-1.5 text-[13px] text-ink2">{summary(w, n)}</div>
-      <div className="att mt-3 flex flex-wrap gap-1.5">
+      {/* 누가 되는지: 참여자 카드처럼 원형 아바타 (테두리·배지 색으로 가능/조율/불가/미입력) */}
+      <ul className="att -mx-1 m-0 mt-3 flex list-none gap-1 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
         {['y', 'm', 'n', 'u'].flatMap((k) =>
           w.g[k].map((pid) => {
             const p = byId[pid]
+            const st = STATUS[k]
             return (
-              <span key={pid} className={`tok ${k} inline-flex items-center gap-1.5 rounded-full border border-rule bg-sheet py-0.5 pl-[3px] pr-2.5 text-xs`} title={`${p?.name || '이름 없음'}: ${STATUS_TITLE[k]}`}>
-                <Avatar name={p?.name} url={p?.avatar_url} size={18} />
-                {p?.name || '이름 없음'}
-              </span>
+              <li key={pid} className="flex w-[60px] shrink-0 flex-col items-center gap-0.5" title={`${p?.name || '이름 없음'}: ${STATUS_TITLE[k]}`}>
+                <span className="relative">
+                  <span className={`block rounded-full p-[2px] ${st.ring}`}>
+                    <span className="block rounded-full bg-sheet p-[2px]">
+                      <Avatar name={p?.name} url={p?.avatar_url} size={34} className={k === 'y' ? '' : 'opacity-60'} />
+                    </span>
+                  </span>
+                  {st.mark && (
+                    <span className={`absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full text-[10px] font-extrabold leading-none text-white ring-2 ring-sheet ${st.badge}`} aria-hidden="true">{st.mark}</span>
+                  )}
+                </span>
+                <span className="w-full truncate text-center text-[12px] font-semibold leading-tight">{p?.name || '이름 없음'}</span>
+                <span className="text-[10px] leading-tight text-ink2">{STATUS_TITLE[k]}</span>
+              </li>
             )
           }),
         )}
-        {w.missing > 0 && <span className="tok u rounded-full border border-rule px-2.5 py-0.5 text-xs">아직 안 들어온 {w.missing}명</span>}
-      </div>
+        {w.missing > 0 && (
+          <li className="flex w-[60px] shrink-0 flex-col items-center gap-0.5">
+            <span className="grid h-[42px] w-[42px] place-items-center rounded-full border-2 border-dashed border-rule text-[12px] font-bold text-ink2">+{w.missing}</span>
+            <span className="text-[10px] leading-tight text-ink2">아직 안 옴</span>
+          </li>
+        )}
+      </ul>
       <div className="mt-3.5 flex flex-wrap gap-1.5">
         {early ? (
           <>
