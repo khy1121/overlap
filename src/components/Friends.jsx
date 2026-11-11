@@ -8,6 +8,7 @@ import { useToast } from '../hooks/useToast'
 import Avatar from './Avatar'
 import PageHeader from './PageHeader'
 import KakaoFriends from './KakaoFriends'
+import { KAKAO_FRIENDS_ON } from '../lib/kakaoFriends'
 
 const PAGE = 10
 export const formatCode = (c) => (c ? `${c.slice(0, 4)}-${c.slice(4)}` : '')
@@ -211,7 +212,19 @@ export default function Friends({ session }) {
         </button>
       </PageHeader>
 
-      <KakaoFriends user={session?.user} onChanged={reload} />
+      {KAKAO_FRIENDS_ON ? (
+        <KakaoFriends user={session?.user} onChanged={reload} />
+      ) : (
+        // 카톡 친구 찾기는 카카오 권한 승인 전까지 숨기고, 지금 되는 방법을 안내해요
+        <section className="sheet flex flex-col gap-2.5" aria-label="친구 추가 방법">
+          <div className="text-[15px] font-bold">친구는 이렇게 추가해요</div>
+          <ul className="m-0 flex list-none flex-col gap-1.5 p-0 text-[13px] text-ink2">
+            <li><b className="text-ink">친구 코드</b> · 내 코드를 카톡으로 보내거나, 받은 코드를 입력해요.</li>
+            <li><b className="text-ink">같은 약속</b> · 함께 약속에 들어온 사람은 약속 화면 참여자 목록에서 바로 친구 신청할 수 있어요.</li>
+          </ul>
+          <button className="btn-soft self-start" onClick={() => setDialog(true)}>내 코드 보내기 · 코드 입력</button>
+        </section>
+      )}
 
       {incoming.length > 0 && (
         <section className="sheet !py-2" aria-label="받은 친구 신청">

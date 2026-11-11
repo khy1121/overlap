@@ -3,6 +3,10 @@
 import { supabase } from './supabase'
 import { hasKakao } from './auth'
 
+// 카카오 '카카오톡 친구 목록' 권한(추가 기능 신청 심사)을 받기 전에는 카카오가 앱 멤버끼리만 친구를 알려 줘요.
+// 그래서 권한을 받을 때까지 이 기능을 숨겨 둬요. 승인 후 Vercel 환경 변수 VITE_KAKAO_FRIENDS=1 로 켜요.
+export const KAKAO_FRIENDS_ON = import.meta.env.VITE_KAKAO_FRIENDS === '1'
+
 // 처음 화면이 열릴 때 주소에 표시가 있으면 카카오 동의를 마치고 돌아온 것
 export const RETURNED_FROM_KAKAO = new URLSearchParams(window.location.search).get('kakao_friends') === '1'
 

@@ -56,7 +56,7 @@ export default function KakaoFriends({ user, onChanged }) {
       <div>
         <div className="text-[15px] font-bold">카톡 친구 중 Overlap 사용자</div>
         <p className="m-0 mt-0.5 text-[13px] text-ink2">
-          카카오톡 친구 중 이미 가입한 사람을 찾아 친구 신청을 보낼 수 있어요. 친구도 카카오로 로그인했어야 보여요.
+          카카오톡 친구 중 Overlap을 쓰는 사람을 찾아 친구 신청을 보낼 수 있어요. 친구도 여기서 ‘카톡 친구 찾기’를 한 번 눌러 동의했어야 보여요.
         </p>
       </div>
 
