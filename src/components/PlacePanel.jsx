@@ -6,21 +6,27 @@ import {
 import { useToast } from '../hooks/useToast'
 import Avatar from './Avatar'
 
-const CATS = [
-  { code: 'CE7', label: '카페' },
-  { code: 'FD6', label: '음식점' },
+// 중간 지점 근처에서 무엇을 볼지: 카페·음식점은 가게 목록, '역만'은 역 자체를 장소로
+const KINDS = [
+  { key: 'CE7', label: '카페' },
+  { key: 'FD6', label: '음식점' },
+  { key: 'station', label: '역에서 만나기' },
 ]
+
+const seg = (on) =>
+  `min-h-[36px] rounded-full border-0 px-3.5 text-[13px] font-semibold ${on ? 'bg-pen-strong text-pen-ink' : 'bg-rule2 text-ink hover:bg-rule'}`
 
 /**
  * 만날 장소 정하기 (시간 확정 전에도 미리 정할 수 있어요).
- * 0) 가고 싶은 곳이 이미 있으면 바로 검색해서 정하기
- * 1) 내 출발지 입력(현재 위치 또는 검색) + 다른 사람에게 보일지 선택
- * 2) 2명 이상 입력하면 중간 지점 근처 역 후보 → 역 주변 카페·음식점 → '이 장소로 정하기'
+ * - 정해진 곳이 있나요? → 장소 이름 검색
+ * - 아직 못 정했나요? → ① 내 출발지 ② 중간 지점 근처 역·가게
+ * 어느 쪽이든 '여기로'를 누르면 아래에서 확인·취소를 한 번 더 물어보고 저장해요.
  * 좌표는 본인만 읽을 수 있고, 다른 사람에게는 공개를 켰을 때만 동 이름이 보여요.
  */
 export default function PlacePanel({ mid, cfg, people, myPid, onPlace, onClose }) {
   const toast = useToast()
   const [origin, setOrigin] = useState(undefined) // undefined 불러오는 중, null 없음
+  const [editOrigin, setEditOrigin] = useState(false)
   const [busy, setBusy] = useState('')
   const [query, setQuery] = useState('')
   const [results, setResults] = useState(null)
@@ -28,10 +34,12 @@ export default function PlacePanel({ mid, cfg, people, myPid, onPlace, onClose }
   const [mid_, setMid] = useState(null) // { lat, lng, n }
   const [stations, setStations] = useState(null)
   const [station, setStation] = useState(null)
-  const [cat, setCat] = useState('CE7')
+  const [kind, setKind] = useState('CE7')
   const [spots, setSpots] = useState(null)
   // 'direct' 정해진 곳이 있어요 → 장소 검색 / 'mid' 아직 못 정했어요 → 출발지·중간 지점
   const [how, setHow] = useState(null)
+  // '여기로'를 누른 장소 (확인 전)
+  const [pending, setPending] = useState(null)
 
   const setCount = people.filter((p) => p.origin_set).length
 
@@ -66,14 +74,14 @@ export default function PlacePanel({ mid, cfg, people, myPid, onPlace, onClose }
 
   // 고른 역 주변 가게
   useEffect(() => {
-    if (!station) return setSpots(null)
+    if (!station || kind === 'station') return setSpots(null)
     let cancelled = false
     setSpots(null)
-    searchCategory(cat, station, station.center ? 1000 : 400, 8)
+    searchCategory(kind, station, station.center ? 1000 : 400, 8)
       .then((l) => !cancelled && setSpots(l))
       .catch(() => !cancelled && setSpots([]))
     return () => { cancelled = true }
-  }, [station, cat])
+  }, [station, kind])
 
   async function save(pos, label) {
     setBusy('save')
@@ -84,6 +92,7 @@ export default function PlacePanel({ mid, cfg, people, myPid, onPlace, onClose }
       setOrigin({ ...pos, label: lbl, is_public: isPublic })
       setResults(null)
       setQuery('')
+      setEditOrigin(false)
       toast('출발지를 저장했어요')
     } catch (e) {
       toast(e.message)
@@ -134,12 +143,15 @@ export default function PlacePanel({ mid, cfg, people, myPid, onPlace, onClose }
       toast(e.message)
     }
   }
-  function pick(p) {
-    onPlace(placeOf(p, station?.center ? null : station?.name))
-    toast(`만날 장소를 ‘${p.name}’으로 정했어요`)
+  function confirmPick() {
+    onPlace(pending)
+    toast(`만날 장소를 ‘${pending.name}’으로 정했어요`)
+    setPending(null)
   }
 
   const myDist = (p) => (origin ? kmText(distanceM(origin, p)) : null)
+  const isPending = (p) => pending && pending.kakao_id === (p.id || null) && pending.name === p.name
+  const choose = (p, st = null) => setPending(placeOf(p, st))
 
   if (!canPlaces()) {
     return (
@@ -149,30 +161,36 @@ export default function PlacePanel({ mid, cfg, people, myPid, onPlace, onClose }
     )
   }
 
+  const showOriginForm = !origin || editOrigin
+
   return (
     <Shell onClose={onClose}>
       {cfg.place && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[14px] bg-pen-soft px-4 py-3 text-[14px]">
-          <span className="text-xs text-ink2">정해진 장소</span>
-          <b className="text-ink">📍 {cfg.place.name}</b>
-          {cfg.place.station && <span className="text-[13px] text-ink2">{cfg.place.station} 근처</span>}
-          <a href={cfg.place.url} target="_blank" rel="noreferrer" className="text-[13px] font-semibold text-accent underline">지도</a>
-          <button className="btn-ghost btn-sm ml-auto !px-1 text-no hover:text-no" onClick={() => onPlace(null)}>장소 취소</button>
+        <div className="flex items-center gap-2 rounded-[14px] bg-pen-soft px-4 py-3">
+          <span className="min-w-0 flex-1">
+            <span className="block text-xs text-ink2">정해진 장소</span>
+            <b className="block truncate text-[15px] text-ink">📍 {cfg.place.name}</b>
+            <span className="block truncate text-xs text-ink2">
+              {cfg.place.station ? `${cfg.place.station} 근처 · ` : ''}
+              <a href={cfg.place.url} target="_blank" rel="noreferrer" className="font-semibold text-accent underline">지도 보기</a>
+            </span>
+          </span>
+          <button className="btn-ghost btn-sm shrink-0 !px-2 text-no hover:text-no" onClick={() => onPlace(null)}>장소 취소</button>
         </div>
       )}
 
       {/* 정해진 곳이 있는지 먼저 물어봐요 */}
       <div className="grid grid-cols-2 gap-2" role="tablist" aria-label="장소 정하는 방법">
         {[
-          ['direct', '정해진 곳이 있나요?', '장소 이름으로 바로 찾기'],
-          ['mid', '아직 못 정했나요?', '출발지로 중간 지점 추천'],
+          ['direct', '정해진 곳이 있나요?', '장소 이름으로 찾기'],
+          ['mid', '아직 못 정했나요?', '중간 지점 추천받기'],
         ].map(([k, title, sub]) => (
           <button
             key={k}
             role="tab"
             aria-selected={how === k}
             className={`flex min-h-[64px] flex-col items-start justify-center gap-0.5 rounded-[14px] border-2 px-3.5 py-2.5 text-left ${how === k ? 'border-pen bg-pen-soft' : 'border-rule2 bg-transparent hover:bg-rule2'}`}
-            onClick={() => setHow(k)}
+            onClick={() => { setHow(k); setPending(null) }}
           >
             <span className="text-[15px] font-bold text-ink">{title}</span>
             <span className="text-xs text-ink2">{sub}</span>
@@ -180,133 +198,125 @@ export default function PlacePanel({ mid, cfg, people, myPid, onPlace, onClose }
         ))}
       </div>
 
-      {how === 'direct' && (
-        <DirectPick near={origin} onPick={(p) => { onPlace(placeOf(p, null)); toast(`만날 장소를 ‘${p.name}’으로 정했어요`) }} />
-      )}
+      {how === 'direct' && <DirectPick near={origin} isPending={isPending} onChoose={(p) => choose(p)} />}
 
       {how === 'mid' && (
-      <>
-      {/* 1. 내 출발지 */}
-      <div className="flex flex-col gap-2">
-        <span className="text-[15px] font-semibold">내 출발지</span>
-        {origin === undefined && <p className="m-0 text-[13px] text-ink2">불러오는 중…</p>}
-        {origin && (
-          <div className="flex flex-wrap items-center gap-2 text-[14px]">
-            <span className="rounded-full bg-pen-soft px-3 py-1 font-semibold">{origin.label}</span>
-            <button className="btn-ghost btn-sm" onClick={remove}>지우기</button>
-          </div>
-        )}
-        <div className="flex flex-wrap gap-2">
-          <button className="btn" disabled={Boolean(busy)} onClick={useHere}>
-            {busy === 'gps' ? '위치 확인 중…' : origin ? '현재 위치로 바꾸기' : '현재 위치 쓰기'}
-          </button>
-          <form className="flex min-w-[240px] flex-1 gap-2" onSubmit={search}>
-            <input
-              className="field-input min-w-0 flex-1"
-              placeholder="집·학교·회사 등 장소 검색"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              aria-label="출발지 검색"
-            />
-            <button className="btn-soft" type="submit" disabled={Boolean(busy)}>검색</button>
-          </form>
-        </div>
-        {results && (
-          <ul className="m-0 flex max-h-[200px] list-none flex-col gap-0.5 overflow-auto p-0">
-            {results.length === 0 && <li className="py-1 text-[13px] text-ink2">검색 결과가 없어요.</li>}
-            {results.map((p) => (
-              <li key={p.id}>
-                <button className="flex w-full flex-col items-start gap-0 rounded-[10px] border-0 bg-transparent px-2 py-1.5 text-left hover:bg-rule2" onClick={() => save({ lat: p.lat, lng: p.lng }, p.name)}>
-                  <span className="block w-full truncate text-[14px] font-semibold text-ink">{p.name}</span>
-                  <span className="block w-full truncate text-xs text-ink2">{p.address}</span>
-                </button>
-              </li>
-            ))}
-          </ul>
-        )}
-        <label className="flex items-center gap-2 text-[13px] text-ink2">
-          <input type="checkbox" checked={isPublic} onChange={(e) => togglePublic(e.target.checked)} />
-          다른 참여자에게 내 출발지 동네 보여주기 (예: 성북구 삼선동). 끄면 ‘입력함’만 보여요.
-        </label>
-        <p className="m-0 text-xs text-ink2">정확한 위치는 본인만 볼 수 있고, 중간 지점 계산에만 쓰여요. 이 약속에서만 저장되고 언제든 지울 수 있어요.</p>
-      </div>
-
-      {/* 2. 참여자 현황 */}
-      <div className="flex flex-col gap-1.5">
-        <span className="text-[15px] font-semibold">출발지 입력 {setCount}/{people.length}명</span>
-        <ul className="m-0 flex list-none flex-wrap gap-x-4 gap-y-1 p-0 text-[13px]">
-          {people.map((p) => (
-            <li key={p.id} className="flex items-center gap-1.5">
-              <Avatar name={p.name} size={22} />
-              <span className="font-medium text-ink">{p.name || '이름 없음'}</span>
-              <span className="text-ink2">{p.origin_set ? p.origin_label || '입력함' : '아직'}</span>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {/* 3. 중간 지점 후보 */}
-      <div className="flex flex-col gap-2">
-        <span className="text-[15px] font-semibold">중간 지점 근처</span>
-        {setCount < 2 && <p className="m-0 text-[13px] text-ink2">두 명 이상 출발지를 입력하면 중간 지점 근처 역과 가게를 추천해요.</p>}
-        {setCount >= 2 && stations === null && <p className="m-0 text-[13px] text-ink2">중간 지점을 찾는 중…</p>}
-        {stations && stations.length === 0 && mid_?.lat != null && (
-          <p className="m-0 text-[13px] text-ink2">중간 지점 3km 안에 지하철역이 없어서 중간 지점 주변 가게를 보여드려요.</p>
-        )}
-        {stations && stations.length > 0 && (
-          <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="역 후보">
-            {stations.map((s) => (
-              <button
-                key={s.id}
-                role="tab"
-                aria-selected={station?.id === s.id}
-                className={`btn btn-sm ${station?.id === s.id ? '!bg-pen-strong !text-pen-ink' : ''}`}
-                onClick={() => setStation(s)}
-              >
-                {s.name}
-                {origin && <span className="ml-1 text-xs opacity-80">나 {myDist(s)}</span>}
-              </button>
-            ))}
-          </div>
-        )}
-        {station && (
-          <>
-            <div className="flex flex-wrap items-center gap-2">
-              <div className="inline-flex rounded-[10px] bg-rule2 p-0.5">
-                {CATS.map((c) => (
-                  <button key={c.code} className={`rounded-[8px] border-0 px-3 py-1 text-[13px] font-semibold ${cat === c.code ? 'bg-sheet text-ink shadow-soft' : 'bg-transparent text-ink2'}`} onClick={() => setCat(c.code)}>
-                    {c.label}
-                  </button>
-                ))}
+        <>
+          {/* ① 내 출발지 */}
+          <Part n={1} title="내 출발지">
+            {origin === undefined && <p className="m-0 text-[13px] text-ink2">불러오는 중…</p>}
+            {origin && !editOrigin && (
+              <div className="flex items-center gap-2 rounded-[12px] bg-rule2 px-3 py-2">
+                <span className="min-w-0 flex-1 truncate text-[14px] font-semibold">📍 {origin.label}</span>
+                <button className="btn-ghost btn-sm" onClick={() => setEditOrigin(true)}>바꾸기</button>
+                <button className="btn-ghost btn-sm text-ink2" onClick={remove}>지우기</button>
               </div>
-              {!station.center && (
-                <button className="btn-ghost btn-sm" onClick={() => pick(station)}>가게는 나중에, ‘{station.name}’으로만 정하기</button>
-              )}
-            </div>
-            {spots === null && <p className="m-0 text-[13px] text-ink2">주변 가게를 찾는 중…</p>}
-            {spots && spots.length === 0 && <p className="m-0 text-[13px] text-ink2">근처에서 찾지 못했어요. 다른 역이나 분류를 골라 보세요.</p>}
-            {spots && spots.length > 0 && (
-              <ul className="m-0 grid list-none grid-cols-1 gap-1 p-0 sm:grid-cols-2">
-                {spots.map((p) => (
-                  <li key={p.id} className="flex items-center gap-2 rounded-[12px] bg-rule2 px-3 py-2">
-                    <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[14px] font-semibold text-ink">{p.name}</span>
-                      <span className="block truncate text-xs text-ink2">{p.category} · {station.center ? '중간 지점' : station.name}에서 {kmText(p.distance)}</span>
-                    </span>
-                    {/* 카카오맵 가게 페이지(사진·영업시간·후기)를 새 탭으로 */}
-                    <a href={p.url} target="_blank" rel="noreferrer" className="btn btn-sm shrink-0 no-underline" aria-label={`${p.name} 정보 보기 (카카오맵)`}>
-                      정보
-                      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M14 4h6v6M20 4 10 14M18 13v6H5V6h6" /></svg>
-                    </a>
-                    <button className="btn-soft btn-sm shrink-0" onClick={() => pick(p)}>여기로</button>
-                  </li>
-                ))}
-              </ul>
             )}
-          </>
-        )}
-      </div>
-      </>
+            {origin !== undefined && showOriginForm && (
+              <div className="flex flex-col gap-2">
+                <button className="btn w-full" disabled={Boolean(busy)} onClick={useHere}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><circle cx="12" cy="12" r="3" /><path d="M12 2v3M12 19v3M2 12h3M19 12h3" /></svg>
+                  {busy === 'gps' ? '위치 확인 중…' : '현재 위치 쓰기'}
+                </button>
+                <form className="flex gap-2" onSubmit={search}>
+                  <input className="field-input min-w-0 flex-1" placeholder="또는 집·학교·회사 검색" value={query} onChange={(e) => setQuery(e.target.value)} aria-label="출발지 검색" />
+                  <button className="btn-soft" type="submit" disabled={Boolean(busy)}>검색</button>
+                </form>
+                {results && (
+                  <ul className="m-0 flex max-h-[200px] list-none flex-col gap-0.5 overflow-auto p-0">
+                    {results.length === 0 && <li className="py-1 text-[13px] text-ink2">검색 결과가 없어요.</li>}
+                    {results.map((p) => (
+                      <li key={p.id}>
+                        <button className="flex w-full flex-col items-start gap-0 rounded-[10px] border-0 bg-transparent px-2 py-1.5 text-left hover:bg-rule2" onClick={() => save({ lat: p.lat, lng: p.lng }, p.name)}>
+                          <span className="block w-full truncate text-[14px] font-semibold text-ink">{p.name}</span>
+                          <span className="block w-full truncate text-xs text-ink2">{p.address}</span>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+                {origin && <button className="btn-ghost btn-sm self-start" onClick={() => { setEditOrigin(false); setResults(null) }}>그대로 두기</button>}
+              </div>
+            )}
+            <label className="flex items-center gap-2 text-[13px] text-ink2">
+              <input type="checkbox" checked={isPublic} onChange={(e) => togglePublic(e.target.checked)} />
+              다른 사람에게 내 동네 보여주기
+            </label>
+            <p className="-mt-1 m-0 text-xs text-ink2">정확한 위치는 나만 볼 수 있어요. 끄면 ‘입력함’으로만 보여요.</p>
+          </Part>
+
+          {/* ② 중간 지점 */}
+          <Part n={2} title="중간 지점 근처" aside={<ParticipantStatus people={people} setCount={setCount} />}>
+            {setCount < 2 ? (
+              <p className="m-0 rounded-[12px] bg-rule2 px-3.5 py-3 text-[13px] text-ink2">두 명 이상 출발지를 넣으면 가운데쯤의 역과 가게를 추천해요. 초대한 사람들에게도 입력을 부탁해 보세요.</p>
+            ) : stations === null ? (
+              <p className="m-0 text-[13px] text-ink2">중간 지점을 찾는 중…</p>
+            ) : (
+              <>
+                {stations.length === 0 && mid_?.lat != null && (
+                  <p className="m-0 text-xs text-ink2">근처에 지하철역이 없어서 중간 지점 주변을 보여 드려요.</p>
+                )}
+                {stations.length > 0 && (
+                  <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="역 후보">
+                    {stations.map((s) => (
+                      <button key={s.id} role="tab" aria-selected={station?.id === s.id} className={seg(station?.id === s.id)} onClick={() => { setStation(s); setPending(null) }}>
+                        {s.name}
+                        {origin && <span className="ml-1 text-[11px] font-medium opacity-75">나 {myDist(s)}</span>}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {station && (
+                  <div className="flex flex-wrap gap-1.5 border-t border-rule2 pt-2.5" role="tablist" aria-label="무엇을 볼까요">
+                    {KINDS.filter((k) => k.key !== 'station' || !station.center).map((k) => (
+                      <button key={k.key} role="tab" aria-selected={kind === k.key} className={seg(kind === k.key)} onClick={() => { setKind(k.key); setPending(null) }}>
+                        {k.label}
+                      </button>
+                    ))}
+                  </div>
+                )}
+                {station && kind === 'station' && !station.center && (
+                  <PlaceRow p={{ ...station, category: '지하철역' }} sub={origin ? `나에게서 ${myDist(station)}` : '지하철역'} on={isPending(station)} onChoose={() => choose(station, station.name)} />
+                )}
+                {station && kind !== 'station' && (
+                  <>
+                    {spots === null && <p className="m-0 text-[13px] text-ink2">주변 가게를 찾는 중…</p>}
+                    {spots && spots.length === 0 && <p className="m-0 text-[13px] text-ink2">근처에서 찾지 못했어요. 다른 역이나 분류를 골라 보세요.</p>}
+                    {spots && spots.length > 0 && (
+                      <ul className="m-0 flex max-h-[320px] list-none flex-col gap-1 overflow-auto p-0">
+                        {spots.map((p) => (
+                          <li key={p.id}>
+                            <PlaceRow
+                              p={p}
+                              sub={`${p.category} · ${station.center ? '중간 지점' : station.name}에서 ${kmText(p.distance)}`}
+                              on={isPending(p)}
+                              onChoose={() => choose(p, station.center ? null : station.name)}
+                            />
+                          </li>
+                        ))}
+                      </ul>
+                    )}
+                  </>
+                )}
+              </>
+            )}
+          </Part>
+        </>
+      )}
+
+      {/* '여기로'를 누르면 한 번 더 확인 */}
+      {pending && (
+        <div className="sticky bottom-[max(12px,env(safe-area-inset-bottom,0px))] z-10 flex flex-col gap-2.5 rounded-[16px] bg-sheet p-3.5 shadow-soft ring-1 ring-rule" role="dialog" aria-label="장소 확인">
+          <div className="min-w-0">
+            <div className="text-xs text-ink2">이 곳으로 정할까요?</div>
+            <div className="truncate text-[15px] font-bold">📍 {pending.name}</div>
+            <div className="truncate text-xs text-ink2">{[pending.station && `${pending.station} 근처`, pending.address].filter(Boolean).join(' · ')}</div>
+          </div>
+          <div className="grid grid-cols-[1fr_2fr] gap-2">
+            <button className="btn min-h-[46px]" onClick={() => setPending(null)}>취소</button>
+            <button className="btn-primary min-h-[46px]" onClick={confirmPick}>확인</button>
+          </div>
+        </div>
       )}
     </Shell>
   )
@@ -317,8 +327,42 @@ function placeOf(p, station) {
   return { name: p.name, address: p.address, lat: p.lat, lng: p.lng, kakao_id: p.id || null, url: p.url || kakaoToLink(p), station: station || null }
 }
 
-/** 장소 이름으로 검색해서 바로 정하기 (중간 지점과 상관없이) */
-function DirectPick({ near, onPick }) {
+/** 장소 한 줄: 이름·설명 + 정보(카카오맵) + 여기로 */
+function PlaceRow({ p, sub, on, onChoose }) {
+  return (
+    <div className={`flex items-center gap-2 rounded-[12px] px-3 py-2 ${on ? 'bg-pen-soft ring-2 ring-pen' : 'bg-rule2'}`}>
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[14px] font-semibold text-ink">{p.name}</span>
+        <span className="block truncate text-xs text-ink2">{sub}</span>
+      </span>
+      {p.url && (
+        <a href={p.url} target="_blank" rel="noreferrer" className="btn btn-sm shrink-0 no-underline" aria-label={`${p.name} 정보 보기 (카카오맵)`}>정보</a>
+      )}
+      <button className={`btn-sm shrink-0 ${on ? 'btn-primary' : 'btn-soft'}`} onClick={onChoose}>{on ? '선택됨' : '여기로'}</button>
+    </div>
+  )
+}
+
+/** 출발지 입력 현황: 숫자 한 줄, 누르면 누가 넣었는지 */
+function ParticipantStatus({ people, setCount }) {
+  return (
+    <details className="relative text-[13px]">
+      <summary className="cursor-pointer list-none font-semibold text-accent">출발지 {setCount}/{people.length}명 ▾</summary>
+      <ul className="absolute right-0 z-10 m-0 mt-1 flex w-[220px] list-none flex-col gap-1 rounded-[12px] bg-sheet p-2.5 shadow-soft ring-1 ring-rule">
+        {people.map((p) => (
+          <li key={p.id} className="flex items-center gap-1.5">
+            <Avatar name={p.name} size={20} />
+            <span className="min-w-0 flex-1 truncate font-medium text-ink">{p.name || '이름 없음'}</span>
+            <span className={p.origin_set ? 'text-ink2' : 'text-ink2 opacity-60'}>{p.origin_set ? p.origin_label || '입력함' : '아직'}</span>
+          </li>
+        ))}
+      </ul>
+    </details>
+  )
+}
+
+/** 장소 이름으로 검색해서 고르기 (중간 지점과 상관없이) */
+function DirectPick({ near, isPending, onChoose }) {
   const toast = useToast()
   const [q, setQ] = useState('')
   const [busy, setBusy] = useState(false)
@@ -339,20 +383,15 @@ function DirectPick({ near, onPick }) {
   return (
     <div className="flex flex-col gap-2">
       <form className="flex gap-2" onSubmit={find}>
-        <input autoFocus className="field-input min-w-0 flex-1" placeholder="만날 곳 이름 (예: 강남역 스타벅스)" value={q} onChange={(e) => setQ(e.target.value)} aria-label="만날 장소 검색" />
+        <input className="field-input min-w-0 flex-1" placeholder="만날 곳 이름 (예: 강남역 스타벅스)" value={q} onChange={(e) => setQ(e.target.value)} aria-label="만날 장소 검색" />
         <button className="btn-soft" type="submit" disabled={busy}>{busy ? '찾는 중…' : '검색'}</button>
       </form>
       {list && (
-        <ul className="m-0 flex max-h-[260px] list-none flex-col gap-1 overflow-auto p-0">
+        <ul className="m-0 flex max-h-[320px] list-none flex-col gap-1 overflow-auto p-0">
           {list.length === 0 && <li className="py-1 text-[13px] text-ink2">검색 결과가 없어요. 다른 이름으로 찾아보세요.</li>}
           {list.map((p) => (
-            <li key={p.id} className="flex items-center gap-2 rounded-[12px] bg-rule2 px-3 py-2">
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[14px] font-semibold text-ink">{p.name}</span>
-                <span className="block truncate text-xs text-ink2">{[p.category, p.address].filter(Boolean).join(' · ')}</span>
-              </span>
-              <a href={p.url} target="_blank" rel="noreferrer" className="btn btn-sm shrink-0 no-underline" aria-label={`${p.name} 정보 보기 (카카오맵)`}>정보</a>
-              <button className="btn-soft btn-sm shrink-0" onClick={() => { onPick(p); setList(null); setQ('') }}>여기로</button>
+            <li key={p.id}>
+              <PlaceRow p={p} sub={[p.category, p.address].filter(Boolean).join(' · ')} on={isPending(p)} onChoose={() => onChoose(p)} />
             </li>
           ))}
         </ul>
@@ -361,9 +400,22 @@ function DirectPick({ near, onPick }) {
   )
 }
 
+function Part({ n, title, aside, children }) {
+  return (
+    <div className="flex flex-col gap-2.5 border-t border-rule2 pt-4">
+      <div className="flex items-center gap-2.5">
+        <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-pen-soft text-[12px] font-extrabold text-accent">{n}</span>
+        <h3 className="m-0 flex-1 text-[15px] font-bold">{title}</h3>
+        {aside}
+      </div>
+      {children}
+    </div>
+  )
+}
+
 function Shell({ children, onClose }) {
   return (
-    <section className="flex flex-col gap-5 rounded-[20px] bg-sheet p-5 shadow-soft" aria-label="만날 장소 정하기">
+    <section className="flex flex-col gap-4 rounded-[20px] bg-sheet p-4 shadow-soft sm:p-5" aria-label="만날 장소 정하기">
       <div className="flex items-center justify-between">
         <h2 className="m-0 text-[18px] font-bold">어디서 만날까요?</h2>
         {onClose && (
