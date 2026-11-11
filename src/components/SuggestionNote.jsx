@@ -52,16 +52,27 @@ export default function SuggestionNote({ cfg, result, list, cand, byId, onNext, 
       </div>
       {span && <div className="mt-1.5 text-[13px] font-semibold text-accent">{span}</div>}
       {choices.length > 1 && (
-        <label className="mt-2 flex items-center gap-2 text-[13px] text-ink2">
-          시작 시각
-          <select
-            className="rounded-[10px] border-0 bg-rule2 px-2.5 py-1.5 text-[14px] font-semibold text-ink"
-            value={w.s}
-            onChange={(e) => setPicked(Number(e.target.value))}
-          >
-            {choices.map((s) => <option key={s} value={s}>{tm(cfg, s)}</option>)}
-          </select>
-        </label>
+        // 시작 시각: 드롭다운 대신 눌러서 고르는 시간 칩 (많으면 옆으로 넘겨요)
+        <div className="mt-2.5">
+          <div className="mb-1.5 text-xs font-semibold text-ink2">시작 시각 고르기</div>
+          <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="radiogroup" aria-label="시작 시각">
+            {choices.map((s) => {
+              const on = s === w.s
+              return (
+                <button
+                  key={s}
+                  type="button"
+                  role="radio"
+                  aria-checked={on}
+                  className={`tabular min-h-[36px] shrink-0 rounded-full border-0 px-3.5 font-mono text-[14px] font-semibold ${on ? 'bg-pen-strong text-pen-ink' : 'bg-rule2 text-ink hover:bg-rule'}`}
+                  onClick={() => setPicked(s)}
+                >
+                  {tm(cfg, s)}
+                </button>
+              )
+            })}
+          </div>
+        </div>
       )}
       <div className="mt-1.5 text-[13px] text-ink2">{summary(w, n)}</div>
       {/* 누가 되는지: 참여자 카드처럼 원형 아바타 (테두리·배지 색으로 가능/조율/불가/미입력) */}
