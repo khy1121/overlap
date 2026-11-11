@@ -498,6 +498,7 @@ export default function Board({ mid, session }) {
           />
           <SlotList
             title="모두 가능한 시간"
+            round
             count={result.all.length}
             hint="전원이 '가능'으로 표시한 시간이에요."
             items={result.all}
