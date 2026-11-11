@@ -13,6 +13,7 @@ const CATS = [
 
 /**
  * 만날 장소 정하기 (시간 확정 전에도 미리 정할 수 있어요).
+ * 0) 가고 싶은 곳이 이미 있으면 바로 검색해서 정하기
  * 1) 내 출발지 입력(현재 위치 또는 검색) + 다른 사람에게 보일지 선택
  * 2) 2명 이상 입력하면 중간 지점 근처 역 후보 → 역 주변 카페·음식점 → '이 장소로 정하기'
  * 좌표는 본인만 읽을 수 있고, 다른 사람에게는 공개를 켰을 때만 동 이름이 보여요.
@@ -129,7 +130,7 @@ export default function PlacePanel({ mid, cfg, people, myPid, onPlace, onClose }
     }
   }
   function pick(p) {
-    onPlace({ name: p.name, address: p.address, lat: p.lat, lng: p.lng, kakao_id: p.id || null, url: p.url || kakaoToLink(p), station: station?.center ? null : station?.name })
+    onPlace(placeOf(p, station?.center ? null : station?.name))
     toast(`만날 장소를 ‘${p.name}’으로 정했어요`)
   }
 
@@ -145,6 +146,25 @@ export default function PlacePanel({ mid, cfg, people, myPid, onPlace, onClose }
 
   return (
     <Shell onClose={onClose}>
+      {cfg.place && (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[14px] bg-pen-soft px-4 py-3 text-[14px]">
+          <span className="text-xs text-ink2">정해진 장소</span>
+          <b className="text-ink">📍 {cfg.place.name}</b>
+          {cfg.place.station && <span className="text-[13px] text-ink2">{cfg.place.station} 근처</span>}
+          <a href={cfg.place.url} target="_blank" rel="noreferrer" className="text-[13px] font-semibold text-accent underline">지도</a>
+          <button className="btn-ghost btn-sm ml-auto !px-1 text-no hover:text-no" onClick={() => onPlace(null)}>장소 취소</button>
+        </div>
+      )}
+
+      {/* 0. 직접 정하기: 가고 싶은 곳이 이미 있으면 */}
+      <DirectPick near={origin} onPick={(p) => { onPlace(placeOf(p, null)); toast(`만날 장소를 ‘${p.name}’으로 정했어요`) }} />
+
+      <div className="flex items-center gap-3 text-xs text-ink2">
+        <span className="h-px flex-1 bg-rule2" />
+        아직 모르겠다면, 각자 출발지로 중간 지점 찾기
+        <span className="h-px flex-1 bg-rule2" />
+      </div>
+
       {/* 1. 내 출발지 */}
       <div className="flex flex-col gap-2">
         <span className="text-[15px] font-semibold">내 출발지</span>
@@ -264,15 +284,58 @@ export default function PlacePanel({ mid, cfg, people, myPid, onPlace, onClose }
             )}
           </>
         )}
-        {cfg.place && (
-          <p className="m-0 text-[13px] text-ink2">
-            지금 정해진 장소: <b className="text-ink">{cfg.place.name}</b>
-            {' · '}
-            <button className="btn-ghost btn-sm !px-1 text-no hover:text-no" onClick={() => onPlace(null)}>장소 취소</button>
-          </p>
-        )}
       </div>
     </Shell>
+  )
+}
+
+/** 약속에 저장할 장소 모양 */
+function placeOf(p, station) {
+  return { name: p.name, address: p.address, lat: p.lat, lng: p.lng, kakao_id: p.id || null, url: p.url || kakaoToLink(p), station: station || null }
+}
+
+/** 장소 이름으로 검색해서 바로 정하기 (중간 지점과 상관없이) */
+function DirectPick({ near, onPick }) {
+  const toast = useToast()
+  const [q, setQ] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [list, setList] = useState(null)
+  async function find(e) {
+    e.preventDefault()
+    const t = q.trim()
+    if (t.length < 2) return toast('두 글자 이상 입력해 주세요')
+    setBusy(true)
+    try {
+      setList(await searchKeyword(t, near || undefined))
+    } catch (err) {
+      toast(err.message)
+    } finally {
+      setBusy(false)
+    }
+  }
+  return (
+    <div className="flex flex-col gap-2">
+      <span className="text-[15px] font-semibold">가고 싶은 곳이 있나요?</span>
+      <form className="flex gap-2" onSubmit={find}>
+        <input className="field-input min-w-0 flex-1" placeholder="예: 강남역 스타벅스, 성수 맛집" value={q} onChange={(e) => setQ(e.target.value)} aria-label="만날 장소 검색" />
+        <button className="btn-soft" type="submit" disabled={busy}>{busy ? '찾는 중…' : '검색'}</button>
+      </form>
+      {list && (
+        <ul className="m-0 flex max-h-[260px] list-none flex-col gap-1 overflow-auto p-0">
+          {list.length === 0 && <li className="py-1 text-[13px] text-ink2">검색 결과가 없어요. 다른 이름으로 찾아보세요.</li>}
+          {list.map((p) => (
+            <li key={p.id} className="flex items-center gap-2 rounded-[12px] bg-rule2 px-3 py-2">
+              <span className="min-w-0 flex-1">
+                <span className="block truncate text-[14px] font-semibold text-ink">{p.name}</span>
+                <span className="block truncate text-xs text-ink2">{[p.category, p.address].filter(Boolean).join(' · ')}</span>
+              </span>
+              <a href={p.url} target="_blank" rel="noreferrer" className="btn btn-sm shrink-0 no-underline" aria-label={`${p.name} 정보 보기 (카카오맵)`}>정보</a>
+              <button className="btn-soft btn-sm shrink-0" onClick={() => { onPick(p); setList(null); setQ('') }}>여기로</button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
 

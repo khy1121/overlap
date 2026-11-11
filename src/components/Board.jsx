@@ -476,7 +476,7 @@ export default function Board({ mid, session }) {
                 <PlaceLine place={cfg.place} originCount={originCount} total={people.length} linkClass="font-semibold text-accent underline" />
               </div>
               <button className="btn-soft self-start" aria-expanded={placeOpen} onClick={openPlace}>
-                {placeOpen ? '장소 창 닫기' : cfg.place ? '장소 바꾸기' : '출발지 넣고 중간 장소 찾기'}
+                {placeOpen ? '장소 창 닫기' : cfg.place ? '장소 바꾸기' : '장소 정하기'}
               </button>
             </section>
           )}
