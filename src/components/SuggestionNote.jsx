@@ -45,10 +45,10 @@ export default function SuggestionNote({ cfg, result, list, cand, byId, onNext, 
           아직 {n}명 중 {entered}명만 입력했어요. 더 모이면 추천이 바뀔 수 있어요.
         </p>
       )}
-      <div className="when mt-2 text-balance font-display text-[25px] font-extrabold leading-tight">
-        {dayLabel(cfg, w.d)}
-        <br />
-        <span className="tabular font-mono text-[22px] font-semibold tracking-tight">{timeText(cfg, w.s)}</span>
+      {/* 날짜와 시간을 한 줄로 (좁으면 시간만 다음 줄로) */}
+      <div className="when mt-2 flex flex-wrap items-baseline gap-x-2 font-display text-[23px] font-extrabold leading-tight">
+        <span>{dayLabel(cfg, w.d)}</span>
+        <span className="tabular whitespace-nowrap font-mono text-[21px] font-semibold tracking-tight">{timeText(cfg, w.s)}</span>
       </div>
       {span && <div className="mt-1.5 text-[13px] font-semibold text-accent">{span}</div>}
       {choices.length > 1 && (
