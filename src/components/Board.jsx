@@ -259,13 +259,12 @@ export default function Board({ mid, session }) {
           <div className="min-w-0">
             <div className="text-xs opacity-85">확정된 약속 시간</div>
             <strong className="font-display text-xl font-extrabold">{dayLabel(cfg, picked.d)} {timeText(cfg, picked.s, picked.dur)}</strong>
-            {/* 만날 장소: 정해졌으면 이름과 길찾기, 아니면 출발지 입력 현황 */}
-            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px]">
-              <PlaceLine place={cfg.place} originCount={originCount} total={people.length} linkClass="font-semibold text-pen-ink underline" />
-              <button className="btn btn-sm !min-h-0 !py-0.5 bg-transparent text-pen-ink underline hover:bg-[color-mix(in_oklab,var(--pen-ink)_18%,transparent)]" aria-expanded={narrow ? tab === 'place' : placeOpen} onClick={openPlace}>
-                {cfg.place ? '장소 바꾸기' : '장소 정하기'}
-              </button>
-            </div>
+            {/* 장소가 정해졌으면 이름과 지도 링크만 (정하기·바꾸기는 '장소' 탭 / 오른쪽 '만날 장소' 카드에서) */}
+            {cfg.place && (
+              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px]">
+                <PlaceLine place={cfg.place} originCount={originCount} total={people.length} linkClass="font-semibold text-pen-ink underline" />
+              </div>
+            )}
           </div>
           <div className="flex flex-wrap gap-1.5">
             <button className="btn btn-sm bg-[color-mix(in_oklab,var(--pen-ink)_18%,transparent)] text-pen-ink hover:bg-[color-mix(in_oklab,var(--pen-ink)_28%,transparent)]" onClick={() => copy(noticeText(picked, picked.dur, true))}>공지 문구 복사</button>
@@ -469,8 +468,8 @@ export default function Board({ mid, session }) {
         </section>
 
         <aside id="suggest" className={`flex scroll-mt-4 flex-col gap-5 ${showSuggest ? '' : 'hidden'}`}>
-          {/* 넓은 화면: 확정 전에도 장소를 미리 정할 수 있게 (좁은 화면은 '장소' 탭) */}
-          {!narrow && !picked && (
+          {/* 넓은 화면: 확정 전후 언제든 장소를 정할 수 있게 (좁은 화면은 '장소' 탭) */}
+          {!narrow && (
             <section className="sheet flex flex-col gap-2" aria-label="만날 장소">
               <h2 className="m-0 text-[17px] font-bold">만날 장소</h2>
               <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px] text-ink2">
