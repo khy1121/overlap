@@ -246,7 +246,8 @@ export default function PlacePanel({ mid, cfg, people, myPid, onPlace, onClose }
           </Part>
 
           {/* ② 중간 지점 */}
-          <Part n={2} title="중간 지점 근처" aside={<ParticipantStatus people={people} setCount={setCount} />}>
+          <Part n={2} title="중간 지점 근처">
+            <OriginStatus people={people} myPid={myPid} setCount={setCount} />
             {setCount < 2 ? (
               <p className="m-0 rounded-[12px] bg-rule2 px-3.5 py-3 text-[13px] text-ink2">두 명 이상 출발지를 넣으면 가운데쯤의 역과 가게를 추천해요. 초대한 사람들에게도 입력을 부탁해 보세요.</p>
             ) : stations === null ? (
@@ -343,21 +344,47 @@ function PlaceRow({ p, sub, on, onChoose }) {
   )
 }
 
-/** 출발지 입력 현황: 숫자 한 줄, 누르면 누가 넣었는지 */
-function ParticipantStatus({ people, setCount }) {
+/** 출발지 입력 현황: 참여자 카드처럼 진행 막대 + 가로로 넘기는 아바타 (넣은 사람은 초록 체크, 아래에 동네) */
+function OriginStatus({ people, myPid, setCount }) {
+  const pct = people.length ? Math.round((setCount / people.length) * 100) : 0
   return (
-    <details className="relative text-[13px]">
-      <summary className="cursor-pointer list-none font-semibold text-accent">출발지 {setCount}/{people.length}명 ▾</summary>
-      <ul className="absolute right-0 z-10 m-0 mt-1 flex w-[220px] list-none flex-col gap-1 rounded-[12px] bg-sheet p-2.5 shadow-soft ring-1 ring-rule">
-        {people.map((p) => (
-          <li key={p.id} className="flex items-center gap-1.5">
-            <Avatar name={p.name} size={20} />
-            <span className="min-w-0 flex-1 truncate font-medium text-ink">{p.name || '이름 없음'}</span>
-            <span className={p.origin_set ? 'text-ink2' : 'text-ink2 opacity-60'}>{p.origin_set ? p.origin_label || '입력함' : '아직'}</span>
-          </li>
-        ))}
+    <div className="flex flex-col gap-2 rounded-[14px] border border-rule2 px-3 py-2.5">
+      <div className="flex items-center gap-3">
+        <span className="text-[13px] font-semibold">출발지 입력</span>
+        <span className="flex min-w-0 flex-1 items-center justify-end gap-2 text-xs text-ink2">
+          <span className="h-1.5 w-full max-w-[100px] overflow-hidden rounded-full bg-rule" aria-hidden="true">
+            <span className="block h-full rounded-full bg-yes" style={{ width: `${pct}%` }} />
+          </span>
+          <span className="shrink-0 tabular">{setCount}/{people.length}명</span>
+        </span>
+      </div>
+      <ul className="-mx-1 m-0 flex list-none gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+        {people.map((p) => {
+          const me = p.id === myPid
+          const on = p.origin_set
+          return (
+            <li key={p.id} className="flex w-[64px] shrink-0 flex-col items-center gap-0.5" title={on ? p.origin_label || '입력함' : '아직 안 넣음'}>
+              <span className="relative">
+                <span className={`block rounded-full p-[2px] ${on ? 'bg-yes' : 'bg-rule'}`}>
+                  <span className="block rounded-full bg-sheet p-[2px]">
+                    <Avatar name={p.name} url={p.avatar_url} size={34} className={on ? '' : 'opacity-50'} />
+                  </span>
+                </span>
+                {on && (
+                  <span className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full bg-yes text-white ring-2 ring-sheet" aria-hidden="true">
+                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
+                  </span>
+                )}
+              </span>
+              <span className="w-full truncate text-center text-[12px] font-semibold leading-tight">{me ? '나' : p.name || '이름 없음'}</span>
+              <span className={`w-full truncate text-center text-[10px] leading-tight ${on ? 'text-ink2' : 'text-ink2 opacity-60'}`}>
+                {on ? (p.origin_label || '입력함').split(' ').pop() : '아직'}
+              </span>
+            </li>
+          )
+        })}
       </ul>
-    </details>
+    </div>
   )
 }
 
