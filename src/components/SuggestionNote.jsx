@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { dayLabel, spanText, startChoices, summary, timeText, tm } from '../lib/schedule'
 import Avatar from './Avatar'
+import { useDragScroll } from '../hooks/useDragScroll'
 
 const STATUS_TITLE = { y: '가능', m: '조율', n: '불가', u: '미입력' }
 // 원형 아바타 테두리·배지
@@ -15,6 +16,7 @@ export default function SuggestionNote({ cfg, result, list, cand, byId, onNext, 
   const { entered, n } = result
   // 연속 구간 안에서 고른 시작 칸 (추천이 바뀌면 처음으로)
   const [picked, setPicked] = useState(null)
+  const drag = useDragScroll() // PC에서 원형 아바타 줄을 마우스로 끌어서 넘기기
   useEffect(() => setPicked(null), [swapKey])
   if (!entered || !list.length) {
     return (
@@ -76,7 +78,7 @@ export default function SuggestionNote({ cfg, result, list, cand, byId, onNext, 
       )}
       <div className="mt-1.5 text-[13px] text-ink2">{summary(w, n)}</div>
       {/* 누가 되는지: 참여자 카드처럼 원형 아바타 (테두리·배지 색으로 가능/조율/불가/미입력) */}
-      <ul className="att -mx-1 m-0 mt-3 flex list-none gap-1 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <ul ref={drag.ref} {...drag.handlers} className={`att -mx-1 m-0 mt-3 flex list-none gap-1 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${drag.className}`}>
         {['y', 'm', 'n', 'u'].flatMap((k) =>
           w.g[k].map((pid) => {
             const p = byId[pid]
