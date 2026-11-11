@@ -5,6 +5,7 @@ import { useMedia } from '../hooks/useMedia'
 import { GOOGLE_CLIENT_ID, requestCalendarToken } from '../lib/googleCalendar'
 import { copyText } from '../lib/copy'
 import { myRequests, requestFriend, resultText } from '../lib/friends'
+import { deleteMeeting, leaveMeeting } from '../lib/meetings'
 import { supabase } from '../lib/supabase'
 import { BRUSH_LABEL, dayLabel, durText, evaluate, md, nDays, nSlots, summary, timeText, tm } from '../lib/schedule'
 import CalendarImport from './CalendarImport'
@@ -218,7 +219,34 @@ export default function Board({ mid, session }) {
         </div>
       </header>
 
-      {settingsOpen && <SettingsBar cfg={cfg} onChange={(patch) => { setCand(0); updateCfg(patch) }} onInvalid={toast} />}
+      {settingsOpen && (
+        <SettingsBar
+          cfg={cfg}
+          onChange={(patch) => { setCand(0); updateCfg(patch) }}
+          onInvalid={toast}
+          isOwner={cfg.owner === uid}
+          onDelete={async () => {
+            try {
+              await deleteMeeting(mid)
+              setDraft(null) // 칠하던 내용이 있어도 '떠나시겠어요?' 확인 없이 이동
+              try { sessionStorage.setItem('overlap:flash', '약속을 삭제했어요') } catch { /* 저장소 막힘 */ }
+              window.location.href = '/'
+            } catch (e) {
+              toast(e.message)
+            }
+          }}
+          onLeave={async () => {
+            try {
+              await leaveMeeting(mid, uid)
+              setDraft(null)
+              try { sessionStorage.setItem('overlap:flash', '약속에서 나왔어요') } catch { /* 저장소 막힘 */ }
+              window.location.href = '/'
+            } catch (e) {
+              toast(e.message)
+            }
+          }}
+        />
+      )}
 
       {inviteOpen && <InvitePanel mid={mid} cfg={cfg} link={link} onClose={() => setInviteOpen(false)} />}
 
@@ -319,7 +347,7 @@ export default function Board({ mid, session }) {
                 )}
                 <span>
                   {lockable
-                    ? '칸을 누르거나 드래그해서 칠해요. 스크롤은 왼쪽 시간 눈금을 잡고 하세요.'
+                    ? '칸을 톡 치면 한 칸, 길게 누른 채 끌면 여러 칸이 칠해져요. 그냥 쓸면 스크롤돼요.'
                     : '칸을 누르거나 드래그해서 칠해요. 요일·시간을 누르면 그 줄 전체가 칠해져요.'}{' '}
                   다 칠했으면 저장을 눌러 주세요.
                 </span>

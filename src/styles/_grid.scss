@@ -26,10 +26,10 @@ $x-mark: linear-gradient(to top right, $x-line), linear-gradient(to bottom right
   min-width: 340px;
   user-select: none;
   -webkit-user-select: none;
-  // 기본은 세로 스크롤 허용. 칠하는 중(.paint)에도 칸만 막아서, 시간 눈금을 잡으면 스크롤돼요.
-  touch-action: pan-y;
+  // 터치 스크롤은 항상 허용해요. 칠하기는 길게 누른 뒤부터 TimeGrid가 touchmove를 막아서 시작돼요.
+  touch-action: pan-x pan-y;
+  -webkit-touch-callout: none; // 길게 눌러도 iOS 미리보기 메뉴가 뜨지 않게
   border-radius: 4px;
-  &.paint .c { touch-action: none; }
   &:focus-visible { outline-offset: 4px; }
 
   @media (max-width: 520px) {

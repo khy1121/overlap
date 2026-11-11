@@ -7,10 +7,15 @@ import { DAYS, dayLabel, dayOf, md, nDays, nSlots, tm } from '../lib/schedule'
  * all 모드: 가능한 사람 수를 진하기로 보여 주고 칸을 누르면 onSelect.
  * canPaint가 false면 칠하지 않고 스크롤만 돼요. 이때 칸을 탭하면 onLockedTap.
  */
+const HOLD_MS = 320 // 이만큼 누르고 있으면 터치 칠하기 시작
+const HOLD_MOVE = 8 // 그 전에 이만큼(px) 움직이면 스크롤로 봐요
+
 export default function TimeGrid({ cfg, people, mode, cells, canPaint, brush, sel, onSelect, onCommit, onFill, onAnnounce, onLockedTap }) {
   const gridRef = useRef(null)
   const [draft, setDraft] = useState(null)
-  const drag = useRef(null) // { val, cells }
+  const drag = useRef(null) // { val, cells, touch }
+  // 터치 길게 누르기 대기: { k, x, y, timer }. 손가락이 움직이면 스크롤로 보고 취소, 가만히 있으면 칠하기 시작
+  const hold = useRef(null)
   const [cur, setCur] = useState({ d: 0, s: 0 })
   const slots = nSlots(cfg)
   const days = nDays(cfg)
@@ -25,12 +30,23 @@ export default function TimeGrid({ cfg, people, mode, cells, canPaint, brush, se
   // 칠하기가 꺼지면 진행 중이던 드래그를 버려요
   useEffect(() => {
     if (canPaint) return
+    cancelHold()
     drag.current = null
     setDraft(null)
   }, [canPaint])
 
+  // 터치로 칠하는 동안에는 브라우저 스크롤을 막아요. 길게 누르기 전에는 막지 않아서 그냥 쓸면 스크롤돼요.
+  useEffect(() => {
+    const el = gridRef.current
+    if (!el) return
+    const block = (e) => { if (drag.current?.touch && e.cancelable) e.preventDefault() }
+    el.addEventListener('touchmove', block, { passive: false })
+    return () => el.removeEventListener('touchmove', block)
+  }, [])
+
   useEffect(() => {
     const end = () => {
+      cancelHold() // 스크롤이 시작되면(pointercancel) 길게 누르기도 취소
       if (!drag.current) return
       const next = drag.current.cells
       drag.current = null
@@ -61,6 +77,17 @@ export default function TimeGrid({ cfg, people, mode, cells, canPaint, brush, se
     setDraft({ ...c })
   }
 
+  function cancelHold() {
+    if (!hold.current) return
+    clearTimeout(hold.current.timer)
+    hold.current = null
+  }
+  function beginDrag(k, touch) {
+    gridRef.current?.focus({ preventScroll: true })
+    drag.current = { val: brush && cells[k] === brush ? '' : brush, cells: { ...cells }, touch }
+    apply(k)
+    if (touch) navigator.vibrate?.(12)
+  }
   function onPointerDown(e) {
     const k = keyAt(e.clientX, e.clientY)
     if (!k) return
@@ -68,15 +95,30 @@ export default function TimeGrid({ cfg, people, mode, cells, canPaint, brush, se
     setCur({ d, s })
     if (mode === 'all') return onSelect({ d, s })
     if (!canPaint) return
+    if (e.pointerType === 'touch') {
+      // 터치는 바로 칠하지 않아요. 짧게 톡 치면 한 칸(onPointerUp), 길게 누르면 드래그 칠하기, 쓸면 스크롤.
+      cancelHold()
+      hold.current = { k, x: e.clientX, y: e.clientY, timer: setTimeout(() => { hold.current = null; beginDrag(k, true) }, HOLD_MS) }
+      return
+    }
     e.preventDefault()
-    gridRef.current.focus({ preventScroll: true })
-    drag.current = { val: brush && cells[k] === brush ? '' : brush, cells: { ...cells } }
-    apply(k)
+    beginDrag(k, false)
   }
   function onPointerMove(e) {
+    if (hold.current) {
+      if (Math.hypot(e.clientX - hold.current.x, e.clientY - hold.current.y) > HOLD_MOVE) cancelHold()
+      return
+    }
     if (!drag.current) return
     const k = keyAt(e.clientX, e.clientY)
     if (k) apply(k)
+  }
+  function onPointerUp() {
+    // 길게 누르기 전에 뗐으면 짧은 탭: 그 칸 하나만 토글
+    if (!hold.current) return
+    const k = hold.current.k
+    cancelHold()
+    toggle(k)
   }
   function toggle(k) {
     const next = { ...cells }
@@ -197,6 +239,8 @@ export default function TimeGrid({ cfg, people, mode, cells, canPaint, brush, se
         className={`timegrid ${days > 7 ? 'wide ' : ''}${mode === 'all' ? 'view' : 'edit'}${mode === 'edit' && canPaint ? ' paint' : ''}`}
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onContextMenu={(e) => { if (canPaint) e.preventDefault() }}
         onKeyDown={onKeyDown}
         onClick={(e) => { if (mode === 'edit' && !canPaint && e.target.dataset?.k) onLockedTap?.() }}
       >

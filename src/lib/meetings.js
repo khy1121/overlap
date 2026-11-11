@@ -9,6 +9,20 @@ export async function fetchMyMeetings() {
   return error ? [] : data
 }
 
+/** 약속 삭제 (만든 사람만, RLS). 참여자 일정도 함께 지워져요(on delete cascade). */
+export async function deleteMeeting(mid) {
+  const { error, count } = await supabase.from('meetings').delete({ count: 'exact' }).eq('id', mid)
+  if (error) throw new Error('약속을 삭제하지 못했어요. 잠시 후 다시 시도해 주세요.')
+  if (!count) throw new Error('약속은 만든 사람만 삭제할 수 있어요.')
+}
+
+/** 약속 나가기: 내 참여 행(일정 포함)을 지워요. 만든 사람은 나갈 수 없고 삭제만 돼요. */
+export async function leaveMeeting(mid, uid) {
+  const { error, count } = await supabase.from('participants').delete({ count: 'exact' }).eq('meeting_id', mid).eq('user_id', uid)
+  if (error) throw new Error('약속에서 나가지 못했어요. 잠시 후 다시 시도해 주세요.')
+  if (!count) throw new Error('이 약속에 참여하고 있지 않아요.')
+}
+
 const startOf = (m) => {
   const [y, mo, d] = m.start_date.split('-').map(Number)
   return new Date(y, mo - 1, d)

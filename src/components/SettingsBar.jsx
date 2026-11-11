@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { iso, nDays } from '../lib/schedule'
 import DurationPicker from './DurationPicker'
 
@@ -8,8 +9,8 @@ const input = 'rounded-[10px] border-0 bg-rule2 px-2.5 py-1.5 text-[13px] text-i
 const parse = (s) => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d) }
 const shift = (s, n) => { const d = parse(s); d.setDate(d.getDate() + n); return iso(d) }
 
-/** 약속 설정: 인원, 기간(시작~종료), 하루 시간대, 만나는 시간 */
-export default function SettingsBar({ cfg, onChange, onInvalid }) {
+/** 약속 설정: 인원, 기간(시작~종료), 하루 시간대, 만나는 시간. 맨 아래에 약속 삭제(만든 사람) 또는 나가기(참여자) */
+export default function SettingsBar({ cfg, onChange, onInvalid, isOwner, onDelete, onLeave }) {
   const days = nDays(cfg)
   const end = shift(cfg.start, days - 1)
   return (
@@ -78,6 +79,53 @@ export default function SettingsBar({ cfg, onChange, onInvalid }) {
         <span className="w-[72px] shrink-0">만나는 시간</span>
         <DurationPicker compact value={cfg.dur} max={Math.min(24, (cfg.to - cfg.from) * 2)} onChange={(dur) => onChange({ dur, picked: null })} />
       </div>
+      {isOwner ? (
+        <DangerRow
+          label="이 약속을 지우면 모든 참여자의 일정 입력도 함께 사라져요. 되돌릴 수 없어요."
+          button="약속 삭제"
+          confirm="정말 삭제"
+          onConfirm={onDelete}
+        />
+      ) : (
+        <DangerRow
+          label="나가면 이 약속에 입력한 내 일정이 지워져요. 초대 링크로 다시 들어올 수 있어요."
+          button="약속 나가기"
+          confirm="정말 나가기"
+          onConfirm={onLeave}
+        />
+      )}
     </section>
+  )
+}
+
+/** 되돌릴 수 없는 동작: 버튼을 한 번 누르면 설명과 함께 확인 버튼이 나와요 */
+function DangerRow({ label, button, confirm, onConfirm }) {
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  async function go() {
+    setBusy(true)
+    try {
+      await onConfirm()
+    } finally {
+      setBusy(false)
+      setOpen(false)
+    }
+  }
+  return (
+    <div className={field}>
+      {open ? (
+        <>
+          <span className="min-w-0 flex-1 basis-[220px] text-no">{label}</span>
+          <span className="flex gap-1.5">
+            <button className="btn btn-sm !bg-no !text-white hover:opacity-90 disabled:opacity-50" disabled={busy} onClick={go}>
+              {busy ? '처리 중…' : confirm}
+            </button>
+            <button className="btn btn-sm" disabled={busy} onClick={() => setOpen(false)}>취소</button>
+          </span>
+        </>
+      ) : (
+        <button className="btn-ghost btn-sm -ml-2 text-no hover:text-no" onClick={() => setOpen(true)}>{button}</button>
+      )}
+    </div>
   )
 }

@@ -26,6 +26,14 @@ export default function App() {
   const toast = useToast()
 
   useEffect(() => {
+    // 다른 화면에서 이동하며 남긴 한 줄 알림 (예: 약속 삭제 후 홈으로)
+    try {
+      const flash = sessionStorage.getItem('overlap:flash')
+      if (flash) {
+        sessionStorage.removeItem('overlap:flash')
+        toast(flash)
+      }
+    } catch { /* 저장소 막힘 */ }
     const err = params.get('error_description')
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
