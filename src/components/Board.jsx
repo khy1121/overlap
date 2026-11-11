@@ -246,8 +246,8 @@ export default function Board({ mid, session }) {
       {settingsOpen && (
         <SettingsBar
           cfg={cfg}
-          onChange={(patch) => { setCand(0); updateCfg(patch) }}
-          onInvalid={toast}
+          onChange={(patch) => { setCand(0); updateCfg(patch); toast('설정을 저장했어요') }}
+          onClose={() => setSettingsOpen(false)}
           isOwner={cfg.owner === uid}
           onDelete={async () => {
             try {
