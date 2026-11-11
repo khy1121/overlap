@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { copyText } from '../lib/copy'
+import { APP_ORIGIN } from '../lib/site'
 import { cancelRequest, myRequests, requestByCode, respondRequest, resultText } from '../lib/friends'
 import { KAKAO_BTN, canKakaoShare, shareKakao } from '../lib/kakao'
 import { useToast } from '../hooks/useToast'
@@ -101,7 +102,7 @@ function AddFriendDialog({ open, onClose, onAdded }) {
             <button
               className="btn-primary flex-1"
               disabled={!code}
-              onClick={async () => toast((await copyText(`Overlap에서 친구 추가해 줘! 내 초대 코드: ${code}\n${window.location.origin}`)) ? '코드를 복사했어요' : '복사하지 못했어요')}
+              onClick={async () => toast((await copyText(`Overlap에서 친구 추가해 줘! 내 초대 코드: ${code}\n${APP_ORIGIN}`)) ? '코드를 복사했어요' : '복사하지 못했어요')}
             >
               코드 복사
             </button>
@@ -114,7 +115,7 @@ function AddFriendDialog({ open, onClose, onAdded }) {
                 shareKakao({
                   title: 'Overlap에서 친구 해요!',
                   description: `내 친구 코드: ${code}\n앱에서 코드를 입력하면 친구 신청이 와요.`,
-                  url: window.location.origin,
+                  url: APP_ORIGIN,
                   button: 'Overlap 열기',
                 }).catch((e) => toast(e.message))
               }

@@ -6,12 +6,14 @@ import { GOOGLE_CLIENT_ID, requestCalendarToken } from '../lib/googleCalendar'
 import { copyText } from '../lib/copy'
 import { myRequests, requestFriend, resultText } from '../lib/friends'
 import { deleteMeeting, leaveMeeting } from '../lib/meetings'
+import { APP_ORIGIN } from '../lib/site'
 import { supabase } from '../lib/supabase'
 import { BRUSH_LABEL, dayLabel, durText, evaluate, nDays, nSlots, rangeText, summary, timeText, tm } from '../lib/schedule'
 import CalendarImport from './CalendarImport'
 import InvitePanel from './InvitePanel'
 import Palette from './Palette'
 import PeopleBar from './PeopleBar'
+import PlacePanel from './PlacePanel'
 import { BackButton } from './PageHeader'
 import SettingsBar from './SettingsBar'
 import SlotList from './SlotList'
@@ -30,6 +32,7 @@ export default function Board({ mid, session }) {
   const [editing, setEditing] = useState(null)
   const [inviteOpen, setInviteOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
+  const [placeOpen, setPlaceOpen] = useState(false)
   const [calToken, setCalToken] = useState(null)
   const [calOpen, setCalOpen] = useState(false)
   const [announce, setAnnounce] = useState('')
@@ -58,7 +61,7 @@ export default function Board({ mid, session }) {
   const [draft, setDraft] = useState(null)
   const paintOn = draft !== null
 
-  const link = `${window.location.origin}/?m=${mid}`
+  const link = `${APP_ORIGIN}/?m=${mid}` // 초대·공지에 넣는 링크 (로컬에서도 배포 주소)
   const uid = session.user.id
   const byId = useMemo(() => Object.fromEntries(people.map((p) => [p.id, p])), [people])
   // 일정은 각자 본인 것만 입력·수정·삭제할 수 있어요 (서버 RLS도 같은 규칙).
@@ -163,7 +166,10 @@ export default function Board({ mid, session }) {
 
   function noticeText(w, dur, final) {
     const head = `${cfg.title} 시간 ${final ? '확정' : '제안'}\n${dayLabel(cfg, w.d)} ${timeText(cfg, w.s, dur)}`
-    if (final) return `${head}\n이 시간에 만나요!\n${link}`
+    if (final) {
+      const where = cfg.place ? `\n장소: ${cfg.place.name}${cfg.place.station ? ` (${cfg.place.station} 근처)` : ''}\n${cfg.place.url}` : ''
+      return `${head}${where}\n이 시간에 만나요!\n${link}`
+    }
     return `${head}\n(${summary(w, n)})\n이 시간 어때요?\n${link}`
   }
   const copy = async (text) => toast((await copyText(text)) ? '복사했어요' : '복사하지 못했어요')
@@ -252,15 +258,41 @@ export default function Board({ mid, session }) {
 
       {picked && (
         <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-md bg-pen-strong px-4 py-3 text-pen-ink">
-          <div>
+          <div className="min-w-0">
             <div className="text-xs opacity-85">확정된 약속 시간</div>
             <strong className="font-display text-xl font-extrabold">{dayLabel(cfg, picked.d)} {timeText(cfg, picked.s, picked.dur)}</strong>
+            {/* 만날 장소: 정해졌으면 이름과 길찾기, 아니면 출발지 입력 현황 */}
+            <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px]">
+              {cfg.place ? (
+                <>
+                  <span className="font-semibold">📍 {cfg.place.name}</span>
+                  {cfg.place.station && <span className="opacity-85">{cfg.place.station} 근처</span>}
+                  <a href={cfg.place.url} target="_blank" rel="noreferrer" className="font-semibold text-pen-ink underline">지도 보기</a>
+                </>
+              ) : (
+                <span className="opacity-85">어디서 만날까요? 출발지 입력 {people.filter((p) => p.origin_set).length}/{people.length}명</span>
+              )}
+              <button className="btn btn-sm !min-h-0 !py-0.5 bg-transparent text-pen-ink underline hover:bg-[color-mix(in_oklab,var(--pen-ink)_18%,transparent)]" aria-expanded={placeOpen} onClick={() => setPlaceOpen((o) => !o)}>
+                {cfg.place ? '장소 바꾸기' : '장소 정하기'}
+              </button>
+            </div>
           </div>
           <div className="flex flex-wrap gap-1.5">
             <button className="btn btn-sm bg-[color-mix(in_oklab,var(--pen-ink)_18%,transparent)] text-pen-ink hover:bg-[color-mix(in_oklab,var(--pen-ink)_28%,transparent)]" onClick={() => copy(noticeText(picked, picked.dur, true))}>공지 문구 복사</button>
             <button className="btn btn-sm bg-transparent text-pen-ink hover:bg-[color-mix(in_oklab,var(--pen-ink)_18%,transparent)]" onClick={() => updateCfg({ picked: null })}>확정 취소</button>
           </div>
         </div>
+      )}
+
+      {picked && placeOpen && (
+        <PlacePanel
+          mid={mid}
+          cfg={cfg}
+          people={people}
+          myPid={myPid}
+          onPlace={(place) => updateCfg({ place })}
+          onClose={() => setPlaceOpen(false)}
+        />
       )}
 
       <div className="grid grid-cols-1 items-start gap-5 min-[920px]:grid-cols-[minmax(0,1fr)_340px]">

@@ -1,10 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 
-const PERSON_COLS = 'id,user_id,name,avatar_url,cells,created_at'
+const PERSON_COLS = 'id,user_id,name,avatar_url,cells,created_at,origin_set,origin_label'
 const CFG_COLS = {
   title: 'title', start: 'start_date', days: 'days', from: 'from_hour', to: 'to_hour', dur: 'dur', count: 'expected', picked: 'picked',
-  startHour: 'start_hour', endHour: 'end_hour',
+  startHour: 'start_hour', endHour: 'end_hour', place: 'place',
 }
 
 const fromRow = (m) => ({
@@ -12,9 +12,12 @@ const fromRow = (m) => ({
   dur: m.dur, count: m.expected, picked: m.picked, owner: m.owner,
   // 기간 양 끝 시각 (DB에 아직 열이 없거나 비어 있으면 null → 하루 시간대 사용)
   startHour: m.start_hour ?? null, endHour: m.end_hour ?? null,
+  place: m.place ?? null, // 확정한 만날 장소 { name, address, lat, lng, url, station }
 })
 const toPerson = (r) => ({
   id: r.id, user_id: r.user_id, name: r.name || '', avatar_url: r.avatar_url, cells: r.cells || {}, created_at: r.created_at,
+  // 출발지 입력 여부와(공개를 켰을 때만) 동 이름. 좌표는 여기 없어요
+  origin_set: Boolean(r.origin_set), origin_label: r.origin_label || null,
 })
 
 /**

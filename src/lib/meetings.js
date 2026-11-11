@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { APP_ORIGIN } from './site'
 
 // '*'로 읽어서, 새 칸(days)이 DB에 아직 없어도 깨지지 않게
 const COLS = '*,participants(count)'
@@ -54,7 +55,9 @@ export function googleAddLink(m, t) {
     action: 'TEMPLATE',
     text: m.title,
     dates: `${f(t.start)}/${f(t.end)}`,
-    details: `Overlap에서 정한 약속이에요.\n${window.location.origin}/?m=${m.id}`,
+    details: `Overlap에서 정한 약속이에요.\n${APP_ORIGIN}/?m=${m.id}`,
   })
+  // 만날 장소를 정했으면 캘린더 위치에도 넣어요
+  if (m.place?.name) q.set('location', [m.place.name, m.place.address].filter(Boolean).join(' · '))
   return `https://calendar.google.com/calendar/render?${q}`
 }

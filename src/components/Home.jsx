@@ -1,8 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
 import { displayName } from '../lib/auth'
 import { DAYS } from '../lib/schedule'
-import { confirmedTime, fetchMyMeetings, hm, meetingSpan } from '../lib/meetings'
+import { confirmedTime, deleteMeeting, fetchMyMeetings, hm, meetingSpan } from '../lib/meetings'
 import { myRequests } from '../lib/friends'
+import { useToast } from '../hooks/useToast'
 import InstallApp from './InstallApp'
 import KakaoLink from './KakaoLink'
 
@@ -40,10 +41,47 @@ const ACTIONS = [
   },
 ]
 
+/** 목록 줄 오른쪽 끝 휴지통. 한 번 누르면 '삭제 / 취소'로 바뀌고, 삭제를 누르면 실행돼요 */
+function RowDelete({ onConfirm }) {
+  const [open, setOpen] = useState(false)
+  const [busy, setBusy] = useState(false)
+  if (open) {
+    return (
+      <span className="flex shrink-0 items-center gap-1">
+        <button
+          className="btn btn-sm !bg-no !text-white hover:opacity-90 disabled:opacity-50"
+          disabled={busy}
+          onClick={async () => { setBusy(true); try { await onConfirm() } finally { setBusy(false); setOpen(false) } }}
+        >
+          {busy ? '…' : '삭제'}
+        </button>
+        <button className="btn btn-sm" disabled={busy} onClick={() => setOpen(false)}>취소</button>
+      </span>
+    )
+  }
+  return (
+    <button className="btn-ghost btn-sm shrink-0 !px-2 text-ink2 hover:text-no" aria-label="약속 삭제" title="약속 삭제" onClick={() => setOpen(true)}>
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M3 6h18M8 6V4h8v2M6 6l1 14h10l1-14M10 11v6M14 11v6" /></svg>
+    </button>
+  )
+}
+
 /** 홈: 큰 동작 버튼 3개 + 다가오는 회의 + 조율 중인 회의 */
 export default function Home({ session }) {
+  const toast = useToast()
   const [list, setList] = useState(null)
   const [incoming, setIncoming] = useState(0)
+  // 내가 만든 약속은 목록에서 바로 지울 수 있어요 (한 번 더 눌러 확인)
+  async function remove(m) {
+    try {
+      await deleteMeeting(m.id)
+      setList((l) => l.filter((x) => x.id !== m.id))
+      toast(`‘${m.title}’을 삭제했어요`)
+    } catch (e) {
+      toast(e.message)
+    }
+  }
+  const trash = (m) => (m.owner === session.user.id ? <RowDelete onConfirm={() => remove(m)} /> : null)
   useEffect(() => {
     fetchMyMeetings().then(setList)
     myRequests().then((reqs) => setIncoming(reqs.filter((r) => r.direction === 'in').length))
@@ -100,8 +138,8 @@ export default function Home({ session }) {
             {list === null && <li className="py-2 text-[13px] text-ink2">불러오는 중…</li>}
             {list !== null && !upcoming.length && <li className="py-2 text-[13px] text-ink2">확정된 약속이 아직 없어요.</li>}
             {upcoming.map(({ m, t }) => (
-              <li key={m.id} className="border-b border-rule2 last:border-0">
-                <a href={`/?m=${m.id}`} className="flex items-center gap-3 py-2.5 text-ink no-underline">
+              <li key={m.id} className="flex items-center gap-1 border-b border-rule2 last:border-0">
+                <a href={`/?m=${m.id}`} className="flex min-w-0 flex-1 items-center gap-3 py-2.5 text-ink no-underline">
                   <span className="grid w-12 shrink-0 place-items-center rounded-[12px] bg-pen-soft py-1 leading-tight text-accent">
                     <span className="text-[11px] font-semibold">{t.start.getMonth() + 1}월</span>
                     <span className="text-[18px] font-extrabold">{t.start.getDate()}</span>
@@ -111,6 +149,7 @@ export default function Home({ session }) {
                     <span className="text-[13px] text-ink2">({DAYS[t.start.getDay()]}) {t.open ? `${hm(t.start)}부터` : `${hm(t.start)}–${hm(t.end)}`}</span>
                   </span>
                 </a>
+                {trash(m)}
               </li>
             ))}
           </ul>
@@ -128,8 +167,8 @@ export default function Home({ session }) {
             {ongoing.slice(0, 6).map((m) => {
               const s = meetingSpan(m)
               return (
-                <li key={m.id} className="border-b border-rule2 last:border-0">
-                  <a href={`/?m=${m.id}`} className="flex items-center justify-between gap-2 py-2.5 text-ink no-underline">
+                <li key={m.id} className="flex items-center gap-1 border-b border-rule2 last:border-0">
+                  <a href={`/?m=${m.id}`} className="flex min-w-0 flex-1 items-center justify-between gap-2 py-2.5 text-ink no-underline">
                     <span className="min-w-0">
                       <span className="block truncate text-[15px] font-semibold">{m.title}</span>
                       <span className="text-[13px] text-ink2">
@@ -138,6 +177,7 @@ export default function Home({ session }) {
                     </span>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-ink2" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
                   </a>
+                  {trash(m)}
                 </li>
               )
             })}

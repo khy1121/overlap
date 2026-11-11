@@ -1,5 +1,7 @@
 // 카카오톡 공유: 카톡 친구 선택 화면을 띄워 초대 카드를 보내요. (검수 없이 쓸 수 있는 기능)
 // 카카오 앱의 JavaScript 키(공개용)와, 카카오 앱 설정 > 플랫폼 > Web 에 등록된 도메인에서만 동작해요.
+import { APP_ORIGIN } from './site'
+
 export const KAKAO_JS_KEY = import.meta.env.VITE_KAKAO_JAVASCRIPT_KEY || ''
 const SDK = 'https://t1.kakaocdn.net/kakao_js_sdk/2.7.4/kakao.min.js'
 const SRI = 'sha384-DKYJZ8NLiK8MN4/C5P2dtSmLQ4KwPaoqAfyA/DfmEc1VDxu4yyC7wy6K1Hs90nka'
@@ -42,7 +44,7 @@ export async function shareKakao({ title, description, url, button = '열어 보
       title,
       description,
       // 카카오 서버가 가져갈 수 있도록 배포 주소의 PNG 아이콘을 써요
-      imageUrl: `${window.location.origin}/icons/icon-512.png`,
+      imageUrl: `${APP_ORIGIN}/icons/icon-512.png`,
       imageWidth: 512,
       imageHeight: 512,
       link,
