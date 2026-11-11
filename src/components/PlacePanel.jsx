@@ -30,13 +30,18 @@ export default function PlacePanel({ mid, cfg, people, myPid, onPlace, onClose }
   const [station, setStation] = useState(null)
   const [cat, setCat] = useState('CE7')
   const [spots, setSpots] = useState(null)
+  // 'direct' 정해진 곳이 있어요 → 장소 검색 / 'mid' 아직 못 정했어요 → 출발지·중간 지점
+  const [how, setHow] = useState(null)
 
   const setCount = people.filter((p) => p.origin_set).length
 
   useEffect(() => {
     fetchMyOrigin(myPid).then((o) => {
       setOrigin(o)
-      if (o) setIsPublic(o.is_public)
+      if (o) {
+        setIsPublic(o.is_public)
+        setHow((h) => h ?? 'mid') // 이미 출발지를 넣었으면 중간 지점 쪽을 바로 보여 줘요
+      }
     })
   }, [myPid])
 
@@ -156,15 +161,31 @@ export default function PlacePanel({ mid, cfg, people, myPid, onPlace, onClose }
         </div>
       )}
 
-      {/* 0. 직접 정하기: 가고 싶은 곳이 이미 있으면 */}
-      <DirectPick near={origin} onPick={(p) => { onPlace(placeOf(p, null)); toast(`만날 장소를 ‘${p.name}’으로 정했어요`) }} />
-
-      <div className="flex items-center gap-3 text-xs text-ink2">
-        <span className="h-px flex-1 bg-rule2" />
-        아직 모르겠다면, 각자 출발지로 중간 지점 찾기
-        <span className="h-px flex-1 bg-rule2" />
+      {/* 정해진 곳이 있는지 먼저 물어봐요 */}
+      <div className="grid grid-cols-2 gap-2" role="tablist" aria-label="장소 정하는 방법">
+        {[
+          ['direct', '정해진 곳이 있나요?', '장소 이름으로 바로 찾기'],
+          ['mid', '아직 못 정했나요?', '출발지로 중간 지점 추천'],
+        ].map(([k, title, sub]) => (
+          <button
+            key={k}
+            role="tab"
+            aria-selected={how === k}
+            className={`flex min-h-[64px] flex-col items-start justify-center gap-0.5 rounded-[14px] border-2 px-3.5 py-2.5 text-left ${how === k ? 'border-pen bg-pen-soft' : 'border-rule2 bg-transparent hover:bg-rule2'}`}
+            onClick={() => setHow(k)}
+          >
+            <span className="text-[15px] font-bold text-ink">{title}</span>
+            <span className="text-xs text-ink2">{sub}</span>
+          </button>
+        ))}
       </div>
 
+      {how === 'direct' && (
+        <DirectPick near={origin} onPick={(p) => { onPlace(placeOf(p, null)); toast(`만날 장소를 ‘${p.name}’으로 정했어요`) }} />
+      )}
+
+      {how === 'mid' && (
+      <>
       {/* 1. 내 출발지 */}
       <div className="flex flex-col gap-2">
         <span className="text-[15px] font-semibold">내 출발지</span>
@@ -285,6 +306,8 @@ export default function PlacePanel({ mid, cfg, people, myPid, onPlace, onClose }
           </>
         )}
       </div>
+      </>
+      )}
     </Shell>
   )
 }
@@ -315,9 +338,8 @@ function DirectPick({ near, onPick }) {
   }
   return (
     <div className="flex flex-col gap-2">
-      <span className="text-[15px] font-semibold">가고 싶은 곳이 있나요?</span>
       <form className="flex gap-2" onSubmit={find}>
-        <input className="field-input min-w-0 flex-1" placeholder="예: 강남역 스타벅스, 성수 맛집" value={q} onChange={(e) => setQ(e.target.value)} aria-label="만날 장소 검색" />
+        <input autoFocus className="field-input min-w-0 flex-1" placeholder="만날 곳 이름 (예: 강남역 스타벅스)" value={q} onChange={(e) => setQ(e.target.value)} aria-label="만날 장소 검색" />
         <button className="btn-soft" type="submit" disabled={busy}>{busy ? '찾는 중…' : '검색'}</button>
       </form>
       {list && (
