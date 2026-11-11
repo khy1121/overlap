@@ -5,6 +5,7 @@ import {
 } from '../lib/places'
 import { useToast } from '../hooks/useToast'
 import Avatar from './Avatar'
+import { useDragScroll } from '../hooks/useDragScroll'
 
 // 중간 지점 근처에서 무엇을 볼지: 카페·음식점은 가게 목록, '역만'은 역 자체를 장소로
 const KINDS = [
@@ -346,6 +347,7 @@ function PlaceRow({ p, sub, on, onChoose }) {
 
 /** 출발지 입력 현황: 참여자 카드처럼 진행 막대 + 가로로 넘기는 아바타 (넣은 사람은 초록 체크, 아래에 동네) */
 function OriginStatus({ people, myPid, setCount }) {
+  const drag = useDragScroll() // PC에서 마우스로 끌어서 넘기기
   const pct = people.length ? Math.round((setCount / people.length) * 100) : 0
   return (
     <div className="flex flex-col gap-2 rounded-[14px] border border-rule2 px-3 py-2.5">
@@ -358,7 +360,7 @@ function OriginStatus({ people, myPid, setCount }) {
           <span className="shrink-0 tabular">{setCount}/{people.length}명</span>
         </span>
       </div>
-      <ul className="-mx-1 m-0 flex list-none gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <ul ref={drag.ref} {...drag.handlers} className={`-mx-1 m-0 flex list-none gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${drag.className}`}>
         {people.map((p) => {
           const me = p.id === myPid
           const on = p.origin_set

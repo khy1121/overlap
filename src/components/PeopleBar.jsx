@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import Avatar from './Avatar'
+import { useDragScroll } from '../hooks/useDragScroll'
 
 function NameEditor({ person, onSave, onCancel }) {
   const [value, setValue] = useState(person.name)
@@ -44,6 +45,7 @@ function NameEditor({ person, onSave, onCancel }) {
  * 일정은 각자 본인 것만 입력할 수 있어서, 고칠 수 있는 건 내 이름뿐이에요.
  */
 export default function PeopleBar({ people, myPid, target, mode, n, canEdit, editing, setEditing, onSelect, onRename, relation, onFriend }) {
+  const drag = useDragScroll() // PC에서 마우스로 끌어서 넘기기
   const done = people.filter((p) => Object.keys(p.cells).length > 0)
   const pct = n ? Math.min(100, Math.round((done.length / n) * 100)) : 0
   return (
@@ -57,7 +59,7 @@ export default function PeopleBar({ people, myPid, target, mode, n, canEdit, edi
           <span className="shrink-0 tabular">{done.length}/{n}명 입력</span>
         </span>
       </div>
-      <ul className="-mx-1 m-0 flex list-none gap-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+      <ul ref={drag.ref} {...drag.handlers} className={`-mx-1 m-0 flex list-none gap-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${drag.className}`}>
         {people.map((p) => {
           if (editing === p.id) {
             return (
