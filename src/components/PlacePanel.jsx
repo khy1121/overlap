@@ -12,7 +12,7 @@ const CATS = [
 ]
 
 /**
- * 만날 장소 정하기 (확정된 약속에서).
+ * 만날 장소 정하기 (시간 확정 전에도 미리 정할 수 있어요).
  * 1) 내 출발지 입력(현재 위치 또는 검색) + 다른 사람에게 보일지 선택
  * 2) 2명 이상 입력하면 중간 지점 근처 역 후보 → 역 주변 카페·음식점 → '이 장소로 정하기'
  * 좌표는 본인만 읽을 수 있고, 다른 사람에게는 공개를 켰을 때만 동 이름이 보여요.
@@ -159,7 +159,7 @@ export default function PlacePanel({ mid, cfg, people, myPid, onPlace, onClose }
           <button className="btn" disabled={Boolean(busy)} onClick={useHere}>
             {busy === 'gps' ? '위치 확인 중…' : origin ? '현재 위치로 바꾸기' : '현재 위치 쓰기'}
           </button>
-          <form className="flex min-w-0 flex-1 gap-2" onSubmit={search}>
+          <form className="flex min-w-[240px] flex-1 gap-2" onSubmit={search}>
             <input
               className="field-input min-w-0 flex-1"
               placeholder="집·학교·회사 등 장소 검색"
@@ -281,9 +281,11 @@ function Shell({ children, onClose }) {
     <section className="flex flex-col gap-5 rounded-[20px] bg-sheet p-5 shadow-soft" aria-label="만날 장소 정하기">
       <div className="flex items-center justify-between">
         <h2 className="m-0 text-[18px] font-bold">어디서 만날까요?</h2>
-        <button className="btn-ghost btn-sm !px-2" aria-label="장소 창 닫기" onClick={onClose}>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
-        </button>
+        {onClose && (
+          <button className="btn-ghost btn-sm !px-2" aria-label="장소 창 닫기" onClick={onClose}>
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12" /></svg>
+          </button>
+        )}
       </div>
       {children}
     </section>

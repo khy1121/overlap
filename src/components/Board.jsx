@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { useMeeting } from '../hooks/useMeeting'
 import { useToast } from '../hooks/useToast'
 import { useMedia } from '../hooks/useMedia'
@@ -33,6 +33,15 @@ export default function Board({ mid, session }) {
   const [inviteOpen, setInviteOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [placeOpen, setPlaceOpen] = useState(false)
+  // 좁은 화면은 시간표 / 추천 / 장소를 탭으로 나눠 한 번에 하나만 보여 줘요 (넓은 화면은 나란히)
+  const narrow = useMedia('(max-width: 919px)')
+  const [tab, setTab] = useState('time')
+  const tabsRef = useRef(null)
+  const goTab = useCallback((t) => {
+    setTab(t)
+    const el = tabsRef.current
+    if (el && el.getBoundingClientRect().top < 0) el.scrollIntoView({ block: 'start' })
+  }, [])
   const [calToken, setCalToken] = useState(null)
   const [calOpen, setCalOpen] = useState(false)
   const [announce, setAnnounce] = useState('')
@@ -140,7 +149,7 @@ export default function Board({ mid, session }) {
     setDraft(next)
   }
 
-  const startEdit = () => { setMode('edit'); setSel(null); setDraft({ ...myCells }) }
+  const startEdit = () => { setMode('edit'); setSel(null); setTab('time'); setDraft({ ...myCells }) }
   function cancelEdit() {
     setDraft(null)
     setCalOpen(false)
@@ -185,6 +194,15 @@ export default function Board({ mid, session }) {
   }
 
   const picked = cfg.picked && cfg.picked.d < nDays(cfg) && cfg.picked.s + (cfg.picked.dur || 1) <= nSlots(cfg) ? cfg.picked : null
+  const originCount = people.filter((p) => p.origin_set).length
+  // 좁은 화면 탭: 편집 중에는 항상 시간표
+  const showTime = !narrow || paintOn || tab === 'time'
+  const showSuggest = !narrow || (!paintOn && tab === 'suggest')
+  const showPlace = narrow && !paintOn && tab === 'place'
+  function openPlace() {
+    if (narrow) goTab('place')
+    else setPlaceOpen((o) => !o)
+  }
   const selDetail = mode === 'all' && sel
     ? ['y', 'm', 'n', 'u'].map((k) => [k, people.filter((p) => (p.cells[`${sel.d}-${sel.s}`] || 'u') === k)]).filter(([, ps]) => ps.length)
     : null
@@ -263,16 +281,8 @@ export default function Board({ mid, session }) {
             <strong className="font-display text-xl font-extrabold">{dayLabel(cfg, picked.d)} {timeText(cfg, picked.s, picked.dur)}</strong>
             {/* 만날 장소: 정해졌으면 이름과 길찾기, 아니면 출발지 입력 현황 */}
             <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px]">
-              {cfg.place ? (
-                <>
-                  <span className="font-semibold">📍 {cfg.place.name}</span>
-                  {cfg.place.station && <span className="opacity-85">{cfg.place.station} 근처</span>}
-                  <a href={cfg.place.url} target="_blank" rel="noreferrer" className="font-semibold text-pen-ink underline">지도 보기</a>
-                </>
-              ) : (
-                <span className="opacity-85">어디서 만날까요? 출발지 입력 {people.filter((p) => p.origin_set).length}/{people.length}명</span>
-              )}
-              <button className="btn btn-sm !min-h-0 !py-0.5 bg-transparent text-pen-ink underline hover:bg-[color-mix(in_oklab,var(--pen-ink)_18%,transparent)]" aria-expanded={placeOpen} onClick={() => setPlaceOpen((o) => !o)}>
+              <PlaceLine place={cfg.place} originCount={originCount} total={people.length} linkClass="font-semibold text-pen-ink underline" />
+              <button className="btn btn-sm !min-h-0 !py-0.5 bg-transparent text-pen-ink underline hover:bg-[color-mix(in_oklab,var(--pen-ink)_18%,transparent)]" aria-expanded={narrow ? tab === 'place' : placeOpen} onClick={openPlace}>
                 {cfg.place ? '장소 바꾸기' : '장소 정하기'}
               </button>
             </div>
@@ -284,19 +294,46 @@ export default function Board({ mid, session }) {
         </div>
       )}
 
-      {picked && placeOpen && (
+      {narrow && !paintOn && (
+        <nav
+          ref={tabsRef}
+          className="sticky z-20 flex gap-1 rounded-full bg-rule2 p-1 shadow-soft"
+          style={{ top: 'max(8px, env(safe-area-inset-top, 0px))' }}
+          role="tablist"
+          aria-label="약속 화면"
+        >
+          {[
+            ['time', '시간표', null],
+            ['suggest', '추천 시간', result.all.length || null],
+            ['place', '장소', cfg.place ? '✓' : originCount ? `${originCount}/${people.length}` : null],
+          ].map(([k, label, badge]) => (
+            <button
+              key={k}
+              role="tab"
+              aria-selected={tab === k}
+              className={`flex min-h-[40px] flex-1 items-center justify-center gap-1 rounded-full border-0 px-2 text-[14px] font-semibold ${tab === k ? 'bg-sheet text-ink shadow-soft' : 'bg-transparent text-ink2'}`}
+              onClick={() => goTab(k)}
+            >
+              {label}
+              {badge && <span className={`rounded-full px-1.5 text-[11px] leading-[18px] ${tab === k ? 'bg-pen-soft text-accent' : 'bg-sheet text-ink2'}`}>{badge}</span>}
+            </button>
+          ))}
+        </nav>
+      )}
+
+      {(narrow ? showPlace : placeOpen) && (
         <PlacePanel
           mid={mid}
           cfg={cfg}
           people={people}
           myPid={myPid}
           onPlace={(place) => updateCfg({ place })}
-          onClose={() => setPlaceOpen(false)}
+          onClose={narrow ? undefined : () => setPlaceOpen(false)}
         />
       )}
 
-      <div className="grid grid-cols-1 items-start gap-5 min-[920px]:grid-cols-[minmax(0,1fr)_340px]">
-        <section className="sheet" aria-label="시간 입력">
+      <div className={`grid grid-cols-1 items-start gap-5 min-[920px]:grid-cols-[minmax(0,1fr)_340px] ${showPlace ? 'hidden' : ''}`}>
+        <section className={`sheet ${showTime ? '' : 'hidden'}`} aria-label="시간 입력">
           <PeopleBar
             people={people}
             myPid={myPid}
@@ -451,7 +488,19 @@ export default function Board({ mid, session }) {
           )}
         </section>
 
-        <aside id="suggest" className="flex scroll-mt-4 flex-col gap-5">
+        <aside id="suggest" className={`flex scroll-mt-4 flex-col gap-5 ${showSuggest ? '' : 'hidden'}`}>
+          {/* 넓은 화면: 확정 전에도 장소를 미리 정할 수 있게 (좁은 화면은 '장소' 탭) */}
+          {!narrow && !picked && (
+            <section className="sheet flex flex-col gap-2" aria-label="만날 장소">
+              <h2 className="m-0 text-[17px] font-bold">만날 장소</h2>
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px] text-ink2">
+                <PlaceLine place={cfg.place} originCount={originCount} total={people.length} linkClass="font-semibold text-accent underline" />
+              </div>
+              <button className="btn-soft self-start" aria-expanded={placeOpen} onClick={openPlace}>
+                {placeOpen ? '장소 창 닫기' : cfg.place ? '장소 바꾸기' : '출발지 넣고 중간 장소 찾기'}
+              </button>
+            </section>
+          )}
           <SuggestionNote
             cfg={cfg}
             result={result}
@@ -479,6 +528,7 @@ export default function Board({ mid, session }) {
             onOpen={(w) => {
               setMode('all')
               setSel({ d: w.d, s: w.s })
+              if (narrow) goTab('time')
               const i = list.findIndex((x) => x.d === w.d && x.s === w.s)
               if (i >= 0) setCand(i)
             }}
@@ -494,6 +544,7 @@ export default function Board({ mid, session }) {
             onOpen={(w) => {
               setMode('all')
               setSel({ d: w.d, s: w.s })
+              if (narrow) goTab('time')
               const i = list.findIndex((x) => x.d === w.d && x.s === w.s)
               if (i >= 0) setCand(i)
             }}
@@ -513,11 +564,23 @@ export default function Board({ mid, session }) {
           onStart={startEdit}
           onCancel={cancelEdit}
           onSave={saveEdit}
-          onBest={() => document.getElementById('suggest')?.scrollIntoView({ behavior: 'smooth', block: 'center' })}
+          onBest={() => (narrow ? goTab('suggest') : document.getElementById('suggest')?.scrollIntoView({ behavior: 'smooth', block: 'center' }))}
         />
       )}
       <div className="sr-only" aria-live="polite">{announce}</div>
     </div>
+  )
+}
+
+/** 장소 한 줄: 정해졌으면 이름·역·지도 링크, 아니면 출발지 입력 현황 */
+function PlaceLine({ place, originCount, total, linkClass }) {
+  if (!place) return <span className="opacity-85">어디서 만날까요? 출발지 입력 {originCount}/{total}명</span>
+  return (
+    <>
+      <span className="font-semibold">📍 {place.name}</span>
+      {place.station && <span className="opacity-85">{place.station} 근처</span>}
+      <a href={place.url} target="_blank" rel="noreferrer" className={linkClass}>지도 보기</a>
+    </>
   )
 }
 
