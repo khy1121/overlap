@@ -11,6 +11,7 @@ import { supabase } from '../lib/supabase'
 import { BRUSH_LABEL, dayLabel, durText, evaluate, nDays, nSlots, rangeText, summary, timeText, tm } from '../lib/schedule'
 import CalendarImport from './CalendarImport'
 import InvitePanel from './InvitePanel'
+import MeetingExit from './MeetingExit'
 import Palette from './Palette'
 import PeopleBar from './PeopleBar'
 import PlacePanel from './PlacePanel'
@@ -248,27 +249,6 @@ export default function Board({ mid, session }) {
           cfg={cfg}
           onChange={(patch) => { setCand(0); updateCfg(patch); toast('설정을 저장했어요') }}
           onClose={() => setSettingsOpen(false)}
-          isOwner={cfg.owner === uid}
-          onDelete={async () => {
-            try {
-              await deleteMeeting(mid)
-              setDraft(null) // 칠하던 내용이 있어도 '떠나시겠어요?' 확인 없이 이동
-              try { sessionStorage.setItem('overlap:flash', '약속을 삭제했어요') } catch { /* 저장소 막힘 */ }
-              window.location.href = '/'
-            } catch (e) {
-              toast(e.message)
-            }
-          }}
-          onLeave={async () => {
-            try {
-              await leaveMeeting(mid, uid)
-              setDraft(null)
-              try { sessionStorage.setItem('overlap:flash', '약속에서 나왔어요') } catch { /* 저장소 막힘 */ }
-              window.location.href = '/'
-            } catch (e) {
-              toast(e.message)
-            }
-          }}
         />
       )}
 
@@ -551,6 +531,23 @@ export default function Board({ mid, session }) {
           />
         </aside>
       </div>
+      {!paintOn && (
+        <MeetingExit
+          isOwner={cfg.owner === uid}
+          onConfirm={async () => {
+            const owner = cfg.owner === uid
+            try {
+              if (owner) await deleteMeeting(mid)
+              else await leaveMeeting(mid, uid)
+              setDraft(null) // 칠하던 내용이 있어도 '떠나시겠어요?' 확인 없이 이동
+              try { sessionStorage.setItem('overlap:flash', owner ? '약속을 삭제했어요' : '약속에서 나왔어요') } catch { /* 저장소 막힘 */ }
+              window.location.href = '/'
+            } catch (e) {
+              toast(e.message)
+            }
+          }}
+        />
+      )}
       {lockable && (
         <MobileBar
           painting={paintOn}

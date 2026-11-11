@@ -19,9 +19,9 @@ const pick = (cfg) => {
 /**
  * 약속 설정. 기간 / 만나는 시간 / 인원으로 나눠 보여 주고, 바꾼 내용은 '변경 저장'을 눌러야 반영돼요.
  * (고치는 도중의 잠깐 틀린 값으로 오류가 뜨거나 확정 시간이 풀리지 않게)
- * 맨 아래에 약속 삭제(만든 사람) 또는 나가기(참여자).
+ * 약속 삭제·나가기는 약속 화면 맨 아래 빨간 버튼(MeetingExit)에 있어요.
  */
-export default function SettingsBar({ cfg, onChange, onClose, isOwner, onDelete, onLeave }) {
+export default function SettingsBar({ cfg, onChange, onClose }) {
   const saved = pick(cfg)
   const [d, setD] = useState(saved)
   const changed = KEYS.filter((k) => d[k] !== saved[k])
@@ -129,24 +129,6 @@ export default function SettingsBar({ cfg, onChange, onClose, isOwner, onDelete,
         </div>
       )}
 
-      {/* 되돌릴 수 없는 동작은 따로 */}
-      <div className="border-t border-rule2 pt-3">
-        {isOwner ? (
-          <DangerRow
-            label="이 약속을 지우면 모든 참여자의 일정 입력도 함께 사라져요. 되돌릴 수 없어요."
-            button="약속 삭제"
-            confirm="정말 삭제"
-            onConfirm={onDelete}
-          />
-        ) : (
-          <DangerRow
-            label="나가면 이 약속에 입력한 내 일정이 지워져요. 초대 링크로 다시 들어올 수 있어요."
-            button="약속 나가기"
-            confirm="정말 나가기"
-            onConfirm={onLeave}
-          />
-        )}
-      </div>
     </section>
   )
 }
@@ -172,33 +154,4 @@ function Card({ label, hint, children }) {
       {hint && <span className="text-xs text-ink2">{hint}</span>}
     </div>
   )
-}
-
-/** 되돌릴 수 없는 동작: 버튼을 한 번 누르면 설명과 함께 확인 버튼이 나와요 */
-function DangerRow({ label, button, confirm, onConfirm }) {
-  const [open, setOpen] = useState(false)
-  const [busy, setBusy] = useState(false)
-  async function go() {
-    setBusy(true)
-    try {
-      await onConfirm()
-    } finally {
-      setBusy(false)
-      setOpen(false)
-    }
-  }
-  if (open) {
-    return (
-      <div className="flex flex-wrap items-center gap-2 text-[13px]">
-        <span className="min-w-0 flex-1 basis-[220px] text-no">{label}</span>
-        <span className="flex gap-1.5">
-          <button className="btn btn-sm !bg-no !text-white hover:opacity-90 disabled:opacity-50" disabled={busy} onClick={go}>
-            {busy ? '처리 중…' : confirm}
-          </button>
-          <button className="btn btn-sm" disabled={busy} onClick={() => setOpen(false)}>취소</button>
-        </span>
-      </div>
-    )
-  }
-  return <button className="btn-ghost btn-sm -ml-2 text-no hover:text-no" onClick={() => setOpen(true)}>{button}</button>
 }
