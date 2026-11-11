@@ -18,6 +18,9 @@ window.addEventListener('vite:preloadError', (e) => {
 })
 import './styles/index.scss'
 
+// iOS 사파리는 user-scalable=no를 무시해서, 두 손가락 확대 제스처를 직접 막아요
+document.addEventListener('gesturestart', (e) => e.preventDefault(), { passive: false })
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ToastProvider>
