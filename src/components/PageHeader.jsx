@@ -1,5 +1,5 @@
 /** 뒤로가기: 이 앱 안에서 넘어왔으면 이전 화면으로, 링크로 바로 들어왔으면 홈으로 */
-export function BackButton({ className = '' }) {
+export function BackButton({ className = '', showLabel = true }) {
   function back() {
     const fromHere = document.referrer && new URL(document.referrer).origin === window.location.origin
     if (fromHere && window.history.length > 1) window.history.back()
@@ -8,7 +8,7 @@ export function BackButton({ className = '' }) {
   return (
     <button type="button" onClick={back} className={`btn-ghost btn-sm -ml-2 !px-2 ${className}`} aria-label="뒤로 가기">
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
-      <span className="text-[15px]">뒤로</span>
+      {showLabel && <span className="text-[15px]">뒤로</span>}
     </button>
   )
 }

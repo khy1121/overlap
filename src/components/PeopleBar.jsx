@@ -44,22 +44,27 @@ function NameEditor({ person, onSave, onCancel }) {
  * 참여자 카드 (탭 위에 한 줄). 아바타를 가로로 넘겨 보고, 입력한 사람은 초록 체크로 표시해요.
  * 일정은 각자 본인 것만 입력할 수 있어서, 고칠 수 있는 건 내 이름뿐이에요.
  */
-export default function PeopleBar({ people, myPid, target, mode, n, canEdit, editing, setEditing, onSelect, onRename, relation, onFriend }) {
+export default function PeopleBar({ people, myPid, target, mode, n, canEdit, editing, setEditing, onSelect, onRename, relation, onFriend, compact = false }) {
   const drag = useDragScroll() // PC에서 마우스로 끌어서 넘기기
   const done = people.filter((p) => Object.keys(p.cells).length > 0)
   const pct = n ? Math.min(100, Math.round((done.length / n) * 100)) : 0
   return (
-    <section className="sheet !px-4 !py-3" aria-label="참여자">
-      <div className="mb-2.5 flex items-center gap-3">
-        <span className="text-[15px] font-bold">참여자 <span className="text-ink2">{people.length}</span></span>
-        <span className="flex min-w-0 flex-1 items-center justify-end gap-2 text-xs text-ink2">
-          <span className="h-1.5 w-full max-w-[120px] overflow-hidden rounded-full bg-rule" aria-hidden="true">
-            <span className="block h-full rounded-full bg-yes" style={{ width: `${pct}%` }} />
+    // compact: 카드·제목 없이 아바타 한 줄 + 오른쪽 입력 현황 (모바일 약속 화면)
+    <section className={compact ? 'flex items-center gap-2' : 'sheet !px-4 !py-3'} aria-label="참여자">
+      {compact ? (
+        <span className="order-last shrink-0 text-xs text-ink2 tabular">{done.length}/{n}명 입력</span>
+      ) : (
+        <div className="mb-2.5 flex items-center gap-3">
+          <span className="text-[15px] font-bold">참여자 <span className="text-ink2">{people.length}</span></span>
+          <span className="flex min-w-0 flex-1 items-center justify-end gap-2 text-xs text-ink2">
+            <span className="h-1.5 w-full max-w-[120px] overflow-hidden rounded-full bg-rule" aria-hidden="true">
+              <span className="block h-full rounded-full bg-yes" style={{ width: `${pct}%` }} />
+            </span>
+            <span className="shrink-0 tabular">{done.length}/{n}명 입력</span>
           </span>
-          <span className="shrink-0 tabular">{done.length}/{n}명 입력</span>
-        </span>
-      </div>
-      <ul ref={drag.ref} {...drag.handlers} className={`-mx-1 m-0 flex list-none gap-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${drag.className}`}>
+        </div>
+      )}
+      <ul ref={drag.ref} {...drag.handlers} className={`-mx-1 m-0 flex min-w-0 flex-1 list-none gap-1 overflow-x-auto px-1 pb-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${drag.className}`}>
         {people.map((p) => {
           if (editing === p.id) {
             return (
@@ -75,7 +80,7 @@ export default function PeopleBar({ people, myPid, target, mode, n, canEdit, edi
           // 같은 약속의 다른 가입자: 친구가 아니면 '+ 친구'로 신청
           const rel = p.user_id && !me && relation ? relation(p.user_id) : null
           return (
-            <li key={p.id} className="flex w-[68px] shrink-0 flex-col items-center gap-1">
+            <li key={p.id} className={`flex shrink-0 flex-col items-center gap-1 ${compact ? 'w-[56px]' : 'w-[68px]'}`}>
               <button
                 aria-pressed={active}
                 title={entered ? '입력함' : '아직 입력 안 함'}
@@ -85,7 +90,7 @@ export default function PeopleBar({ people, myPid, target, mode, n, canEdit, edi
               >
                 <span className={`block rounded-full p-[2px] ${me ? 'bg-pen' : entered ? 'bg-yes' : 'bg-rule'}`}>
                   <span className="block rounded-full bg-sheet p-[2px]">
-                    <Avatar name={p.name} url={p.avatar_url} size={40} className={entered ? '' : 'opacity-60'} />
+                    <Avatar name={p.name} url={p.avatar_url} size={compact ? 32 : 40} className={entered ? '' : 'opacity-60'} />
                   </span>
                 </span>
                 {entered && (
