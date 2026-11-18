@@ -5,7 +5,6 @@ import {
 } from '../lib/places'
 import { useToast } from '../hooks/useToast'
 import Avatar from './Avatar'
-import { useDragScroll } from '../hooks/useDragScroll'
 
 // 중간 지점 근처에서 무엇을 볼지: 카페·음식점은 가게 목록, '역만'은 역 자체를 장소로
 const KINDS = [
@@ -15,7 +14,7 @@ const KINDS = [
 ]
 
 const seg = (on) =>
-  `min-h-[36px] rounded-full border-0 px-3.5 text-[13px] font-semibold ${on ? 'bg-pen-strong text-pen-ink' : 'bg-rule2 text-ink hover:bg-rule'}`
+  `min-h-[36px] shrink-0 rounded-full border-0 px-3.5 text-[13px] font-semibold ${on ? 'bg-pen-strong text-pen-ink' : 'bg-rule2 text-ink hover:bg-rule'}`
 
 /**
  * 만날 장소 정하기 (시간 확정 전에도 미리 정할 수 있어요).
@@ -49,8 +48,9 @@ export default function PlacePanel({ mid, cfg, people, myPid, onPlace, onClose }
       setOrigin(o)
       if (o) {
         setIsPublic(o.is_public)
-        setHow((h) => h ?? 'mid') // 이미 출발지를 넣었으면 중간 지점 쪽을 바로 보여 줘요
       }
+      // 이미 출발지를 넣었으면 중간 지점, 아니면 이름으로 찾기부터
+      setHow((h) => h ?? (o ? 'mid' : 'direct'))
     })
   }, [myPid])
 
@@ -181,20 +181,19 @@ export default function PlacePanel({ mid, cfg, people, myPid, onPlace, onClose }
       )}
 
       {/* 정해진 곳이 있는지 먼저 물어봐요 */}
-      <div className="grid grid-cols-2 gap-2" role="tablist" aria-label="장소 정하는 방법">
+      <div className="flex gap-1 rounded-full bg-rule2 p-1" role="tablist" aria-label="장소 정하는 방법">
         {[
-          ['direct', '정해진 곳이 있나요?', '장소 이름으로 찾기'],
-          ['mid', '아직 못 정했나요?', '중간 지점 추천받기'],
-        ].map(([k, title, sub]) => (
+          ['direct', '이름으로 찾기'],
+          ['mid', '중간 지점 추천'],
+        ].map(([k, title]) => (
           <button
             key={k}
             role="tab"
             aria-selected={how === k}
-            className={`flex min-h-[64px] flex-col items-start justify-center gap-0.5 rounded-[14px] border-2 px-3.5 py-2.5 text-left ${how === k ? 'border-pen bg-pen-soft' : 'border-rule2 bg-transparent hover:bg-rule2'}`}
+            className={`min-h-[38px] flex-1 rounded-full border-0 text-[14px] font-semibold ${how === k ? 'bg-sheet text-ink shadow-soft' : 'bg-transparent text-ink2 hover:text-ink'}`}
             onClick={() => { setHow(k); setPending(null) }}
           >
-            <span className="text-[15px] font-bold text-ink">{title}</span>
-            <span className="text-xs text-ink2">{sub}</span>
+            {title}
           </button>
         ))}
       </div>
@@ -204,7 +203,7 @@ export default function PlacePanel({ mid, cfg, people, myPid, onPlace, onClose }
       {how === 'mid' && (
         <>
           {/* ① 내 출발지 */}
-          <Part n={1} title="내 출발지">
+          <Part title="내 출발지">
             {origin === undefined && <p className="m-0 text-[13px] text-ink2">불러오는 중…</p>}
             {origin && !editOrigin && (
               <div className="flex items-center gap-2 rounded-[12px] bg-rule2 px-3 py-2">
@@ -239,16 +238,14 @@ export default function PlacePanel({ mid, cfg, people, myPid, onPlace, onClose }
                 {origin && <button className="btn-ghost btn-sm self-start" onClick={() => { setEditOrigin(false); setResults(null) }}>그대로 두기</button>}
               </div>
             )}
-            <label className="flex items-center gap-2 text-[13px] text-ink2">
+            <label className="flex items-center gap-2 text-[13px] text-ink2" title="정확한 위치는 나만 볼 수 있어요. 끄면 ‘입력함’으로만 보여요.">
               <input type="checkbox" checked={isPublic} onChange={(e) => togglePublic(e.target.checked)} />
-              다른 사람에게 내 동네 보여주기
+              내 동네 보여주기 <span className="text-xs">(정확한 위치는 나만 봐요)</span>
             </label>
-            <p className="-mt-1 m-0 text-xs text-ink2">정확한 위치는 나만 볼 수 있어요. 끄면 ‘입력함’으로만 보여요.</p>
           </Part>
 
           {/* ② 중간 지점 */}
-          <Part n={2} title="중간 지점 근처">
-            <OriginStatus people={people} myPid={myPid} setCount={setCount} />
+          <Part title="가운데 역 · 가게" aside={<OriginStatus people={people} myPid={myPid} setCount={setCount} />}>
             {setCount < 2 ? (
               <p className="m-0 rounded-[12px] bg-rule2 px-3.5 py-3 text-[13px] text-ink2">두 명 이상 출발지를 넣으면 가운데쯤의 역과 가게를 추천해요. 초대한 사람들에게도 입력을 부탁해 보세요.</p>
             ) : stations === null ? (
@@ -259,7 +256,7 @@ export default function PlacePanel({ mid, cfg, people, myPid, onPlace, onClose }
                   <p className="m-0 text-xs text-ink2">근처에 지하철역이 없어서 중간 지점 주변을 보여 드려요.</p>
                 )}
                 {stations.length > 0 && (
-                  <div className="flex flex-wrap gap-1.5" role="tablist" aria-label="역 후보">
+                  <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="역 후보">
                     {stations.map((s) => (
                       <button key={s.id} role="tab" aria-selected={station?.id === s.id} className={seg(station?.id === s.id)} onClick={() => { setStation(s); setPending(null) }}>
                         {s.name}
@@ -269,7 +266,7 @@ export default function PlacePanel({ mid, cfg, people, myPid, onPlace, onClose }
                   </div>
                 )}
                 {station && (
-                  <div className="flex flex-wrap gap-1.5 border-t border-rule2 pt-2.5" role="tablist" aria-label="무엇을 볼까요">
+                  <div className="-mx-1 flex gap-1.5 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden" role="tablist" aria-label="무엇을 볼까요">
                     {KINDS.filter((k) => k.key !== 'station' || !station.center).map((k) => (
                       <button key={k.key} role="tab" aria-selected={kind === k.key} className={seg(kind === k.key)} onClick={() => { setKind(k.key); setPending(null) }}>
                         {k.label}
@@ -308,7 +305,7 @@ export default function PlacePanel({ mid, cfg, people, myPid, onPlace, onClose }
 
       {/* '여기로'를 누르면 한 번 더 확인 */}
       {pending && (
-        <div className="sticky bottom-[max(12px,env(safe-area-inset-bottom,0px))] z-10 flex flex-col gap-2.5 rounded-[16px] bg-sheet p-3.5 shadow-soft ring-1 ring-rule" role="dialog" aria-label="장소 확인">
+        <div className="sticky bottom-[calc(80px+env(safe-area-inset-bottom,0px))] z-10 min-[768px]:bottom-3 flex flex-col gap-2.5 rounded-[16px] bg-sheet p-3.5 shadow-soft ring-1 ring-rule" role="dialog" aria-label="장소 확인">
           <div className="min-w-0">
             <div className="text-xs text-ink2">이 곳으로 정할까요?</div>
             <div className="truncate text-[15px] font-bold">📍 {pending.name}</div>
@@ -345,48 +342,19 @@ function PlaceRow({ p, sub, on, onChoose }) {
   )
 }
 
-/** 출발지 입력 현황: 참여자 카드처럼 진행 막대 + 가로로 넘기는 아바타 (넣은 사람은 초록 체크, 아래에 동네) */
+/** 출발지 입력 현황 한 줄: 겹친 아바타(넣은 사람은 초록 테두리) + k/n명 */
 function OriginStatus({ people, myPid, setCount }) {
-  const drag = useDragScroll() // PC에서 마우스로 끌어서 넘기기
-  const pct = people.length ? Math.round((setCount / people.length) * 100) : 0
   return (
-    <div className="flex flex-col gap-2 rounded-[14px] border border-rule2 px-3 py-2.5">
-      <div className="flex items-center gap-3">
-        <span className="text-[13px] font-semibold">출발지 입력</span>
-        <span className="flex min-w-0 flex-1 items-center justify-end gap-2 text-xs text-ink2">
-          <span className="h-1.5 w-full max-w-[100px] overflow-hidden rounded-full bg-rule" aria-hidden="true">
-            <span className="block h-full rounded-full bg-yes" style={{ width: `${pct}%` }} />
+    <span className="flex items-center gap-2" aria-label={`출발지 입력 ${setCount}/${people.length}명`}>
+      <span className="flex -space-x-1.5" aria-hidden="true">
+        {people.slice(0, 5).map((p) => (
+          <span key={p.id} className={`block rounded-full p-[2px] ${p.origin_set ? 'bg-yes' : 'bg-rule'}`} title={`${p.id === myPid ? '나' : p.name || '이름 없음'}: ${p.origin_set ? p.origin_label || '입력함' : '아직'}`}>
+            <Avatar name={p.name} url={p.avatar_url} size={24} className={p.origin_set ? '' : 'opacity-50'} />
           </span>
-          <span className="shrink-0 tabular">{setCount}/{people.length}명</span>
-        </span>
-      </div>
-      <ul ref={drag.ref} {...drag.handlers} className={`-mx-1 m-0 flex list-none gap-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${drag.className}`}>
-        {people.map((p) => {
-          const me = p.id === myPid
-          const on = p.origin_set
-          return (
-            <li key={p.id} className="flex w-[64px] shrink-0 flex-col items-center gap-0.5" title={on ? p.origin_label || '입력함' : '아직 안 넣음'}>
-              <span className="relative">
-                <span className={`block rounded-full p-[2px] ${on ? 'bg-yes' : 'bg-rule'}`}>
-                  <span className="block rounded-full bg-sheet p-[2px]">
-                    <Avatar name={p.name} url={p.avatar_url} size={34} className={on ? '' : 'opacity-50'} />
-                  </span>
-                </span>
-                {on && (
-                  <span className="absolute -bottom-0.5 -right-0.5 grid h-4 w-4 place-items-center rounded-full bg-yes text-white ring-2 ring-sheet" aria-hidden="true">
-                    <svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round"><path d="M20 6 9 17l-5-5" /></svg>
-                  </span>
-                )}
-              </span>
-              <span className="w-full truncate text-center text-[12px] font-semibold leading-tight">{me ? '나' : p.name || '이름 없음'}</span>
-              <span className={`w-full truncate text-center text-[10px] leading-tight ${on ? 'text-ink2' : 'text-ink2 opacity-60'}`}>
-                {on ? (p.origin_label || '입력함').split(' ').pop() : '아직'}
-              </span>
-            </li>
-          )
-        })}
-      </ul>
-    </div>
+        ))}
+      </span>
+      <span className="tabular text-xs text-ink2">출발지 {setCount}/{people.length}명</span>
+    </span>
   )
 }
 
@@ -429,12 +397,11 @@ function DirectPick({ near, isPending, onChoose }) {
   )
 }
 
-function Part({ n, title, aside, children }) {
+function Part({ title, aside, children }) {
   return (
-    <div className="flex flex-col gap-2.5 border-t border-rule2 pt-4">
-      <div className="flex items-center gap-2.5">
-        <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-pen-soft text-[12px] font-extrabold text-accent">{n}</span>
-        <h3 className="m-0 flex-1 text-[15px] font-bold">{title}</h3>
+    <div className="flex flex-col gap-2">
+      <div className="flex min-h-[32px] items-center gap-2.5">
+        <h3 className="m-0 flex-1 text-[14px] font-bold text-ink2">{title}</h3>
         {aside}
       </div>
       {children}
@@ -444,7 +411,7 @@ function Part({ n, title, aside, children }) {
 
 function Shell({ children, onClose }) {
   return (
-    <section className="flex flex-col gap-4 rounded-[20px] bg-sheet p-4 shadow-soft sm:p-5" aria-label="만날 장소 정하기">
+    <section className="flex flex-col gap-3 rounded-[20px] bg-sheet p-4 shadow-soft sm:p-5" aria-label="만날 장소 정하기">
       <div className="flex items-center justify-between">
         <h2 className="m-0 text-[18px] font-bold">어디서 만날까요?</h2>
         {onClose && (
