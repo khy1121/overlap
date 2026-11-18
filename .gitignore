@@ -4,3 +4,15 @@ dist
 .env*.local
 .vercel
 .DS_Store
+
+# Android (TWA)
+android/keystore.properties
+android/local.properties
+android/.gradle
+android/build
+android/app/build
+android/app/release
+*.jks
+*.keystore
+*.aab
+*.apk
