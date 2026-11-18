@@ -13,12 +13,12 @@ export function BackButton({ className = '' }) {
   )
 }
 
-/** 하위 페이지 머리: 뒤로가기 + 제목 + 오른쪽 동작 */
-export default function PageHeader({ title, sub, children }) {
+/** 하위 페이지 머리: 뒤로가기 + 제목 + 오른쪽 동작. back={false}: 하단 탭 화면(내 일정·친구)이라 뒤로가기 없음 */
+export default function PageHeader({ title, sub, children, back = true }) {
   return (
-    <header className="mb-1 flex flex-col gap-1">
-      <BackButton className="self-start" />
-      <div className="flex flex-wrap items-end justify-between gap-3">
+    <header className={`mb-1 flex flex-col gap-1 ${back ? '' : 'mt-2'}`}>
+      {back && <BackButton className="self-start" />}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="min-w-0">
           <h1 className="m-0 font-display text-[26px] font-extrabold tracking-[-.02em]">{title}</h1>
           {sub && <p className="m-0 mt-0.5 text-sm text-ink2">{sub}</p>}
