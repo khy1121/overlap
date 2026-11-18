@@ -26,8 +26,21 @@ export const isInApp = /KAKAOTALK|NAVER\(inapp|Instagram|FBAN|FBAV|Line\//i.test
 export const isKakao = /KAKAOTALK/i.test(ua)
 export const isMobile = /Android|iPhone|iPad|iPod/i.test(ua) || isIOS
 
+// Play 스토어 앱(TWA)으로 열리면 첫 화면의 referrer가 android-app://kr.overlap.app 이에요.
+// 앱 안에서 페이지를 옮기면 referrer가 사라지니 세션 동안 기억해 둬요.
+const TWA_KEY = 'overlap:twa'
+export const isTWA = (() => {
+  if (typeof document === 'undefined') return false
+  try {
+    if (document.referrer.startsWith('android-app://')) sessionStorage.setItem(TWA_KEY, '1')
+    return sessionStorage.getItem(TWA_KEY) === '1'
+  } catch {
+    return document.referrer.startsWith('android-app://')
+  }
+})()
+
 export function isStandalone() {
-  return window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
+  return isTWA || window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone === true
 }
 
 /** 지금 보여 줄 설치 방식: 'prompt' | 'ios' | 'inapp' | 'android-menu' | null(숨김) */
