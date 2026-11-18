@@ -10,6 +10,13 @@ export async function fetchMyMeetings() {
   return error ? [] : data
 }
 
+/** 내가 일정을 칠한 약속 id 모음 (홈의 '칠할 약속' 표시용). 못 불러오면 null */
+export async function fetchMyEntries(uid) {
+  const { data, error } = await supabase.from('participants').select('meeting_id,cells').eq('user_id', uid)
+  if (error) return null
+  return new Set(data.filter((p) => p.cells && Object.keys(p.cells).length > 0).map((p) => p.meeting_id))
+}
+
 /** 약속 삭제 (만든 사람만, RLS). 참여자 일정도 함께 지워져요(on delete cascade). */
 export async function deleteMeeting(mid) {
   const { error, count } = await supabase.from('meetings').delete({ count: 'exact' }).eq('id', mid)
