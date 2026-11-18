@@ -79,22 +79,22 @@ export default function MySchedule() {
   const pendingOn = (day) => pending.filter((m) => { const s = meetingSpan(m); return day >= s.start && day <= s.end })
 
   return (
-    <div className="flex flex-col gap-4">
-      <PageHeader title="내 일정" sub="확정된 약속을 달력으로 보고, Google 캘린더의 바쁜 시간도 함께 확인해요.">
+    <div className="flex flex-col gap-3">
+      <PageHeader title="내 일정" back={false}>
         {gToken ? (
           <span className="inline-flex items-center gap-1.5 text-[13px] text-ink2">
-            <i className="h-2 w-2 rounded-full bg-yes" /> {gLoading ? 'Google 캘린더 불러오는 중…' : 'Google 캘린더 연결됨'}
+            <i className="h-2 w-2 rounded-full bg-yes" /> {gLoading ? '불러오는 중…' : 'Google 연결됨'}
           </span>
         ) : (
-          <button className="btn" onClick={connectGoogle}>
-            <GoogleIcon /> Google 캘린더 연결
+          <button className="btn btn-sm" onClick={connectGoogle}>
+            <GoogleIcon /> Google 연결
           </button>
         )}
       </PageHeader>
 
-      <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-[minmax(0,1fr)_320px]">
+      <div className="grid grid-cols-1 items-start gap-3 md:grid-cols-[minmax(0,1fr)_320px] md:gap-4">
         <section className="sheet !p-3 sm:!p-5" aria-label="달력">
-          <div className="mb-3 flex items-center justify-between">
+          <div className="mb-2 flex items-center justify-between">
             <button className="btn-ghost btn-sm !px-2" aria-label="이전 달" onClick={() => setMonth(new Date(month.getFullYear(), month.getMonth() - 1, 1))}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
             </button>
@@ -126,7 +126,7 @@ export default function MySchedule() {
                   aria-pressed={isPicked}
                   aria-label={`${day.getMonth() + 1}월 ${day.getDate()}일, 일정 ${ev.filter((e) => e.kind === 'meet').length}개`}
                   onClick={() => setPicked(day)}
-                  className={`flex min-h-[64px] flex-col items-stretch gap-0.5 rounded-none border-0 p-1 text-left active:!transform-none md:min-h-[96px] md:p-1.5 ${
+                  className={`flex min-h-[48px] flex-col items-stretch gap-0.5 rounded-none border-0 p-1 text-left active:!transform-none md:min-h-[96px] md:p-1.5 ${
                     isPicked ? 'bg-pen-soft' : 'bg-sheet hover:bg-rule2'
                   } ${inMonth ? '' : '[&>*]:opacity-40'}`}
                 >
@@ -158,23 +158,23 @@ export default function MySchedule() {
               )
             })}
           </div>
-          <div className="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-xs text-ink2">
+          <div className="mt-2.5 flex flex-wrap justify-center gap-x-4 gap-y-1 text-xs text-ink2">
             <span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-[3px] bg-pen-strong" />확정된 약속</span>
             <span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-[3px] bg-maybe" />시간 조율 중</span>
-            <span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-[3px] bg-ink2" />Google 캘린더(바쁨)</span>
+            <span className="inline-flex items-center gap-1.5"><i className="h-2.5 w-2.5 rounded-[3px] bg-ink2" />Google 바쁨</span>
           </div>
         </section>
 
-        <aside className="flex flex-col gap-4">
+        <aside className="flex flex-col gap-3">
           <section className="sheet">
-            <h2 className="m-0 text-[17px] font-bold">
+            <h2 className="m-0 text-[15px] font-bold">
               {picked.getMonth() + 1}월 {picked.getDate()}일 ({DAYS[picked.getDay()]})
             </h2>
-            <ul className="m-0 mt-3 flex list-none flex-col gap-2 p-0">
+            <ul className="m-0 mt-2 flex list-none flex-col gap-2 p-0">
               {meetings === null && <li className="text-[13px] text-ink2">불러오는 중…</li>}
               {meetings !== null && !dayEvents.length && !pendingOn(picked).length && <li className="text-[13px] text-ink2">잡힌 일정이 없어요.</li>}
               {dayEvents.map((e, i) => (
-                <li key={i} className={`rounded-[14px] px-3.5 py-3 ${e.kind === 'meet' ? 'bg-pen-soft' : 'bg-rule2'}`}>
+                <li key={i} className={`rounded-[14px] px-3.5 py-2.5 ${e.kind === 'meet' ? 'bg-pen-soft' : 'bg-rule2'}`}>
                   <div className="text-[13px] font-semibold text-ink2 tabular">{e.open ? `${hm(e.start)}부터 (시간 미정)` : `${hm(e.start)}–${hm(e.end)}`}</div>
                   {e.kind === 'meet' ? (
                     <>
@@ -198,7 +198,7 @@ export default function MySchedule() {
           </section>
 
           <section className="sheet">
-            <h2 className="m-0 text-[17px] font-bold">시간 조율 중인 약속</h2>
+            <h2 className="m-0 text-[15px] font-bold">조율 중</h2>
             <ul className="m-0 mt-2 list-none p-0">
               {meetings !== null && !pending.length && <li className="py-2 text-[13px] text-ink2">조율 중인 약속이 없어요.</li>}
               {pending.slice(0, 20).map((m) => {

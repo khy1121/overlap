@@ -26,8 +26,8 @@ function Switch({ on, onChange, disabled, label }) {
   )
 }
 
-const Row = ({ title, desc, children }) => (
-  <div className="flex items-center gap-3 border-b border-rule2 py-3.5 last:border-0">
+const Row = ({ title, desc, children, compact = false }) => (
+  <div className={`flex items-center gap-3 border-b border-rule2 last:border-0 ${compact ? 'min-h-[48px] py-2' : 'py-3'}`}>
     <div className="min-w-0 flex-1">
       <div className="text-[15px] font-semibold">{title}</div>
       {desc && <div className="text-[13px] text-ink2">{desc}</div>}
@@ -124,39 +124,43 @@ export default function Settings({ session }) {
 
   const pushOn = push === 'on'
   const h2 = 'm-0 mb-1 text-[13px] font-semibold text-ink2'
+  // 한 줄 링크 행 (오른쪽 화살표)
+  const LinkRow = ({ href, title, badge }) => (
+    <a href={href} className="flex min-h-[48px] items-center gap-3 border-b border-rule2 py-2.5 text-ink no-underline last:border-0">
+      <span className="min-w-0 flex-1 text-[15px] font-semibold">{title}</span>
+      {badge}
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-ink2" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+    </a>
+  )
   return (
-    <div className="mx-auto flex w-full max-w-[640px] flex-col gap-5">
+    <div className="mx-auto flex w-full max-w-[640px] flex-col gap-4">
       <PageHeader title="설정" />
 
-      <section>
-        <h2 className={h2}>프로필</h2>
-        <form className="sheet flex flex-col gap-2" onSubmit={saveName}>
-          <label htmlFor="my-name" className="text-[15px] font-semibold">표시 이름</label>
-          <div className="flex gap-2">
-            <input id="my-name" className="field-input min-w-0 flex-1" maxLength={20} value={name} onChange={(e) => setName(e.target.value)} />
-            <button className="btn-primary min-h-[48px]" type="submit" disabled={busy || !name.trim() || name.trim() === savedName}>저장</button>
-          </div>
-          <p className="m-0 text-[13px] text-ink2">
-            친구 목록과 약속 참여자 목록에 보이는 이름이에요.
-            {nameLogin && ' 이름·생년월일로 로그인할 때는 가입할 때 쓴 이름을 그대로 입력해 주세요.'}
-          </p>
-        </form>
-      </section>
+      {/* 프로필: 이름 입력 한 줄 */}
+      <form className="sheet flex flex-col gap-1.5 !py-3" onSubmit={saveName}>
+        <label htmlFor="my-name" className="text-[13px] font-semibold text-ink2">표시 이름{hasKakao(user) ? ' · 카카오 연결됨' : ''}</label>
+        <div className="flex gap-2">
+          <input id="my-name" className="field-input min-w-0 flex-1" maxLength={20} value={name} onChange={(e) => setName(e.target.value)} />
+          <button className="btn-primary min-h-[48px]" type="submit" disabled={busy || !name.trim() || name.trim() === savedName}>저장</button>
+        </div>
+        {nameLogin && <p className="m-0 text-[12px] text-ink2">로그인할 때는 가입할 때 쓴 이름을 그대로 입력해 주세요.</p>}
+      </form>
 
       <section>
         <h2 className={h2}>알림</h2>
         <div className="sheet !py-1">
-          <Row title="이 기기에서 알림 받기" desc={push === 'on' ? '켜져 있어요' : push === 'off' ? '꺼져 있어요' : push ? '사용할 수 없어요' : '확인하는 중…'}>
+          <Row title="이 기기에서 알림 받기" desc={push === 'on' ? null : push === 'off' ? '꺼져 있어요' : push ? '사용할 수 없어요' : '확인하는 중…'}>
             <Switch label="이 기기에서 알림 받기" on={pushOn} disabled={busy || !['on', 'off'].includes(push)} onChange={togglePush} />
           </Row>
-          {PUSH_NOTE[push] && <p className="m-0 mb-3 rounded-[12px] bg-rule2 px-3.5 py-2.5 text-[13px] text-ink2">{PUSH_NOTE[push]}</p>}
+          {PUSH_NOTE[push] && <p className="m-0 mb-2 rounded-[12px] bg-rule2 px-3.5 py-2.5 text-[13px] text-ink2">{PUSH_NOTE[push]}</p>}
+          {/* 종류별 알림은 이름만 한 줄씩 (설명은 스위치 이름표에) */}
           {KINDS.map((k) => (
-            <Row key={k.key} title={k.label} desc={k.desc}>
-              <Switch label={k.label} on={prefs ? prefs[k.key] : true} disabled={!prefs} onChange={(on) => toggleKind(k.key, on)} />
+            <Row key={k.key} title={k.label} compact>
+              <Switch label={`${k.label}: ${k.desc}`} on={prefs ? prefs[k.key] : true} disabled={!prefs} onChange={(on) => toggleKind(k.key, on)} />
             </Row>
           ))}
           {pushOn && (
-            <div className="py-3">
+            <div className="py-2.5">
               <button className="btn-soft w-full" onClick={test} disabled={busy}>테스트 알림 보내기</button>
             </div>
           )}
@@ -164,64 +168,35 @@ export default function Settings({ session }) {
       </section>
 
       <section>
-        <h2 className={h2}>화면</h2>
+        <h2 className={h2}>화면 · 계정</h2>
         <div className="sheet !py-1">
-          <Row title="테마" desc="시스템 설정을 따르거나 라이트·다크를 골라요">
+          <Row title="테마" compact>
             <ThemeToggle />
           </Row>
-        </div>
-      </section>
-
-      <section>
-        <h2 className={h2}>계정</h2>
-        <div className="flex flex-col gap-3">
-          {hasKakao(user) ? (
-            <div className="sheet !py-1">
-              <Row title="카카오 계정" desc="연결돼 있어요. 카카오로도 로그인할 수 있어요." />
-            </div>
-          ) : (
-            <KakaoLink user={user} />
+          {inboxNew !== null && (
+            <LinkRow
+              href="/?page=inbox"
+              title="의견함 (관리자)"
+              badge={inboxNew > 0 ? <span className="rounded-full bg-no px-2 text-[12px] font-bold leading-5 text-white">{inboxNew}</span> : null}
+            />
           )}
-          <InstallApp />
-          <div className="flex flex-wrap items-center gap-2">
-            <button
-              className="btn-ghost"
-              onClick={async () => {
-                await supabase.auth.signOut()
-                window.location.href = '/'
-              }}
-            >
-              로그아웃
-            </button>
-            <a href="/?page=privacy" className="btn-ghost no-underline">개인정보처리방침</a>
-          </div>
+          <LinkRow href="/?page=feedback" title="의견 보내기" />
+          <LinkRow href="/?page=privacy" title="개인정보처리방침" />
+          <button
+            type="button"
+            className="flex min-h-[48px] w-full items-center border-0 bg-transparent py-2.5 text-left text-[15px] font-semibold text-ink"
+            onClick={async () => {
+              await supabase.auth.signOut()
+              window.location.href = '/'
+            }}
+          >
+            로그아웃
+          </button>
         </div>
       </section>
 
-      <section>
-        <h2 className="m-0 mb-1 text-[13px] font-semibold text-ink2">도움</h2>
-        {inboxNew !== null && (
-          <a href="/?page=inbox" className="sheet mb-2 flex items-center gap-3 text-ink no-underline transition-transform active:scale-[.99]">
-            <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-maybe-soft text-[20px]" aria-hidden="true">📥</span>
-            <span className="min-w-0 flex-1">
-              <span className="flex items-center gap-1.5 text-[15px] font-semibold">
-                의견함 <span className="text-[12px] font-medium text-ink2">관리자</span>
-                {inboxNew > 0 && <span className="rounded-full bg-no px-2 text-[12px] font-bold leading-5 text-white">{inboxNew}</span>}
-              </span>
-              <span className="block text-[13px] text-ink2">사용자가 보낸 버그 신고와 아이디어를 확인해요.</span>
-            </span>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-ink2" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
-          </a>
-        )}
-        <a href="/?page=feedback" className="sheet flex items-center gap-3 text-ink no-underline transition-transform active:scale-[.99]">
-          <span className="grid h-10 w-10 shrink-0 place-items-center rounded-[12px] bg-pen-soft text-[20px]" aria-hidden="true">💬</span>
-          <span className="min-w-0 flex-1">
-            <span className="block text-[15px] font-semibold">의견 보내기</span>
-            <span className="block text-[13px] text-ink2">버그나 고치면 좋을 점을 알려 주세요. 익명으로도 보낼 수 있어요.</span>
-          </span>
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-ink2" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
-        </a>
-      </section>
+      {!hasKakao(user) && <KakaoLink user={user} />}
+      <InstallApp />
 
       <Withdraw />
     </div>
@@ -250,14 +225,11 @@ function Withdraw() {
   }
 
   return (
-    <section>
-      <h2 className="m-0 mb-1 text-[13px] font-semibold text-ink2">회원 탈퇴</h2>
-      <div className="sheet flex flex-col gap-3">
+    <section aria-label="회원 탈퇴">
+      {/* 평소엔 맨 아래 작은 글자 하나, 누르면 안내와 확인 입력이 펼쳐져요 */}
+      <div className={open ? 'sheet flex flex-col gap-3' : 'flex justify-center'}>
         {!open ? (
-          <div className="flex items-center gap-3">
-            <p className="m-0 min-w-0 flex-1 text-[13px] text-ink2">계정과 개인정보를 모두 삭제해요.</p>
-            <button className="btn-ghost text-no hover:text-no" onClick={() => setOpen(true)}>탈퇴하기</button>
-          </div>
+          <button className="btn-ghost btn-sm text-ink2 hover:text-no" onClick={() => setOpen(true)}>회원 탈퇴</button>
         ) : (
           <>
             <ul className="m-0 flex flex-col gap-1 pl-5 text-[14px]">
