@@ -1,0 +1,46 @@
+name: 버그
+description: 잘못 동작하거나 깨지는 것
+title: "[버그] "
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes:
+      label: 무슨 일이 생겼나요
+      description: 실제로 일어난 일과 원래 기대한 동작
+      placeholder: 약속 보드에서 시간을 칠하면 저장이 안 돼요. 새로고침하면 칠한 칸이 사라져요.
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 재현 방법
+      placeholder: |
+        1. 홈에서 약속 열기
+        2. 시간표에서 '가능'으로 칸 칠하기
+        3. 새로고침
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: 어디에서
+      multiple: true
+      options:
+        - Android 앱 (Play 스토어)
+        - 모바일 브라우저 (Chrome·삼성 인터넷)
+        - 아이폰 Safari
+        - 카카오톡 인앱 브라우저
+        - PC 브라우저
+    validations:
+      required: true
+  - type: textarea
+    id: screenshot
+    attributes:
+      label: 스크린샷·영상
+      description: 있으면 끌어다 놓아 주세요
+  - type: textarea
+    id: extra
+    attributes:
+      label: 기타
+      description: 기기 모델, 다크 모드 여부, 오류 메시지 등

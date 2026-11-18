@@ -1,0 +1,33 @@
+name: 디자인·UI
+description: 화면 모양, 사용 흐름, 문구 개선
+title: "[디자인] "
+labels: [design]
+body:
+  - type: input
+    id: screen
+    attributes:
+      label: 화면
+      placeholder: 첫 화면(로그인) / 홈 / 새 약속 / 약속 보드 / 내 시간표 / 친구 / 설정 / 스플래시
+    validations:
+      required: true
+  - type: textarea
+    id: now
+    attributes:
+      label: 지금 문제
+      description: 무엇이 어색하거나 불편한지. 지금 화면 스크린샷이 있으면 좋아요.
+    validations:
+      required: true
+  - type: textarea
+    id: want
+    attributes:
+      label: 바뀐 모습
+      description: 시안, 참고 화면, 설명
+  - type: checkboxes
+    id: check
+    attributes:
+      label: 함께 볼 것
+      options:
+        - label: 다크 모드
+        - label: 작은 화면 (360px 폭)
+        - label: 글자 크게 설정한 기기
+        - label: PC 화면

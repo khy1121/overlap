@@ -1,0 +1,37 @@
+name: 기능
+description: 새 기능이나 기존 기능 바꾸기
+title: "[기능] "
+labels: [enhancement]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: 어떤 문제를 푸나요
+      description: 누가, 언제, 무엇이 불편한지. 해결책보다 문제를 먼저 적어 주세요.
+      placeholder: 약속 시간이 확정돼도 참여자가 앱을 열기 전까지 몰라요.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: 제안
+      description: 어떻게 바뀌면 좋을지
+    validations:
+      required: true
+  - type: textarea
+    id: done
+    attributes:
+      label: 완료 조건
+      description: 이게 되면 끝난 것으로 봐요
+      placeholder: |
+        - [ ] 시간이 확정되면 참여자 전원에게 알림이 간다
+        - [ ] 알림을 누르면 해당 약속 보드가 열린다
+  - type: checkboxes
+    id: impact
+    attributes:
+      label: 영향 범위 (아는 만큼)
+      options:
+        - label: DB 변경 (supabase/migrations)
+        - label: Edge Function 변경 (supabase/functions)
+        - label: Android 앱 재빌드 필요 (android/)
+        - label: 디자인·UI 변경
