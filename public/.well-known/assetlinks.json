@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "kr.overlap.app",
+      "sha256_cert_fingerprints": [
+        "BE:A3:7E:99:6B:D1:49:31:DA:7E:9A:C6:3F:56:0B:88:92:60:86:40:1D:94:16:99:1B:E3:AD:CC:D4:25:6D:76"
+      ]
+    }
+  }
+]
