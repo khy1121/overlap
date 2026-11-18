@@ -1,45 +1,10 @@
 import { useEffect, useMemo, useState } from 'react'
 import { displayName } from '../lib/auth'
 import { DAYS } from '../lib/schedule'
-import { confirmedTime, deleteMeeting, fetchMyMeetings, hm, meetingSpan } from '../lib/meetings'
-import { myRequests } from '../lib/friends'
+import { confirmedTime, deleteMeeting, fetchMyMeetings, fetchMyEntries, hm, meetingSpan } from '../lib/meetings'
 import { useToast } from '../hooks/useToast'
 import InstallApp from './InstallApp'
 import KakaoLink from './KakaoLink'
-
-const ACTIONS = [
-  {
-    href: '/?page=new',
-    title: '새 약속 만들기',
-    desc: '회의도, 친구 모임도 시간 맞추기부터',
-    tone: 'bg-pen-strong text-pen-ink',
-    icon: <path d="M12 5v14M5 12h14" />,
-  },
-  {
-    href: '/?page=schedule',
-    title: '내 일정 보기',
-    desc: '확정된 약속을 달력으로 확인해요',
-    tone: 'bg-yes-soft text-ink',
-    icon: (
-      <>
-        <rect x="3" y="5" width="18" height="16" rx="3" />
-        <path d="M3 10h18M8 3v4M16 3v4" />
-      </>
-    ),
-  },
-  {
-    href: '/?page=friends',
-    title: '친구',
-    desc: '친구 신청을 주고받고 목록을 봐요',
-    tone: 'bg-maybe-soft text-ink',
-    icon: (
-      <>
-        <circle cx="9" cy="8" r="3.5" />
-        <path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6" />
-      </>
-    ),
-  },
-]
 
 /** 목록 줄 오른쪽 끝 휴지통. 한 번 누르면 '삭제 / 취소'로 바뀌고, 삭제를 누르면 실행돼요 */
 function RowDelete({ onConfirm }) {
@@ -66,12 +31,39 @@ function RowDelete({ onConfirm }) {
   )
 }
 
-/** 홈: 큰 동작 버튼 3개 + 다가오는 회의 + 조율 중인 회의 */
+const md = (d) => `${d.getMonth() + 1}/${d.getDate()}`
+
+/** 한 줄 약속: 왼쪽 타일(날짜 또는 입력 현황) + 제목 · 설명 + 오른쪽 */
+function Row({ href, tileTop, tileMain, title, meta, tag, end }) {
+  return (
+    <li className="flex items-center gap-1 border-b border-rule2 last:border-0">
+      <a href={href} className="flex min-w-0 flex-1 items-center gap-3 py-2.5 text-ink no-underline">
+        <span className="grid w-12 shrink-0 place-items-center rounded-[12px] bg-pen-soft py-1 leading-tight text-accent">
+          <span className="text-[11px] font-semibold">{tileTop}</span>
+          <span className="text-[17px] font-extrabold tabular">{tileMain}</span>
+        </span>
+        <span className="min-w-0 flex-1">
+          <span className="flex items-center gap-1.5">
+            <span className="truncate text-[15px] font-semibold">{title}</span>
+            {tag && <span className="shrink-0 rounded-full bg-maybe-soft px-1.5 text-[11px] font-bold leading-[18px] text-ink">{tag}</span>}
+          </span>
+          <span className="block truncate text-[13px] text-ink2">{meta}</span>
+        </span>
+      </a>
+      {end}
+    </li>
+  )
+}
+
+/**
+ * 홈: [내가 칠할 약속 카드] → 다가오는 약속 → 조율 중, 모두 한 줄씩.
+ * '새 약속 만들기'는 아래(모바일) / 제목 옆(PC)에 늘 있고, 내 일정·친구는 하단 탭으로 가요.
+ */
 export default function Home({ session }) {
   const toast = useToast()
+  const uid = session.user.id
   const [list, setList] = useState(null)
-  const [incoming, setIncoming] = useState(0)
-  // 내가 만든 약속은 목록에서 바로 지울 수 있어요 (한 번 더 눌러 확인)
+  const [entered, setEntered] = useState(null) // 내가 칠한 약속 id 모음
   async function remove(m) {
     try {
       await deleteMeeting(m.id)
@@ -81,11 +73,11 @@ export default function Home({ session }) {
       toast(e.message)
     }
   }
-  const trash = (m) => (m.owner === session.user.id ? <RowDelete onConfirm={() => remove(m)} /> : null)
+  const trash = (m) => (m.owner === uid ? <RowDelete onConfirm={() => remove(m)} /> : null)
   useEffect(() => {
     fetchMyMeetings().then(setList)
-    myRequests().then((reqs) => setIncoming(reqs.filter((r) => r.direction === 'in').length))
-  }, [])
+    fetchMyEntries(uid).then(setEntered)
+  }, [uid])
 
   const now = useMemo(() => new Date(), [])
   const upcoming = useMemo(
@@ -96,97 +88,91 @@ export default function Home({ session }) {
     () => (list || []).filter((m) => !confirmedTime(m) && meetingSpan(m).end >= new Date(now.getFullYear(), now.getMonth(), now.getDate() - 1)),
     [list, now],
   )
+  // 아직 내가 칠하지 않은 조율 중 약속 (입력 정보를 못 불러오면 비워 둬요)
+  const todo = entered ? ongoing.filter((m) => !entered.has(m.id)) : []
+  const first = todo[0]
+  const rest = ongoing.filter((m) => m !== first).slice(0, 6)
 
   return (
-    <div className="flex flex-col gap-6">
-      <h1 className="m-0 mt-2 text-[26px] font-extrabold leading-snug tracking-[-.02em]">
-        {displayName(session.user)}님,
-        <br />
-        어떤 걸 해 볼까요?
-      </h1>
+    <div className="flex flex-col gap-5 pb-20 md:pb-4">
+      <div className="mt-2 flex items-end justify-between gap-3">
+        <h1 className="m-0 text-[24px] font-extrabold leading-snug tracking-[-.02em]">
+          {displayName(session.user)}님,
+          <br />
+          {todo.length ? `칠할 약속이 ${todo.length}개 있어요` : '어떤 약속을 잡아 볼까요?'}
+        </h1>
+        <a href="/?page=new" className="btn-primary hidden shrink-0 no-underline md:inline-flex">+ 새 약속 만들기</a>
+      </div>
 
-      <nav className="grid grid-cols-1 gap-3 sm:grid-cols-3" aria-label="바로가기">
-        {ACTIONS.map((a) => (
-          <a key={a.href} href={a.href} className="sheet flex items-center gap-4 text-ink no-underline transition-transform active:scale-[.98] sm:flex-col sm:items-start">
-            <span className={`grid h-12 w-12 shrink-0 place-items-center rounded-[14px] ${a.tone}`}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{a.icon}</svg>
-            </span>
-            <span className="min-w-0 flex-1">
-              <span className="flex items-center gap-1.5 text-[17px] font-bold">
-                {a.title}
-                {a.href === '/?page=friends' && incoming > 0 && (
-                  <span className="rounded-full bg-no px-2 text-[12px] font-bold leading-5 text-white" aria-label={`받은 친구 신청 ${incoming}개`}>{incoming}</span>
-                )}
-              </span>
-              <span className="block text-[13px] text-ink2">{a.desc}</span>
-            </span>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-ink2 sm:hidden" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
-          </a>
-        ))}
-      </nav>
+      {first && (
+        <section className="flex flex-col gap-1 rounded-md bg-pen-soft p-4" aria-label="내가 칠할 약속">
+          <span className="text-[13px] font-semibold text-accent">내 시간 입력 필요 · {first.participants?.[0]?.count ?? 0}명 참여</span>
+          <a href={`/?m=${first.id}`} className="truncate text-[19px] font-extrabold text-ink no-underline">{first.title}</a>
+          <span className="text-[13px] text-ink2">{md(meetingSpan(first).start)}–{md(meetingSpan(first).end)}</span>
+          <a href={`/?m=${first.id}`} className="btn-primary mt-2 no-underline">시간 칠하기</a>
+        </section>
+      )}
 
-      <InstallApp />
-      <KakaoLink user={session.user} />
-
-      <div className="grid grid-cols-1 items-start gap-4 md:grid-cols-2">
-        <section className="sheet">
-          <div className="flex items-center justify-between">
-            <h2 className="m-0 text-[17px] font-bold">다가오는 약속</h2>
-            <a href="/?page=schedule" className="text-[13px] font-semibold text-ink2 no-underline hover:text-ink">달력 보기</a>
+      <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2">
+        <section aria-labelledby="h-upcoming">
+          <div className="mb-1.5 flex items-center justify-between">
+            <h2 id="h-upcoming" className="m-0 text-[15px] font-bold text-ink2">다가오는 약속</h2>
           </div>
-          <ul className="m-0 mt-2 list-none p-0">
-            {list === null && <li className="py-2 text-[13px] text-ink2">불러오는 중…</li>}
-            {list !== null && !upcoming.length && <li className="py-2 text-[13px] text-ink2">확정된 약속이 아직 없어요.</li>}
+          <ul className="sheet m-0 list-none !py-1">
+            {list === null && <li className="py-2.5 text-[13px] text-ink2">불러오는 중…</li>}
+            {list !== null && !upcoming.length && <li className="py-2.5 text-[13px] text-ink2">확정된 약속이 아직 없어요.</li>}
             {upcoming.map(({ m, t }) => (
-              <li key={m.id} className="flex items-center gap-1 border-b border-rule2 last:border-0">
-                <a href={`/?m=${m.id}`} className="flex min-w-0 flex-1 items-center gap-3 py-2.5 text-ink no-underline">
-                  <span className="grid w-12 shrink-0 place-items-center rounded-[12px] bg-pen-soft py-1 leading-tight text-accent">
-                    <span className="text-[11px] font-semibold">{t.start.getMonth() + 1}월</span>
-                    <span className="text-[18px] font-extrabold">{t.start.getDate()}</span>
-                  </span>
-                  <span className="min-w-0">
-                    <span className="block truncate text-[15px] font-semibold">{m.title}</span>
-                    <span className="text-[13px] text-ink2">({DAYS[t.start.getDay()]}) {t.open ? `${hm(t.start)}부터` : `${hm(t.start)}–${hm(t.end)}`}</span>
-                  </span>
-                </a>
-                {trash(m)}
-              </li>
+              <Row
+                key={m.id}
+                href={`/?m=${m.id}`}
+                tileTop={`${t.start.getMonth() + 1}월`}
+                tileMain={t.start.getDate()}
+                title={m.title}
+                meta={`(${DAYS[t.start.getDay()]}) ${t.open ? `${hm(t.start)}부터` : `${hm(t.start)}–${hm(t.end)}`}${m.place?.name ? ` · ${m.place.name}` : ''}`}
+                end={trash(m)}
+              />
             ))}
           </ul>
         </section>
 
-        <section className="sheet">
-          <h2 className="m-0 text-[17px] font-bold">시간 조율 중</h2>
-          <ul className="m-0 mt-2 list-none p-0">
-            {list === null && <li className="py-2 text-[13px] text-ink2">불러오는 중…</li>}
-            {list !== null && !ongoing.length && (
-              <li className="py-2 text-[13px] text-ink2">
-                조율 중인 약속이 없어요. <a href="/?page=new" className="font-semibold text-accent">새 약속 만들기</a>
-              </li>
+        <section aria-labelledby="h-ongoing">
+          <h2 id="h-ongoing" className="m-0 mb-1.5 text-[15px] font-bold text-ink2">조율 중</h2>
+          <ul className="sheet m-0 list-none !py-1">
+            {list === null && <li className="py-2.5 text-[13px] text-ink2">불러오는 중…</li>}
+            {list !== null && !rest.length && (
+              <li className="py-2.5 text-[13px] text-ink2">{first ? '다른 조율 중인 약속은 없어요.' : '조율 중인 약속이 없어요.'}</li>
             )}
-            {ongoing.slice(0, 6).map((m) => {
+            {rest.map((m) => {
               const s = meetingSpan(m)
+              const mine = entered?.has(m.id)
               return (
-                <li key={m.id} className="flex items-center gap-1 border-b border-rule2 last:border-0">
-                  <a href={`/?m=${m.id}`} className="flex min-w-0 flex-1 items-center justify-between gap-2 py-2.5 text-ink no-underline">
-                    <span className="min-w-0">
-                      <span className="block truncate text-[15px] font-semibold">{m.title}</span>
-                      <span className="text-[13px] text-ink2">
-                        {s.start.getMonth() + 1}/{s.start.getDate()}–{s.end.getMonth() + 1}/{s.end.getDate()} · {m.participants?.[0]?.count ?? 0}명 참여{m.owner === session.user.id ? ' · 내가 만듦' : ''}
-                      </span>
-                    </span>
-                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-ink2" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
-                  </a>
-                  {trash(m)}
-                </li>
+                <Row
+                  key={m.id}
+                  href={`/?m=${m.id}`}
+                  tileTop="참여"
+                  tileMain={`${m.participants?.[0]?.count ?? 0}명`}
+                  title={m.title}
+                  meta={`${md(s.start)}–${md(s.end)}${m.owner === uid ? ' · 내가 만듦' : ''}`}
+                  tag={entered && !mine ? '입력 전' : null}
+                  end={trash(m)}
+                />
               )
             })}
           </ul>
         </section>
       </div>
-      <div className="flex justify-center gap-4 pb-2 text-[13px] text-ink2">
+
+      <InstallApp />
+      <KakaoLink user={session.user} />
+
+      <div className="flex justify-center gap-4 text-[13px] text-ink2">
         <a href="/?page=feedback" className="text-ink2 underline underline-offset-2 hover:text-ink">의견 보내기</a>
         <a href="/?page=privacy" className="text-ink2 underline underline-offset-2 hover:text-ink">개인정보처리방침</a>
+      </div>
+
+      {/* 모바일: 하단 탭 바로 위에 늘 떠 있는 새 약속 버튼 */}
+      <div className="pointer-events-none fixed inset-x-0 z-20 px-4 md:hidden" style={{ bottom: 'calc(66px + env(safe-area-inset-bottom, 0px))' }}>
+        <a href="/?page=new" className="btn-primary btn-lg pointer-events-auto mx-auto flex max-w-[560px] no-underline shadow-float">+ 새 약속 만들기</a>
       </div>
     </div>
   )

@@ -14,12 +14,15 @@ import UpdateBanner from './components/UpdateBanner'
 import Privacy from './components/Privacy'
 import Feedback from './components/Feedback'
 import Inbox from './components/Inbox'
+import TabBar from './components/TabBar'
 
 const params = new URLSearchParams(window.location.search)
 const MID = params.get('m')
 // 로그인 후 하위 페이지: /?page=new | schedule | friends | settings | feedback | inbox(관리자)
 const PAGES = { new: NewMeeting, schedule: MySchedule, friends: Friends, settings: Settings, feedback: Feedback, inbox: Inbox }
 const Page = PAGES[params.get('page')]
+// 하단 탭이 보이는 화면: 홈(약속) · 내 일정 · 친구
+const TAB = MID ? null : !params.get('page') ? 'home' : { schedule: 'schedule', friends: 'friends' }[params.get('page')] || null
 
 export default function App() {
   const [session, setSession] = useState(undefined) // undefined = 아직 모름
@@ -58,8 +61,9 @@ export default function App() {
 
   return (
     <div className="wrap">
-      <AppBar session={session} />
-      <main>{view}</main>
+      <AppBar session={session} tab={session ? TAB : null} />
+      <main className={session && TAB ? 'pb-[76px] md:pb-0' : ''}>{view}</main>
+      {session && TAB && <TabBar active={TAB} />}
       <UpdateBanner />
     </div>
   )
