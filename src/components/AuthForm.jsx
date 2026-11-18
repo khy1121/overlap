@@ -53,7 +53,8 @@ function BirthInput({ value, onChange }) {
   )
 }
 
-export default function AuthForm({ initial = 'login', onDone }) {
+// hideKakao: 카카오 버튼을 화면에 따로 둔 곳(초대 화면)에서는 이름·생년월일 폼만 보여 줘요
+export default function AuthForm({ initial = 'login', onDone, hideKakao = false }) {
   const [tab, setTab] = useState(initial)
   const [form, setForm] = useState({ name: '', birth: '', password: '', confirm: '' })
   const [error, setError] = useState('')
@@ -93,12 +94,16 @@ export default function AuthForm({ initial = 'login', onDone }) {
   const label = 'flex flex-col gap-1.5 text-left text-[13px] font-medium text-ink2'
   return (
     <div className="w-full rounded-[20px] bg-sheet p-5 text-left shadow-soft sm:p-6">
-      <KakaoButton onClick={kakao} disabled={busy} />
-      <div className="my-4 flex items-center gap-3 text-[13px] text-ink2">
-        <span className="h-px flex-1 bg-rule" />
-        또는 이름·생년월일로
-        <span className="h-px flex-1 bg-rule" />
-      </div>
+      {!hideKakao && (
+        <>
+          <KakaoButton onClick={kakao} disabled={busy} />
+          <div className="my-4 flex items-center gap-3 text-[13px] text-ink2">
+            <span className="h-px flex-1 bg-rule" />
+            또는 이름·생년월일로
+            <span className="h-px flex-1 bg-rule" />
+          </div>
+        </>
+      )}
       <div className="mb-4 grid grid-cols-2 gap-1 rounded-full bg-rule2 p-1" role="tablist">
         {[['login', '로그인'], ['signup', '회원가입']].map(([k, t]) => (
           <button
