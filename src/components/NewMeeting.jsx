@@ -105,29 +105,35 @@ export default function NewMeeting() {
     </select>
   )
 
+  // 질문 오른쪽에 보여 줄 짧은 값
+  const md = (s) => s ? `${Number(s.slice(5, 7))}/${Number(s.slice(8, 10))}` : ''
+  const dateAside = days >= 1 && days <= MAX_DAYS ? (one ? md(form.start) : `${md(form.start)}–${md(form.end)}`) : null
+  const timeAside = split ? `첫날 ${form.startHour}시 ~ 마지막 날 ${form.endHour}시` : `${from}–${to}시`
+  const scrollRow = '-mx-1 flex gap-1.5 overflow-x-auto px-1 pb-0.5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden'
+  const setCount = (c) => { setCountTouched(true); patch({ count: Math.max(1, Math.min(50, c)) }) }
+
   return (
-    <div className="mx-auto flex w-full max-w-[560px] flex-col gap-4">
-      <PageHeader title="새 약속 만들기" sub="빠른 선택으로 정하고, 필요할 때만 자세히 바꿔요." />
-      <form className="flex flex-col gap-4" onSubmit={create}>
-        {/* 1. 무슨 약속 */}
-        <Step n={1} title="무슨 약속인가요?">
+    <div className="mx-auto flex w-full max-w-[560px] flex-col gap-3">
+      <PageHeader title="새 약속" />
+      {/* 질문 5개를 한 줄 제목 + 칩 한 줄로. 고른 값은 제목 오른쪽에 보여요 (스크롤 없이 한 화면) */}
+      <form className="flex flex-col gap-5 pb-36" onSubmit={create}>
+        <Q title="무슨 약속이에요?">
           <input className="field-input text-[16px]" maxLength={40} placeholder="약속 이름" autoFocus value={form.title} onChange={(e) => patch({ title: e.target.value })} aria-label="약속 이름" />
-          <div className="flex flex-wrap gap-1.5">
+          <div className={scrollRow}>
             {TITLE_IDEAS.map((t) => (
-              <button key={t} type="button" className={`${chip(form.title === t)} !min-h-[32px] !px-3 !text-[13px]`} onClick={() => patch({ title: t })}>{t}</button>
+              <button key={t} type="button" className={`${chip(form.title === t)} !min-h-[32px] shrink-0 !px-3 !text-[13px]`} onClick={() => patch({ title: t })}>{t}</button>
             ))}
           </div>
-        </Step>
+        </Q>
 
-        {/* 2. 언제쯤 */}
-        <Step n={2} title="언제쯤 만날까요?" aside={days >= 1 && days <= MAX_DAYS ? `${days}일` : null}>
-          <div className="flex flex-wrap gap-1.5">
+        <Q title="언제쯤?" aside={dateAside}>
+          <div className={scrollRow}>
             {presets.map((p) => (
-              <button key={p.key} type="button" aria-pressed={datePreset?.key === p.key} className={chip(datePreset?.key === p.key)} onClick={() => { setCustomDate(false); patch({ start: p.start, end: p.end }) }}>
+              <button key={p.key} type="button" aria-pressed={datePreset?.key === p.key} className={`${chip(datePreset?.key === p.key)} shrink-0`} onClick={() => { setCustomDate(false); patch({ start: p.start, end: p.end }) }}>
                 {p.label}
               </button>
             ))}
-            <button type="button" aria-pressed={!datePreset} className={chip(!datePreset)} onClick={() => setCustomDate(true)}>직접 정하기</button>
+            <button type="button" aria-pressed={!datePreset} className={`${chip(!datePreset)} shrink-0`} onClick={() => setCustomDate(true)}>직접</button>
           </div>
           {!datePreset && (
             <div className="grid grid-cols-2 gap-2">
@@ -141,37 +147,28 @@ export default function NewMeeting() {
               </label>
             </div>
           )}
-        </Step>
+        </Q>
 
-        {/* 3. 몇 시쯤 */}
-        <Step n={3} title="몇 시쯤이 좋을까요?">
-          <div className="grid grid-cols-4 gap-1.5">
+        <Q title="몇 시쯤?" aside={timeAside}>
+          <div className={scrollRow}>
             {TIME_PRESETS.map((p) => (
               <button
                 key={p.key}
                 type="button"
                 aria-pressed={timePreset?.key === p.key}
-                className={tile(timePreset?.key === p.key)}
+                className={`${chip(timePreset?.key === p.key)} shrink-0`}
                 onClick={() => { setCustomTime(false); patch({ from: p.from, to: p.to, split: false }) }}
               >
                 {p.label}
-                <span className="text-[11px] font-medium opacity-80">{p.sub}</span>
+                <span className="text-[12px] font-medium opacity-75">{p.sub}</span>
               </button>
             ))}
-            <button
-              type="button"
-              aria-pressed={!timePreset}
-              className={tile(!timePreset)}
-              onClick={() => setCustomTime(true)}
-            >
-              직접
-              <span className="text-[11px] font-medium opacity-80">시간 고르기</span>
-            </button>
+            <button type="button" aria-pressed={!timePreset} className={`${chip(!timePreset)} shrink-0`} onClick={() => setCustomTime(true)}>직접</button>
           </div>
           {!timePreset && (
-            <div className="flex flex-col gap-2.5 rounded-[14px] border border-rule2 p-3">
+            <div className="flex flex-col gap-2.5 rounded-[14px] bg-sheet p-3">
               <div className="flex flex-wrap items-center gap-2 text-sm text-ink2">
-                <span className="basis-full text-xs font-semibold">{one ? '시간' : '매일'}</span>
+                <span className="text-xs font-semibold">{one ? '시간' : '매일'}</span>
                 {hourSelect('시간대 시작', form.from, 0, (h) => patch({ from: h }))}
                 부터
                 {hourSelect('시간대 끝', form.to, 1, (h) => patch({ to: h }))}
@@ -180,62 +177,60 @@ export default function NewMeeting() {
               {!one && (
                 <label className="flex items-center gap-2 text-[13px] text-ink2">
                   <input type="checkbox" checked={form.split} onChange={(e) => patch({ split: e.target.checked, startHour: from, endHour: to })} />
-                  첫날 시작·마지막 날 끝 시각은 따로 정하기 (예: 오늘 12시 ~ 모레 22시)
+                  첫날 시작·마지막 날 끝 시각은 따로 정하기
                 </label>
               )}
               {split && (
-                <>
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-ink2">
-                    <span className="basis-full text-xs font-semibold">첫날</span>
-                    {hourSelect('첫날 시작 시각', form.startHour, 0, (h) => patch({ startHour: h }))}
-                    부터
-                  </div>
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-ink2">
-                    <span className="basis-full text-xs font-semibold">마지막 날</span>
-                    {hourSelect('마지막 날 끝 시각', form.endHour, 1, (h) => patch({ endHour: h }))}
-                    까지
-                  </div>
-                </>
+                <div className="flex flex-wrap items-center gap-2 text-sm text-ink2">
+                  <span className="text-xs font-semibold">첫날</span>
+                  {hourSelect('첫날 시작 시각', form.startHour, 0, (h) => patch({ startHour: h }))}
+                  부터 · <span className="text-xs font-semibold">마지막 날</span>
+                  {hourSelect('마지막 날 끝 시각', form.endHour, 1, (h) => patch({ endHour: h }))}
+                  까지
+                </div>
               )}
             </div>
           )}
-        </Step>
+        </Q>
 
-        {/* 4. 얼마나 */}
-        <Step n={4} title="얼마나 만날까요?" aside={durText(form.dur)}>
-          <DurationPicker compact value={form.dur} max={maxDur} onChange={(dur) => patch({ dur })} />
-        </Step>
+        <Q title="얼마나?" aside={durText(form.dur)}>
+          <DurationPicker compact scroll value={form.dur} max={maxDur} onChange={(dur) => patch({ dur })} />
+        </Q>
 
-        {/* 5. 누구랑 */}
-        <Step
-          n={5}
-          title="누구랑 만나요?"
-          aside={friends?.length > 0 ? (
-            <button
-              type="button"
-              className="btn-ghost btn-sm !min-h-0"
-              onClick={() => {
-                const all = picked.size === friends.length
-                setPicked(all ? new Set() : new Set(friends.map((f) => f.user_id)))
-                if (!countTouched) patch({ count: Math.max(4, (all ? 0 : friends.length) + 1) })
-              }}
-            >
-              {picked.size === friends.length ? '모두 해제' : '모두 선택'}
-            </button>
-          ) : null}
+        <Q
+          title="누구랑?"
+          aside={(
+            // 예상 인원(나 포함): 제목 줄 오른쪽 작은 스테퍼
+            <span className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-accent" role="group" aria-label="예상 인원 (나 포함)">
+              <button type="button" className="grid h-8 w-8 place-items-center rounded-full border-0 bg-transparent text-lg text-ink2 hover:bg-rule2" aria-label="인원 줄이기" onClick={() => setCount(form.count - 1)}>−</button>
+              <output className="tabular" aria-live="polite">나 포함 {form.count}명</output>
+              <button type="button" className="grid h-8 w-8 place-items-center rounded-full border-0 bg-transparent text-lg text-ink2 hover:bg-rule2" aria-label="인원 늘리기" onClick={() => setCount(form.count + 1)}>+</button>
+            </span>
+          )}
         >
           {friends === null && <p className="m-0 text-[13px] text-ink2">친구 목록을 불러오는 중…</p>}
-          {friends?.length === 0 && (
-            <p className="m-0 rounded-[12px] bg-rule2 px-3.5 py-3 text-[13px] text-ink2">
-              저장된 친구가 없어요. 만든 뒤 바로 카톡·링크로 초대할 수 있어요.
-            </p>
-          )}
+          {friends?.length === 0 && <p className="m-0 text-[13px] text-ink2">저장된 친구가 없어요. 만든 뒤 카톡·링크로 초대할 수 있어요.</p>}
           {friends?.length > 0 && (
-            <ul className="m-0 flex list-none flex-wrap gap-2 p-0">
+            <ul className={`m-0 list-none p-0 ${scrollRow}`}>
+              {friends.length > 1 && (
+                <li className="shrink-0">
+                  <button
+                    type="button"
+                    className="inline-flex min-h-[40px] items-center rounded-full border-0 bg-transparent px-2.5 text-[13px] font-semibold text-accent"
+                    onClick={() => {
+                      const all = picked.size === friends.length
+                      setPicked(all ? new Set() : new Set(friends.map((f) => f.user_id)))
+                      if (!countTouched) patch({ count: Math.max(4, (all ? 0 : friends.length) + 1) })
+                    }}
+                  >
+                    {picked.size === friends.length ? '모두 해제' : '모두'}
+                  </button>
+                </li>
+              )}
               {friends.map((f) => {
                 const on = picked.has(f.user_id)
                 return (
-                  <li key={f.user_id}>
+                  <li key={f.user_id} className="shrink-0">
                     <button
                       type="button"
                       aria-pressed={on}
@@ -244,50 +239,42 @@ export default function NewMeeting() {
                     >
                       <Avatar name={f.name} size={30} className={on ? '!bg-sheet !text-accent' : '!bg-sheet'} />
                       {f.name || '이름 없음'}
-                      {on && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>}
                     </button>
                   </li>
                 )
               })}
             </ul>
           )}
-          <div className="flex items-center justify-between gap-2 border-t border-rule2 pt-3">
-            <span className="text-[13px] text-ink2">예상 인원 <span className="text-xs">(나 포함)</span></span>
-            <span className="inline-flex items-center rounded-[12px] bg-rule2" role="group" aria-label="예상 인원">
-              <button type="button" className="h-9 w-9 rounded-[12px] border-0 bg-transparent text-lg" aria-label="인원 줄이기" onClick={() => { setCountTouched(true); patch({ count: Math.max(1, form.count - 1) }) }}>−</button>
-              <output className="min-w-[44px] text-center text-[15px] font-semibold tabular" aria-live="polite">{form.count}명</output>
-              <button type="button" className="h-9 w-9 rounded-[12px] border-0 bg-transparent text-lg" aria-label="인원 늘리기" onClick={() => { setCountTouched(true); patch({ count: Math.min(50, form.count + 1) }) }}>+</button>
-            </span>
-          </div>
-        </Step>
+        </Q>
 
-        {/* 요약 + 만들기 */}
-        <div className="sticky bottom-[max(12px,env(safe-area-inset-bottom,0px))] z-10 flex flex-col gap-2.5 rounded-[20px] bg-sheet p-4 shadow-soft ring-1 ring-rule">
-          {err ? (
-            <p className="m-0 text-[13px] font-semibold text-no" role="alert">{err}</p>
-          ) : (
-            <div className="min-w-0">
-              <div className="truncate text-[15px] font-bold">{form.title.trim() || '이름 없는 약속'}</div>
-              <div className="tabular mt-0.5 font-mono text-[13px] text-ink">{rangeText(cfg)}</div>
-              <div className="text-xs text-ink2">
-                {days > 2 && `가운데 날 ${from}–${to}시 · `}{durText(form.dur)} · {form.count}명{picked.size ? ` · 친구 ${picked.size}명 바로 초대` : ''}
-              </div>
-            </div>
-          )}
-          <button className="btn-primary btn-lg disabled:opacity-50" type="submit" disabled={busy || Boolean(err)}>
-            {busy ? '만드는 중…' : picked.size ? `만들고 친구 ${picked.size}명 초대하기` : '약속 만들기'}
-          </button>
+        {/* 아래 고정: 요약 한 줄 + 만들기 */}
+        <div
+          className="fixed inset-x-0 bottom-0 z-30 border-t border-rule bg-[color-mix(in_oklab,var(--sheet)_94%,transparent)] px-4 pt-2.5 backdrop-blur"
+          style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 0px))' }}
+        >
+          <div className="mx-auto flex max-w-[560px] flex-col gap-2">
+            {err ? (
+              <p className="m-0 text-center text-[13px] font-semibold text-no" role="alert">{err}</p>
+            ) : (
+              <p className="tabular m-0 truncate text-center text-[13px] text-ink2">
+                {rangeText(cfg)} · {durText(form.dur)} · {form.count}명
+              </p>
+            )}
+            <button className="btn-primary btn-lg disabled:opacity-50" type="submit" disabled={busy || Boolean(err)}>
+              {busy ? '만드는 중…' : picked.size ? `만들고 친구 ${picked.size}명 초대하기` : '약속 만들기'}
+            </button>
+          </div>
         </div>
       </form>
     </div>
   )
 }
 
-function Step({ n, title, aside, children }) {
+/** 질문 한 덩어리: 제목 줄(오른쪽에 고른 값) + 선택지 */
+function Q({ title, aside, children }) {
   return (
-    <section className="sheet flex flex-col gap-3">
-      <div className="flex items-center gap-2.5">
-        <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full bg-pen-soft text-[12px] font-extrabold text-accent">{n}</span>
+    <section className="flex flex-col gap-2">
+      <div className="flex min-h-[32px] items-center gap-2">
         <h2 className="m-0 flex-1 text-[16px] font-bold">{title}</h2>
         {aside && (typeof aside === 'string' ? <span className="text-[13px] font-semibold text-accent">{aside}</span> : aside)}
       </div>
