@@ -35,6 +35,9 @@ export default function Board({ mid, session }) {
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [placeOpen, setPlaceOpen] = useState(false)
   const [menuOpen, setMenuOpen] = useState(false)
+  const [chosen, setChosen] = useState(null) // 추천 카드에서 지금 보고 있는 후보(시작 시각 칩 반영)
+  const [showAll, setShowAll] = useState(false) // 모바일: 후보 목록 펼침
+  const [reconsider, setReconsider] = useState(false) // 확정 후 '다른 시간 보기'
   // 좁은 화면: 탭 없이 한 화면에 [추천 카드 → 시간표]. 장소는 누르면 시간표 자리를 대신해요.
   // 넓은 화면: 시간표 옆에 추천·목록·장소 카드를 나란히.
   const narrow = useMedia('(max-width: 919px)')
@@ -102,13 +105,15 @@ export default function Board({ mid, session }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [m.status])
 
-  // 처음 열 때 보기: 이미 칠했으면 '전체 겹쳐 보기'(추천과 함께 보는 화면), 아직이면 '내 일정'
+  // 처음 열 때: 이미 칠했으면 '모두 겹쳐 보기'(추천과 함께 보는 화면),
+  // 아직 안 칠했고 확정 전이면 바로 칠하기 모드로 열어서 '내 일정 등록'을 한 번 덜 누르게 해요.
   const modeInit = useRef(false)
   useEffect(() => {
     if (m.status !== 'ready' || !myPid || modeInit.current) return
     modeInit.current = true
     if (Object.keys(byId[myPid]?.cells || {}).length) setMode('all')
-  }, [m.status, myPid, byId])
+    else if (canEdit(myPid) && !cfg?.picked) setDraft({})
+  }, [m.status, myPid, byId, canEdit, cfg])
 
   useEffect(() => {
     if (cfg) document.title = `${cfg.title} · Overlap`
@@ -232,9 +237,15 @@ export default function Board({ mid, session }) {
       desc: '바쁜 시간을 불가로 칠해 줘요 (저장 전에 확인)',
       onClick: () => { if (!paintOn) startEdit(); startCalendar() },
     },
+    {
+      key: 'place',
+      label: cfg.place ? '장소 바꾸기' : '장소 정하기',
+      desc: cfg.place ? cfg.place.name : `이름으로 찾기 · 중간 지점 추천 (출발지 ${originCount}/${people.length}명)`,
+      onClick: () => setPlaceOpen(true),
+    },
     picked
       ? { key: 'notice', label: '공지 문구 복사', desc: '확정된 시간·장소와 링크', onClick: () => copy(noticeText(picked, picked.dur, true)) }
-      : best && { key: 'suggest', label: '제안 문구 복사', desc: '카톡에 붙여 넣을 추천 시간 안내', onClick: () => copy(noticeText(best, cfg.dur, false)) },
+      : (chosen || best) && { key: 'suggest', label: '제안 문구 복사', desc: '카톡에 붙여 넣을 추천 시간 안내', onClick: () => copy(noticeText(chosen || best, cfg.dur, false)) },
   ].filter(Boolean)
 
   const suggestion = (compact) => (
@@ -258,7 +269,37 @@ export default function Board({ mid, session }) {
       }}
       onCopy={(w) => copy(noticeText(w, cfg.dur, false))}
       onInvite={() => { setInviteOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+      onWhen={setChosen}
+      showAll={showAll}
+      onShowAll={() => setShowAll((v) => !v)}
     />
+  )
+  // 모바일 후보 목록 (추천 카드의 '후보 전체 보기'로 펼쳐요)
+  const slotLists = (
+    <>
+      <SlotList
+        title="모두 가능한 시간"
+        round
+        count={result.all.length}
+        hint="전원이 '가능'으로 표시한 시간이에요."
+        items={result.all}
+        empty={result.entered ? '전원이 되는 시간은 아직 없어요. 아래 추천 시간을 확인해 보세요.' : '입력이 모이면 여기에 나타나요.'}
+        cfg={cfg}
+        n={n}
+        byId={byId}
+        onOpen={openSuggestion}
+      />
+      <SlotList
+        title="추천 시간"
+        hint="가능한 사람이 많고 불가가 적은 순서예요. '조율'은 반만 쳐요."
+        items={result.rec}
+        empty="입력이 모이면 여기에 나타나요."
+        cfg={cfg}
+        n={n}
+        byId={byId}
+        onOpen={openSuggestion}
+      />
+    </>
   )
 
   return (
@@ -287,8 +328,8 @@ export default function Board({ mid, session }) {
         <div className="flex flex-wrap items-center gap-x-1.5 pl-1 text-[13px] text-ink2">
           <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${live === 'live' ? 'bg-yes' : live === 'off' ? 'bg-no' : 'bg-ink2'}`} aria-hidden="true" />
           <span className="tabular">{rangeText(cfg)}</span>
-          <span>· {cfg.count}명 · {durText(cfg.dur)}</span>
-          {nDays(cfg) > 2 && !narrow && <span>· 가운데 날 {String(cfg.from).padStart(2, '0')}:00–{String(cfg.to).padStart(2, '0')}:00</span>}
+          <span>· {cfg.count}명 예상 · {durText(cfg.dur)}</span>
+          {nDays(cfg) > 2 && <span>· 가운데 날 {String(cfg.from).padStart(2, '0')}:00–{String(cfg.to).padStart(2, '0')}:00</span>}
           <span role="status" className={live === 'live' ? 'sr-only' : ''}>
             {live === 'live' ? '실시간 공유 중' : live === 'off' ? '· 연결 끊김, 새로고침해 주세요' : '· 연결 중…'}
           </span>
@@ -328,6 +369,11 @@ export default function Board({ mid, session }) {
               </div>
               <div className="flex flex-wrap gap-1.5">
                 <button className="btn btn-sm bg-[color-mix(in_oklab,var(--pen-ink)_18%,transparent)] text-pen-ink hover:bg-[color-mix(in_oklab,var(--pen-ink)_28%,transparent)]" onClick={() => copy(noticeText(picked, picked.dur, true))}>공지 복사</button>
+                {narrow && (
+                  <button className="btn btn-sm bg-transparent text-pen-ink hover:bg-[color-mix(in_oklab,var(--pen-ink)_18%,transparent)]" aria-expanded={reconsider} onClick={() => setReconsider((v) => !v)}>
+                    {reconsider ? '추천 접기' : '다른 시간 보기'}
+                  </button>
+                )}
                 <button className="btn btn-sm bg-transparent text-pen-ink hover:bg-[color-mix(in_oklab,var(--pen-ink)_18%,transparent)]" onClick={() => updateCfg({ picked: null })}>확정 취소</button>
               </div>
             </div>
@@ -353,7 +399,8 @@ export default function Board({ mid, session }) {
           />
 
           {/* 모바일: 시간표 바로 위에 추천 카드 하나 (칠하는 중·확정 후엔 숨김) */}
-          {narrow && !paintOn && !picked && suggestion(true)}
+          {narrow && !paintOn && (!picked || reconsider) && suggestion(true)}
+          {narrow && !paintOn && (!picked || reconsider) && showAll && slotLists}
 
           {!narrow && placeOpen && (
             <PlacePanel mid={mid} cfg={cfg} people={people} myPid={myPid} onPlace={(place) => updateCfg({ place })} onClose={() => setPlaceOpen(false)} />
@@ -451,8 +498,9 @@ export default function Board({ mid, session }) {
                       <span className="inline-flex items-center gap-1.5"><i className="sw y" />가능</span>
                       <span className="inline-flex items-center gap-1.5"><i className="sw m" />조율</span>
                       <span className="inline-flex items-center gap-1.5"><i className="sw n" />불가</span>
+                      <span className="inline-flex items-center gap-1.5"><i className="sw e" />미입력</span>
                       {!paintOn && <span>{hasMine ? '내가 칠한 시간이에요' : '아직 칠하지 않았어요'}</span>}
-                      {paintOn && <span>같은 색으로 다시 칠하면 지워져요</span>}
+                      {paintOn && <span>같은 색으로 다시 칠하면 지워져요 · 다 칠했으면 저장</span>}
                     </>
                   ) : (
                     <>
@@ -479,28 +527,7 @@ export default function Board({ mid, session }) {
                   </button>
                 </section>
                 {suggestion(false)}
-                <SlotList
-                  title="모두 가능한 시간"
-                  round
-                  count={result.all.length}
-                  hint="전원이 '가능'으로 표시한 시간이에요."
-                  items={result.all}
-                  empty={result.entered ? '전원이 되는 시간은 아직 없어요. 아래 추천 시간을 확인해 보세요.' : '입력이 모이면 여기에 나타나요.'}
-                  cfg={cfg}
-                  n={n}
-                  byId={byId}
-                  onOpen={openSuggestion}
-                />
-                <SlotList
-                  title="추천 시간"
-                  hint="가능한 사람이 많고 불가가 적은 순서예요. '조율'은 반만 쳐요."
-                  items={result.rec}
-                  empty="입력이 모이면 여기에 나타나요."
-                  cfg={cfg}
-                  n={n}
-                  byId={byId}
-                  onOpen={openSuggestion}
-                />
+                {slotLists}
               </aside>
             )}
           </div>
@@ -516,7 +543,7 @@ export default function Board({ mid, session }) {
           editLabel={editLabel}
           brush={brush}
           setBrush={setBrush}
-          placeLabel={cfg.place ? cfg.place.name : '장소 정하기'}
+          placeLabel={cfg.place ? cfg.place.name : originCount ? `장소 · 출발지 ${originCount}/${people.length}` : '장소 정하기'}
           placeOpen={placeFull}
           onPlace={() => setPlaceOpen((o) => !o)}
           onStart={startEdit}
