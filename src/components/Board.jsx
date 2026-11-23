@@ -100,7 +100,9 @@ export default function Board({ mid, session }) {
       window.history.replaceState(null, '', `/?m=${mid}`)
       setInviteOpen(true)
       const invited = Number(params.get('invited')) || 0
-      toast(invited ? `약속을 만들고 친구 ${invited}명을 초대했어요` : '약속을 만들었어요. 함께할 사람들을 초대해 보세요.')
+      const failed = Number(params.get('failed')) || 0 // 새 약속 화면에서 초대하지 못한 친구 수
+      const head = invited ? `약속을 만들고 친구 ${invited}명을 초대했어요` : '약속을 만들었어요'
+      toast(failed ? `${head}. 친구 ${failed}명은 초대하지 못했어요. 초대 창에서 다시 초대해 주세요.` : invited ? head : `${head}. 함께할 사람들을 초대해 보세요.`)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [m.status])
