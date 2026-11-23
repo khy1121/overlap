@@ -24,6 +24,7 @@ import SuggestionNote from './SuggestionNote'
 import TimeGrid from './TimeGrid'
 import TopTimes from './TopTimes'
 import CandidatePoll from './CandidatePoll'
+import RolesSheet from './RolesSheet'
 
 export default function Board({ mid, session }) {
   const toast = useToast()
@@ -80,6 +81,8 @@ export default function Board({ mid, session }) {
   const [startOpen, setStartOpen] = useState(false) // 처음 들어온 사람에게 입력 방법 고르기
   // 늦게 온 사람: 후보만 투표 (열 때의 후보를 고정해요. 투표하면서 순서가 바뀌지 않게)
   const [poll, setPoll] = useState(null)
+  const [rolesOpen, setRolesOpen] = useState(false) // 참석자 꼭/선택/불참 (만든 사람)
+  const [askLater, setAskLater] = useState(false) // '모두 되면 확정' 제안을 이번엔 닫음
   const draftRef = useRef(null) // 드래그 결과를 반영할 때 지금 draft를 읽으려고
   draftRef.current = draft
 
@@ -140,6 +143,20 @@ export default function Board({ mid, session }) {
 
   // 처음 열 때: 이미 칠했으면 '모두 겹쳐 보기'(추천과 함께 보는 화면),
   // 아직 안 칠했고 확정 전이면 바로 칠하기 모드로 열어서 '내 일정 등록'을 한 번 덜 누르게 해요.
+  // 불참은 계산에서 빼고, 예상 인원도 그만큼 줄여요
+  const evalOf = useCallback((ps) => {
+    const inPs = ps.filter((p) => p.role !== 'absent')
+    return evaluate({ ...cfg, count: Math.max(1, (cfg?.count || 1) - (ps.length - inPs.length)) }, inPs)
+  }, [cfg])
+  // 자동 확정: 꼭 와야 하는 사람이 모두 가능한 시간이 생기면 가장 이른 시간으로 (저장된 응답 기준)
+  useEffect(() => {
+    if (m.status !== 'ready' || !cfg?.autoConfirm || cfg.picked) return
+    const w = evalOf(people).all[0]
+    if (!w) return
+    updateCfg({ picked: { d: w.d, s: w.s, dur: cfg.dur } })
+    toast('꼭 와야 하는 사람이 모두 돼서 자동으로 확정했어요')
+  }, [m.status, cfg, people, evalOf, updateCfg, toast])
+
   const modeInit = useRef(false)
   useEffect(() => {
     if (m.status !== 'ready' || !myPid || modeInit.current) return
@@ -148,12 +165,12 @@ export default function Board({ mid, session }) {
     else if (canEdit(myPid) && !cfg?.picked) {
       setDraft({})
       // 다른 사람 응답이 절반 이상 모였고 후보가 2개 이상이면 시간표 대신 후보 투표부터
-      const res = evaluate(cfg, people)
+      const res = evalOf(people)
       const othersIn = people.filter((p) => p.id !== myPid && Object.keys(p.cells || {}).length).length
       if (othersIn * 2 >= res.n && res.rec.length >= 2) setPoll({ list: res.rec.slice(0, 6), answered: othersIn })
       else setStartOpen(true)
     }
-  }, [m.status, myPid, byId, canEdit, cfg, people])
+  }, [m.status, myPid, byId, canEdit, cfg, people, evalOf])
 
   useEffect(() => {
     if (cfg) document.title = `${cfg.title} · Overlap`
@@ -191,7 +208,7 @@ export default function Board({ mid, session }) {
     )
   }
 
-  const result = evaluate(cfg, shownPeople)
+  const result = evalOf(shownPeople)
   const list = result.all.length ? result.all : result.rec
   const n = result.n
 
@@ -303,6 +320,12 @@ export default function Board({ mid, session }) {
       label: 'Google 캘린더에서 바쁜 시간 가져오기',
       desc: '바쁜 시간을 불가로 칠해 줘요 (저장 전에 확인)',
       onClick: () => { if (!paintOn) startEdit(); startCalendar() },
+    },
+    isOwner && {
+      key: 'roles',
+      label: '참석자 꼭/선택 정하기',
+      desc: cfg.autoConfirm ? '모두 되면 자동 확정 켜짐' : '선택은 추천에 반만 반영 · 모두 되면 확정 제안',
+      onClick: () => setRolesOpen(true),
     },
     {
       key: 'place',
@@ -465,7 +488,7 @@ export default function Board({ mid, session }) {
                     {reconsider ? '추천 접기' : '다른 시간 보기'}
                   </button>
                 )}
-                <button className="btn btn-sm bg-transparent text-pen-ink hover:bg-[color-mix(in_oklab,var(--pen-ink)_18%,transparent)]" onClick={() => updateCfg({ picked: null })}>확정 취소</button>
+                <button className="btn btn-sm bg-transparent text-pen-ink hover:bg-[color-mix(in_oklab,var(--pen-ink)_18%,transparent)]" onClick={() => (cfg.autoConfirm ? (updateCfg({ picked: null, autoConfirm: false }), toast('확정을 취소하고 자동 확정을 껐어요')) : updateCfg({ picked: null }))}>확정 취소</button>
               </div>
             </div>
           )}
@@ -490,6 +513,17 @@ export default function Board({ mid, session }) {
           />
 
           {/* 모바일: 시간표 바로 위에 추천 카드 하나 (칠하는 중·확정 후엔 숨김) */}
+          {/* 꼭 와야 하는 사람이 모두 가능한 시간이 생기면 확정 제안 */}
+          {!picked && !paintOn && !askLater && result.all[0] && (
+            <div className="flex flex-col gap-2 rounded-md bg-pen-strong px-4 py-3 text-pen-ink" role="status">
+              <span className="text-[13px] opacity-90">{result.all[0].g.y.length >= n ? `${n}명 모두 돼요` : '꼭 와야 하는 사람이 모두 돼요'}</span>
+              <strong className="font-display text-xl font-extrabold">{dayLabel(cfg, result.all[0].d)} {timeText(cfg, result.all[0].s)}</strong>
+              <div className="flex gap-2">
+                <button className="btn flex-1 bg-sheet text-accent hover:bg-sheet" onClick={() => { updateCfg({ picked: { d: result.all[0].d, s: result.all[0].s, dur: cfg.dur } }); toast('확정했어요. 모두에게 보여요.') }}>이 시간으로 확정</button>
+                <button className="btn bg-transparent text-pen-ink ring-1 ring-inset ring-pen-ink/60 hover:bg-transparent" onClick={() => setAskLater(true)}>조금 더 기다리기</button>
+              </div>
+            </div>
+          )}
           {narrow && !paintOn && (!picked || reconsider) && topTimes}
           {narrow && !paintOn && (!picked || reconsider) && showAll && slotLists}
 
@@ -665,6 +699,16 @@ export default function Board({ mid, session }) {
           onSelect={() => setFine(false)}
           onCalendar={() => { setFine(true); startCalendar() }}
           onClose={() => setStartOpen(false)}
+        />
+      )}
+      {rolesOpen && (
+        <RolesSheet
+          people={people}
+          myPid={myPid}
+          autoConfirm={Boolean(cfg.autoConfirm)}
+          onRole={(p, role) => updatePerson(p.id, { role })}
+          onAutoConfirm={(on) => updateCfg({ autoConfirm: on })}
+          onClose={() => setRolesOpen(false)}
         />
       )}
       {menuOpen && <BoardMenu items={menuItems} isOwner={isOwner} onExit={exitMeeting} onClose={() => setMenuOpen(false)} />}

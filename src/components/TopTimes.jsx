@@ -63,7 +63,7 @@ export default function TopTimes({ cfg, result, byId, onPick, onCopy, onInvite, 
                     {dayLabel(cfg, shown.d)} <span className="tabular font-mono">{timeText(cfg, shown.s)}</span>
                   </span>
                   <span className="block truncate text-[12px] text-ink2">
-                    {c.all ? `${n}명 모두 가능` : `${yes}/${n}명 가능`}{extra.length ? ` · ${extra.join(' · ')}` : ''}
+                    {c.all ? (yes >= n ? `${n}명 모두 가능` : `꼭 오는 사람 모두 가능 · ${yes}/${n}명`) : `${yes}/${n}명 가능`}{extra.length ? ` · ${extra.join(' · ')}` : ''}
                   </span>
                 </span>
               </button>

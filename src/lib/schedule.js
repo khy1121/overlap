@@ -140,6 +140,9 @@ export function evaluate(cfg, people) {
   const missing = n - people.length
   const entered = people.filter(hasInput).length
   if (!entered) return { all: [], rec: [], entered: 0, n }
+  // 선택 참석자: 점수에 반만 반영하고 '모두 가능' 조건에서 빼요 (불참은 넘기기 전에 빼 둬요)
+  const opt = new Set(people.filter((p) => p.role === 'optional').map((p) => p.id))
+  const w8 = (ids, a, b) => ids.reduce((sum, id) => sum + (opt.has(id) ? b : a), 0)
 
   const dur = effDur(cfg)
   const slots = nSlots(cfg)
@@ -172,7 +175,8 @@ export function evaluate(cfg, people) {
     for (let s = 0; s + dur <= slots; s++) {
       if (!fits(d, s)) continue
       const g = groupsAt(d, s)
-      out.push({ d, s, g, missing, score: g.y.length * 2 + g.m.length - g.n.length * 3, all: g.y.length === n })
+      const reqAll = missing === 0 && people.every((p) => opt.has(p.id) || g.y.includes(p.id))
+      out.push({ d, s, g, missing, score: w8(g.y, 2, 1) + w8(g.m, 1, 0.5) - w8(g.n, 3, 1), all: reqAll })
     }
   }
 
@@ -201,7 +205,7 @@ export function evaluate(cfg, people) {
 }
 
 export function summary(w, n) {
-  if (w.all) return `${n}명 모두 가능`
+  if (w.all) return w.g.y.length >= n ? `${n}명 모두 가능` : `꼭 와야 하는 사람 모두 가능 · 가능 ${w.g.y.length}/${n}`
   const parts = [`가능 ${w.g.y.length}`]
   if (w.g.m.length) parts.push(`조율 ${w.g.m.length}`)
   if (w.g.n.length) parts.push(`불가 ${w.g.n.length}`)
