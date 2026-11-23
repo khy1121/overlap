@@ -1,0 +1,22 @@
+# PR과 main에 올라온 코드마다 공통 로직 테스트와 웹 빌드를 돌려요.
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: 공통 로직 테스트 (@overlap/core)
+        run: npm test
+      - name: 웹 빌드 (@overlap/web)
+        run: npm run build

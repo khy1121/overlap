@@ -3,18 +3,25 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
-  "description": "웹·앱 공통 로직 (화면·브라우저와 무관): 시간 계산, 추천, 빠른 선택, 큰 칸, 자주 되던 시간",
+  "description": "웹·앱 공통 로직: 시간 계산·추천 등 순수 함수(브라우저 무관) + Supabase 클라이언트를 인자로 받는 조회 함수",
   "exports": {
     ".": "./src/index.js",
     "./schedule": "./src/schedule.js",
     "./presets": "./src/presets.js",
     "./parts": "./src/parts.js",
-    "./habits": "./src/habits.js"
+    "./habits": "./src/habits.js",
+    "./client": "./src/client.js",
+    "./api/meetings": "./src/api/meetings.js",
+    "./api/friends": "./src/api/friends.js",
+    "./api/habits": "./src/api/habits.js"
   },
   "scripts": {
     "test": "vitest run"
   },
   "devDependencies": {
     "vitest": "2.1.9"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "2.45.4"
   }
 }
