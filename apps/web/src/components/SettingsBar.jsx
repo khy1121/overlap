@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { MAX_DAYS, dayRange, durText, nDays, nSlots, rangeError, rangeText } from '../lib/schedule'
+import { MAX_DAYS, dayRange, durText, nDays, nSlots, rangeError, rangeText } from '@overlap/core/schedule'
 import { TIME_PRESETS, addDays, chip, datePresets, daysBetween, tile } from '../lib/presets'
 import DurationPicker from './DurationPicker'
 

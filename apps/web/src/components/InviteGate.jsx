@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { signInWithKakao } from '../lib/auth'
-import { DAYS, durText } from '../lib/schedule'
+import { DAYS, durText } from '@overlap/core/schedule'
 import { supabase } from '../lib/supabase'
 import AuthForm, { KakaoButton } from './AuthForm'
 
