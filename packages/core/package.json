@@ -18,7 +18,8 @@
     "./identity": "./src/identity.js",
     "./api/auth": "./src/api/auth.js",
     "./api/profile": "./src/api/profile.js",
-    "./site": "./src/site.js"
+    "./site": "./src/site.js",
+    "./hooks/useMeeting": "./src/hooks/useMeeting.js"
   },
   "scripts": {
     "test": "vitest run"
@@ -28,5 +29,8 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "2.45.4"
+  },
+  "peerDependencies": {
+    "react": ">=18"
   }
 }
