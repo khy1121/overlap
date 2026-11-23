@@ -11,6 +11,8 @@ import { supabase } from '../lib/supabase'
 import { BRUSH_LABEL, briefRange, dayLabel, durText, evaluate, nDays, nSlots, rangeText, summary, timeText, tm } from '../lib/schedule'
 import BoardMenu from './BoardMenu'
 import CalendarImport from './CalendarImport'
+import CoarseGrid, { keysOf, partsOf } from './CoarseGrid'
+import InputStartSheet from './InputStartSheet'
 import InvitePanel from './InvitePanel'
 import Palette from './Palette'
 import PeopleBar from './PeopleBar'
@@ -73,6 +75,8 @@ export default function Board({ mid, session }) {
   const [undoStack, setUndoStack] = useState([]) // 되돌리기용 이전 상태들 (최근 것이 끝)
   const [saveState, setSaveState] = useState('idle') // idle | saving | saved
   const flushRef = useRef(null)
+  const [fine, setFine] = useState(false) // 칠하는 중 보기: false = 큰 칸(요일 × 시간대), true = 30분 칸
+  const [startOpen, setStartOpen] = useState(false) // 처음 들어온 사람에게 입력 방법 고르기
   const draftRef = useRef(null) // 드래그 결과를 반영할 때 지금 draft를 읽으려고
   draftRef.current = draft
 
@@ -138,7 +142,7 @@ export default function Board({ mid, session }) {
     if (m.status !== 'ready' || !myPid || modeInit.current) return
     modeInit.current = true
     if (Object.keys(byId[myPid]?.cells || {}).length) setMode('all')
-    else if (canEdit(myPid) && !cfg?.picked) setDraft({})
+    else if (canEdit(myPid) && !cfg?.picked) { setDraft({}); setStartOpen(true) }
   }, [m.status, myPid, byId, canEdit, cfg])
 
   useEffect(() => {
@@ -192,6 +196,12 @@ export default function Board({ mid, session }) {
     const next = { ...draft }
     keys.forEach((k) => { if (clear || !brush) delete next[k]; else next[k] = brush })
     applyDraft(next)
+  }
+  // '다 돼요': 약속 범위 안의 모든 30분 칸을 가능으로
+  function allYes() {
+    const next = {}
+    for (let d = 0; d < nDays(cfg); d++) for (const part of partsOf(cfg)) for (const k of keysOf(cfg, d, part)) next[k] = 'y'
+    return next
   }
   function undo() {
     const prev = undoStack[undoStack.length - 1]
@@ -503,9 +513,15 @@ export default function Board({ mid, session }) {
                 // 칠하는 중: 저장 상태 · 되돌리기 · 모두 지우기 (저장 버튼 없음)
                 <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1">
                   <span className={`text-[13px] font-semibold ${saveState === 'saved' ? 'text-yes' : 'text-ink2'}`} role="status">{saveText}</span>
-                  <span className="text-xs text-ink2">{lockable ? '톡 치면 한 칸, 꾹 눌러 끌면 여러 칸' : '누르거나 드래그해서 칠해요'}</span>
+                  <span className="text-xs text-ink2">{!fine ? '칸을 누를 때마다 가능 → 안 돼요 → 조율' : lockable ? '톡 치면 한 칸, 꾹 눌러 끌면 여러 칸' : '누르거나 드래그해서 칠해요'}</span>
                   <span className="ml-auto flex items-center gap-1">
+                    <span className="inline-flex gap-0.5 rounded-full bg-rule2 p-0.5" role="group" aria-label="칸 크기">
+                      {[[false, '큰 칸'], [true, '30분']].map(([v, label]) => (
+                        <button key={label} aria-pressed={fine === v} className={`min-h-[30px] rounded-full border-0 px-2.5 text-[12px] font-semibold ${fine === v ? 'bg-sheet text-ink shadow-soft' : 'bg-transparent text-ink2'}`} onClick={() => setFine(v)}>{label}</button>
+                      ))}
+                    </span>
                     <button className="btn-ghost btn-sm" disabled={!undoStack.length} onClick={undo}>되돌리기</button>
+                    <button className="btn-ghost btn-sm" onClick={() => applyDraft(allYes())}>전부 가능</button>
                     {Object.keys(draft).length > 0 && (
                       <button className="btn-ghost btn-sm text-no hover:text-no" onClick={() => applyDraft({})}>모두 지우기</button>
                     )}
@@ -513,7 +529,7 @@ export default function Board({ mid, session }) {
                 </div>
               )}
 
-              {paintOn && !lockable && (
+              {paintOn && fine && !lockable && (
                 <div className="sticky z-[5] mb-1 flex items-center gap-2 bg-sheet py-2" style={{ top: 'env(safe-area-inset-top, 0px)' }}>
                   <Palette brush={brush} setBrush={setBrush} className="min-w-0 flex-1" />
                   <button className="btn-primary min-h-[44px]" onClick={finishEdit}>다 했어요</button>
@@ -534,6 +550,9 @@ export default function Board({ mid, session }) {
                 />
               )}
 
+              {paintOn && !fine ? (
+                <CoarseGrid cfg={cfg} cells={draft} people={people} myPid={myPid} onChange={applyDraft} />
+              ) : (
               <TimeGrid
                 cfg={cfg}
                 people={shownPeople}
@@ -551,6 +570,7 @@ export default function Board({ mid, session }) {
                   setAnnounce(`${dayLabel(cfg, c.d)} ${tm(cfg, c.s)}${mode === 'edit' ? ` ${BRUSH_LABEL[v] || '미입력'}` : ''}`)
                 }}
               />
+              )}
 
               {/* 범례는 한 줄로. 겹쳐 보기에서 칸을 누르면 그 자리에 누가 되는지 보여요 */}
               {mode === 'all' && sel ? (
@@ -608,11 +628,22 @@ export default function Board({ mid, session }) {
         </>
       )}
 
+      {startOpen && (
+        <InputStartSheet
+          waiting={people.filter((p) => p.id !== myPid && Object.keys(p.cells || {}).length).length}
+          canCalendar={Boolean(GOOGLE_CLIENT_ID)}
+          onSubtract={() => { setFine(false); applyDraft(allYes()); toast('전부 가능으로 채웠어요. 안 되는 칸만 눌러 주세요') }}
+          onSelect={() => setFine(false)}
+          onCalendar={() => { setFine(true); startCalendar() }}
+          onClose={() => setStartOpen(false)}
+        />
+      )}
       {menuOpen && <BoardMenu items={menuItems} isOwner={isOwner} onExit={exitMeeting} onClose={() => setMenuOpen(false)} />}
 
       {lockable && !settingsOpen && (
         <MobileBar
           painting={paintOn}
+          showPalette={fine}
           canPaint={canEdit(myPid)}
           editLabel={editLabel}
           brush={brush}
@@ -650,7 +681,7 @@ function PenIcon() {
 }
 
 /** 모바일 하단 고정 바: 평소엔 [장소] + [내 시간 칠하기], 칠하는 중엔 칠하기 도구 + 되돌리기 · 다 했어요 (자동 저장). */
-function MobileBar({ painting, canPaint, editLabel, brush, setBrush, placeLabel, placeOpen, onPlace, onStart, onUndo, canUndo, onDone }) {
+function MobileBar({ painting, showPalette, canPaint, editLabel, brush, setBrush, placeLabel, placeOpen, onPlace, onStart, onUndo, canUndo, onDone }) {
   return (
     <div
       className="fixed inset-x-0 bottom-0 z-30 border-t border-rule bg-[color-mix(in_oklab,var(--sheet)_92%,transparent)] px-3 pt-2.5 shadow-[0_-8px_24px_-12px_rgba(42,40,56,.18)] backdrop-blur"
@@ -658,7 +689,7 @@ function MobileBar({ painting, canPaint, editLabel, brush, setBrush, placeLabel,
     >
       {painting ? (
         <div className="mx-auto flex max-w-[560px] flex-col gap-2">
-          <Palette brush={brush} setBrush={setBrush} compact />
+          {showPalette && <Palette brush={brush} setBrush={setBrush} compact />}
           <div className="grid grid-cols-[1fr_2fr] gap-2">
             <button type="button" className="btn min-h-[48px]" disabled={!canUndo} onClick={onUndo}>되돌리기</button>
             <button type="button" className="btn-primary min-h-[48px]" onClick={onDone}>다 했어요 · 결과 보기</button>
