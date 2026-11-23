@@ -169,7 +169,7 @@ export function KakaoButton({ onClick, disabled, label = '카카오로 시작하
       type="button"
       onClick={onClick}
       disabled={disabled}
-      className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-[14px] border-0 bg-[#FEE500] text-[15px] font-semibold text-black/85 hover:bg-[#F5DC00]"
+      className="flex min-h-[52px] w-full items-center justify-center gap-2 rounded-[14px] border-0 bg-kakao text-[15px] font-semibold text-black/85 hover:bg-kakao-hover"
     >
       <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
         <path fill="#000" d="M12 3C6.48 3 2 6.48 2 10.78c0 2.78 1.86 5.22 4.66 6.6l-.95 3.48c-.08.3.26.54.52.37l4.15-2.74c.53.07 1.07.11 1.62.11 5.52 0 10-3.48 10-7.82S17.52 3 12 3Z" />
