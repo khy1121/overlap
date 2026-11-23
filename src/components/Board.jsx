@@ -23,6 +23,7 @@ import SlotList from './SlotList'
 import SuggestionNote from './SuggestionNote'
 import TimeGrid from './TimeGrid'
 import TopTimes from './TopTimes'
+import CandidatePoll from './CandidatePoll'
 
 export default function Board({ mid, session }) {
   const toast = useToast()
@@ -77,6 +78,8 @@ export default function Board({ mid, session }) {
   const flushRef = useRef(null)
   const [fine, setFine] = useState(false) // 칠하는 중 보기: false = 큰 칸(요일 × 시간대), true = 30분 칸
   const [startOpen, setStartOpen] = useState(false) // 처음 들어온 사람에게 입력 방법 고르기
+  // 늦게 온 사람: 후보만 투표 (열 때의 후보를 고정해요. 투표하면서 순서가 바뀌지 않게)
+  const [poll, setPoll] = useState(null)
   const draftRef = useRef(null) // 드래그 결과를 반영할 때 지금 draft를 읽으려고
   draftRef.current = draft
 
@@ -142,8 +145,15 @@ export default function Board({ mid, session }) {
     if (m.status !== 'ready' || !myPid || modeInit.current) return
     modeInit.current = true
     if (Object.keys(byId[myPid]?.cells || {}).length) setMode('all')
-    else if (canEdit(myPid) && !cfg?.picked) { setDraft({}); setStartOpen(true) }
-  }, [m.status, myPid, byId, canEdit, cfg])
+    else if (canEdit(myPid) && !cfg?.picked) {
+      setDraft({})
+      // 다른 사람 응답이 절반 이상 모였고 후보가 2개 이상이면 시간표 대신 후보 투표부터
+      const res = evaluate(cfg, people)
+      const othersIn = people.filter((p) => p.id !== myPid && Object.keys(p.cells || {}).length).length
+      if (othersIn * 2 >= res.n && res.rec.length >= 2) setPoll({ list: res.rec.slice(0, 6), answered: othersIn })
+      else setStartOpen(true)
+    }
+  }, [m.status, myPid, byId, canEdit, cfg, people])
 
   useEffect(() => {
     if (cfg) document.title = `${cfg.title} · Overlap`
@@ -220,6 +230,7 @@ export default function Board({ mid, session }) {
   // 다 칠했으면 남은 저장을 바로 보내고 겹쳐 보기로
   function finishEdit() {
     flushRef.current?.()
+    setPoll(null)
     setDraft(null)
     setUndoStack([])
     setCalOpen(false)
@@ -488,6 +499,22 @@ export default function Board({ mid, session }) {
 
           <div className="grid grid-cols-1 items-start gap-5 min-[920px]:grid-cols-[minmax(0,1fr)_340px]">
             <section className={narrow ? '' : 'sheet'} aria-label="시간 입력">
+              {poll && paintOn ? (
+                <CandidatePoll
+                  cfg={cfg}
+                  candidates={poll.list}
+                  cells={draft}
+                  byId={byId}
+                  answered={poll.answered}
+                  onVote={(keys, v) => {
+                    const next = { ...draft }
+                    keys.forEach((k) => { if (v) next[k] = v; else delete next[k] })
+                    applyDraft(next)
+                  }}
+                  onSeeAll={() => setPoll(null)}
+                />
+              ) : (
+              <>
               {(
                 <div className="mb-2 flex items-center justify-between gap-2.5">
                   <div className="inline-flex flex-1 gap-1 rounded-full bg-rule2 p-1 min-[920px]:flex-none" role="group" aria-label="보기">
@@ -605,6 +632,8 @@ export default function Board({ mid, session }) {
                     </>
                   )}
                 </div>
+              )}
+              </>
               )}
             </section>
 
