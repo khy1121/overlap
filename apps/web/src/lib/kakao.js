@@ -54,4 +54,4 @@ export async function shareKakao({ title, description, url, button = '열어 보
 }
 
 /** 공유 버튼용: 카카오 노란색 */
-export const KAKAO_BTN = 'border-0 bg-[#FEE500] text-black/85 hover:bg-[#F5DC00]'
+export const KAKAO_BTN = 'border-0 bg-kakao text-black/85 hover:bg-kakao-hover'

@@ -13,7 +13,8 @@
     "./client": "./src/client.js",
     "./api/meetings": "./src/api/meetings.js",
     "./api/friends": "./src/api/friends.js",
-    "./api/habits": "./src/api/habits.js"
+    "./api/habits": "./src/api/habits.js",
+    "./tokens": "./src/tokens.js"
   },
   "scripts": {
     "test": "vitest run"
