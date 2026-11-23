@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { signInWithKakao } from '../lib/auth'
+import { DAYS, durText } from '../lib/schedule'
 import { supabase } from '../lib/supabase'
 import AuthForm, { KakaoButton } from './AuthForm'
 
@@ -39,15 +40,25 @@ export default function InviteGate({ mid }) {
     )
   }
 
-  const startText = `${Number(info.start_date.slice(5, 7))}월 ${Number(info.start_date.slice(8, 10))}일부터`
+  // 기간·시간대 한 줄 (DB 함수가 새 칸을 아직 안 돌려주면 시작일만)
+  const [y, mo, d0] = info.start_date.split('-').map(Number)
+  const day = (i) => { const t = new Date(y, mo - 1, d0 + i); return `${t.getMonth() + 1}/${t.getDate()}(${DAYS[t.getDay()]})` }
+  const days = info.days || 0
+  const rangeText = days
+    ? [
+        days > 1 ? `${day(0)}–${day(days - 1)}` : day(0),
+        `${days > 1 ? '매일 ' : ''}${info.from_hour}–${info.to_hour}시`,
+        info.dur !== undefined ? durText(info.dur) : null,
+      ].filter(Boolean).join(' · ')
+    : `${mo}월 ${d0}일부터`
   return (
     <section className="mx-auto flex w-full max-w-[460px] flex-col items-center gap-3 pb-44 pt-8 text-center">
-      <p className="m-0 text-[15px] text-ink2">약속에 초대받았어요</p>
+      <p className="m-0 text-[15px] text-ink2">{info.host_name ? `${info.host_name}님이 약속에 초대했어요` : '약속에 초대받았어요'}</p>
       <h1 className="m-0 text-balance font-display text-[30px] font-extrabold leading-tight tracking-[-.02em]">{info.title}</h1>
       <div className="sheet mt-2 flex w-full flex-col gap-2.5 text-left">
         <span className="flex items-center gap-2.5 text-[15px] font-semibold">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-ink2" aria-hidden="true"><rect x="3" y="5" width="18" height="16" rx="3" /><path d="M3 10h18M8 3v4M16 3v4" /></svg>
-          {startText}
+          {rangeText}
         </span>
         <span className="flex items-center gap-2.5 text-[15px] font-semibold">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-ink2" aria-hidden="true"><circle cx="9" cy="8" r="3.5" /><path d="M2.5 20a6.5 6.5 0 0 1 13 0M16 4.5a3.5 3.5 0 0 1 0 7M18 14a6 6 0 0 1 3.5 6" /></svg>
