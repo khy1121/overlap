@@ -11,7 +11,7 @@ import { supabase } from '../lib/supabase'
 import { BRUSH_LABEL, briefRange, dayLabel, durText, evaluate, nDays, nSlots, rangeText, summary, timeText, tm } from '../lib/schedule'
 import BoardMenu from './BoardMenu'
 import CalendarImport from './CalendarImport'
-import CoarseGrid, { keysOf, partsOf } from './CoarseGrid'
+import CoarseGrid, { DEFAULT_BOUNDS, keysOf, partsOf } from './CoarseGrid'
 import InputStartSheet from './InputStartSheet'
 import InvitePanel from './InvitePanel'
 import Palette from './Palette'
@@ -79,6 +79,12 @@ export default function Board({ mid, session }) {
   const flushRef = useRef(null)
   const [fine, setFine] = useState(false) // 칠하는 중 보기: false = 큰 칸(요일 × 시간대), true = 30분 칸
   const [startOpen, setStartOpen] = useState(false) // 처음 들어온 사람에게 입력 방법 고르기
+  // 큰 칸 시간대 나누는 시각 (사용자 맞춤, 이 기기에 저장)
+  const boundsKey = `overlap:parts:${session.user.id}`
+  const [bounds, setBoundsState] = useState(() => {
+    try { const v = JSON.parse(localStorage.getItem(boundsKey)); return Array.isArray(v) && v.every(Number.isInteger) ? v : DEFAULT_BOUNDS } catch { return DEFAULT_BOUNDS }
+  })
+  const setBounds = (v) => { setBoundsState(v); try { localStorage.setItem(boundsKey, JSON.stringify(v)) } catch { /* 저장소 막힘 */ } }
   // 늦게 온 사람: 후보만 투표 (열 때의 후보를 고정해요. 투표하면서 순서가 바뀌지 않게)
   const [poll, setPoll] = useState(null)
   const [rolesOpen, setRolesOpen] = useState(false) // 참석자 꼭/선택/불참 (만든 사람)
@@ -612,7 +618,7 @@ export default function Board({ mid, session }) {
               )}
 
               {paintOn && !fine ? (
-                <CoarseGrid cfg={cfg} cells={draft} people={people} myPid={myPid} onChange={applyDraft} />
+                <CoarseGrid cfg={cfg} cells={draft} people={people} myPid={myPid} onChange={applyDraft} bounds={bounds} onBounds={setBounds} />
               ) : (
               <TimeGrid
                 cfg={cfg}

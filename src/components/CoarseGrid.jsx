@@ -1,17 +1,28 @@
+import { useState } from 'react'
 import { blocked, dayLabel, nDays, rowFrom, rowTo } from '../lib/schedule'
+
+/** 기본 나누는 시각: 오전(~12시) · 오후(12~18시) · 저녁(18시~) */
+export const DEFAULT_BOUNDS = [12, 18]
+const period = (h) => (h < 6 ? '새벽' : h < 12 ? '오전' : h < 18 ? '오후' : h < 22 ? '저녁' : '밤')
 
 /**
  * 약속 시간 범위를 큰 시간대로 나눠요.
- * 범위가 넓으면 오전(~12시) · 오후(12~18시) · 저녁(18시~), 좁으면(예: 18~23시) 1~2시간 단위로 3칸쯤.
+ * bounds = 나누는 시각들 (사용자가 바꿀 수 있어요, 기본 12·18시). 범위 밖 시각은 무시해요.
+ * 그렇게 나눈 칸이 2개 미만이면(예: 18~23시 약속) 1~2시간 단위로 3칸쯤.
  * 결과: [{ from, to, label, sub }] (시각은 정수 시)
  */
-export function partsOf(cfg) {
+export function partsOf(cfg, bounds = DEFAULT_BOUNDS) {
   const a = rowFrom(cfg)
   const b = rowTo(cfg)
-  const named = [[0, 12, '오전'], [12, 18, '오후'], [18, 24, '저녁']]
-    .map(([x, y, label]) => ({ from: Math.max(a, x), to: Math.min(b, y), label }))
-    .filter((p) => p.to - p.from >= 1)
-  if (named.length >= 2) return named.map((p) => ({ ...p, sub: `${p.from}–${p.to}시` }))
+  const cuts = [...new Set(bounds)].filter((h) => h > a && h < b).sort((x, y) => x - y)
+  const edges = [a, ...cuts, b]
+  const segs = edges.slice(0, -1).map((from, i) => ({ from, to: edges[i + 1] })).filter((p) => p.to - p.from >= 1)
+  const isDefault = bounds.length === DEFAULT_BOUNDS.length && bounds.every((h, i) => h === DEFAULT_BOUNDS[i])
+  if (segs.length >= 2) {
+    return segs.map((p) => (isDefault
+      ? { ...p, label: period(p.from), sub: `${p.from}–${p.to}시` }
+      : { ...p, label: `${p.from}–${p.to}시`, sub: period(p.from) }))
+  }
   // 한 시간대 안에 들어가는 좁은 범위: 비슷한 길이로 3칸 (1시간 미만 칸은 만들지 않아요)
   const len = b - a
   const n = Math.min(3, Math.max(1, len))
@@ -51,8 +62,9 @@ const LOOK = {
  * 큰 칸 입력: 요일 × 시간대. 누르면 그 시간대의 30분 칸들을 한꺼번에 칠해요(저장은 30분 칸 그대로라 추천 계산은 같아요).
  * 칸 아래 'n명 돼요'는 다른 사람 중 그 시간대의 절반 이상이 가능·조율인 사람 수예요.
  */
-export default function CoarseGrid({ cfg, cells, people, myPid, onChange }) {
-  const parts = partsOf(cfg)
+export default function CoarseGrid({ cfg, cells, people, myPid, onChange, bounds = DEFAULT_BOUNDS, onBounds }) {
+  const parts = partsOf(cfg, bounds)
+  const [editing, setEditing] = useState(false)
   const days = nDays(cfg)
   const others = people.filter((p) => p.id !== myPid)
 
@@ -70,6 +82,15 @@ export default function CoarseGrid({ cfg, cells, people, myPid, onChange }) {
   const okCount = (keys) => others.filter((p) => keys.filter((k) => ['y', 'm'].includes(p.cells?.[k])).length * 2 >= keys.length).length
 
   return (
+    <div className="flex flex-col gap-1.5">
+      {onBounds && (
+        <div className="flex justify-end">
+          <button type="button" className="border-0 bg-transparent p-1 text-[12px] font-semibold text-accent" aria-expanded={editing} onClick={() => setEditing((v) => !v)}>
+            {editing ? '시간대 바꾸기 닫기' : '시간대 바꾸기'}
+          </button>
+        </div>
+      )}
+      {editing && <BoundsEditor cfg={cfg} bounds={bounds} onBounds={onBounds} />}
     <div className="flex flex-col gap-1.5" role="grid" aria-label="큰 칸으로 내 시간 입력">
       <div className="grid gap-1.5" style={{ gridTemplateColumns: `52px repeat(${parts.length}, minmax(0, 1fr))` }} role="row">
         <span />
@@ -124,6 +145,64 @@ export default function CoarseGrid({ cfg, cells, people, myPid, onChange }) {
           </div>
         )
       })}
+    </div>
+    </div>
+  )
+}
+
+/**
+ * 시간대 나누기 맞춤: 몇 칸(2~4)과 나누는 시각. 바꾸면 바로 큰 칸이 다시 그려져요.
+ * 나누는 시각은 약속 시간 범위 안에서만 고를 수 있어요.
+ */
+function BoundsEditor({ cfg, bounds, onBounds }) {
+  const a = rowFrom(cfg)
+  const b = rowTo(cfg)
+  const inRange = bounds.filter((h) => h > a && h < b).sort((x, y) => x - y)
+  const count = inRange.length + 1
+  const hours = Array.from({ length: Math.max(0, b - a - 1) }, (_, i) => a + 1 + i)
+  // 칸 수를 바꾸면 범위를 비슷하게 나누는 시각으로
+  const evenly = (n) => Array.from({ length: n - 1 }, (_, i) => Math.round(a + ((b - a) * (i + 1)) / n))
+  const setCut = (i, h) => {
+    const next = inRange.slice()
+    next[i] = h
+    onBounds([...new Set(next)].sort((x, y) => x - y))
+  }
+  if (hours.length < 1) return <p className="m-0 text-[12px] text-ink2">약속 시간이 짧아서 나눌 수 없어요.</p>
+  return (
+    <div className="flex flex-col gap-2 rounded-[14px] bg-rule2 p-3">
+      <div className="flex flex-wrap items-center gap-1.5">
+        <span className="mr-1 text-[13px] font-semibold">몇 칸으로</span>
+        {[2, 3, 4].filter((n) => n - 1 <= hours.length).map((n) => (
+          <button
+            key={n}
+            type="button"
+            aria-pressed={count === n}
+            className={`min-h-[36px] rounded-full border-0 px-3.5 text-[13px] font-semibold ${count === n ? 'bg-pen-strong text-pen-ink' : 'bg-sheet text-ink'}`}
+            onClick={() => onBounds(evenly(n))}
+          >
+            {n}칸
+          </button>
+        ))}
+        <button type="button" className="ml-auto border-0 bg-transparent p-1 text-[12px] font-semibold text-ink2 underline" onClick={() => onBounds(DEFAULT_BOUNDS)}>기본값</button>
+      </div>
+      <div className="flex flex-wrap items-center gap-1.5 text-[13px] text-ink2">
+        <span>{a}시</span>
+        {inRange.map((h, i) => (
+          <span key={i} className="flex items-center gap-1.5">
+            <span>~</span>
+            <select
+              className="field-input !min-h-[36px] w-[76px] !py-1"
+              aria-label={`${i + 1}번째로 나누는 시각`}
+              value={h}
+              onChange={(e) => setCut(i, Number(e.target.value))}
+            >
+              {hours.filter((x) => (i === 0 || x > inRange[i - 1]) && (i === inRange.length - 1 || x < inRange[i + 1])).map((x) => <option key={x} value={x}>{x}시</option>)}
+            </select>
+          </span>
+        ))}
+        <span>~ {b}시</span>
+      </div>
+      <p className="m-0 text-[12px] text-ink2">이 기기에 저장돼서 다음 약속에도 같은 구분으로 보여요</p>
     </div>
   )
 }
