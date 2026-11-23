@@ -17,21 +17,30 @@ React 18 + Vite, Tailwind CSS 3 + SCSS, Supabase (Postgres, Auth, Realtime), Ver
 ## 로컬 실행
 
 ```bash
-cp .env.example .env.local
-npm install
-npm run dev
+cp .env.example .env.local   # 저장소 루트에 둬요 (웹·앱이 같이 써요)
+npm install                  # 루트에서 한 번이면 모든 워크스페이스가 설치돼요
+npm run dev                  # 웹 개발 서버 (apps/web)
+npm run build                # 웹 빌드 → apps/web/dist
 ```
+
+웹에만 옵션을 넘길 때는 `npm run dev -w @overlap/web -- --port 5180`처럼 써요.
 
 ## 폴더 구조
 
+웹과 (앞으로 만들) 앱을 한 저장소에서 관리하는 npm workspaces 모노레포예요.
+
 ```
-src/
-  components/   화면 컴포넌트 (Board = 회의 화면, TimeGrid = 시간표 등)
-  hooks/        useMeeting (불러오기·실시간·저장), useToast
-  lib/          supabase 클라이언트, 로그인, 시간 계산(schedule.js)
-  styles/       Tailwind + SCSS (색 토큰, 시간표 무늬)
-supabase/migrations/   DB 구조와 보안 규칙(RLS)
-supabase/functions/    signup 가입 함수 (Edge Function)
+apps/
+  web/                  웹앱 (Vite + React). Vercel이 여기를 빌드해요 (vercel.json → apps/web/dist)
+    src/
+      components/       화면 컴포넌트 (Board = 약속 화면, TimeGrid = 시간표 등)
+      hooks/            useMeeting (불러오기·실시간·저장), useToast
+      lib/              supabase 클라이언트, 로그인, 시간 계산(schedule.js)
+      styles/           Tailwind + SCSS (색 토큰, 시간표 무늬)
+packages/               웹·앱 공통 코드 (예정: packages/core)
+supabase/migrations/    DB 구조와 보안 규칙(RLS)
+supabase/functions/     가입·푸시·탈퇴 등 Edge Function
+android/                Play 스토어용 Android 앱 (TWA)
 ```
 
 ## 가입 방식
@@ -39,7 +48,7 @@ supabase/functions/    signup 가입 함수 (Edge Function)
 이메일 없이 이름·생년월일·비밀번호로 가입해요.
 
 - 이름과 생년월일로 내부 로그인 식별자를 만들어요. 식별자는 `SHA-256(이름|생년월일)`로 만든 가짜 이메일이에요.
-  - 같은 규칙이 `supabase/functions/signup/index.ts`와 `src/lib/identity.js` 두 곳에 있어요. 한쪽을 바꾸면 다른 쪽도 같이 바꿔야 해요.
+  - 같은 규칙이 `supabase/functions/signup/index.ts`와 `apps/web/src/lib/identity.js` 두 곳에 있어요. 한쪽을 바꾸면 다른 쪽도 같이 바꿔야 해요.
 - 가입은 `signup` Edge Function이 서비스 키로 인증이 끝난 계정을 바로 만들어요. 그래서 이메일 인증 설정이 필요 없어요.
 - 생년월일은 저장하지 않아요. 이름은 프로필에 저장해요.
 - 이름과 생년월일이 같은 계정은 하나만 만들 수 있어요.
