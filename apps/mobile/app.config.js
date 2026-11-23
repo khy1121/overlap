@@ -17,6 +17,8 @@ function rootEnv() {
 }
 const env = { ...rootEnv(), ...process.env }
 
+const googleServices = process.env.GOOGLE_SERVICES_JSON || (fs.existsSync(path.join(__dirname, 'google-services.json')) ? './google-services.json' : null)
+
 // EAS 프로젝트 (@rlagjsdud/overlap). 공개 값이에요. 빌드 서버에는 .env.local이 없어서 여기 직접 둬요
 const EAS_PROJECT_ID = env.EXPO_PROJECT_ID || '77c8b76b-598c-4f11-853f-62290711d0dc'
 
@@ -38,6 +40,8 @@ module.exports = {
       // 지금 Play용 TWA와 같은 패키지 이름: 나중에 같은 서명 키로 업데이트해서 바꿀 수 있게
       package: 'kr.overlap.app',
       adaptiveIcon: { foregroundImage: './assets/adaptive-icon.png', backgroundColor: '#FFFFFF' },
+      // FCM(앱 알림): 빌드 서버는 EAS 파일 변수 GOOGLE_SERVICES_JSON, 내 컴퓨터는 apps/mobile/google-services.json (커밋 안 함)
+      ...(googleServices ? { googleServicesFile: googleServices } : {}),
     },
     // 앱 알림: 안드로이드 알림 아이콘 색. FCM 설정(google-services.json)은 EAS 빌드 때 넣어요
     plugins: [['expo-notifications', { color: '#3182F6' }]],
