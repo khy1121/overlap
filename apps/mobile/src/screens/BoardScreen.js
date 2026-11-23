@@ -7,6 +7,7 @@ import { meetingLink } from '@overlap/core/site'
 import { supabase } from '../lib/supabase'
 import { type, useTheme } from '../lib/theme'
 import { Avatar, Button, Card } from '../ui'
+import PlaceCard from '../components/PlaceCard'
 
 // 큰 칸 한 칸의 상태: 모두 같으면 그 값(y/m/n), 하나도 없으면 u, 섞였으면 mix
 function stateOf(cells, keys) {
@@ -22,7 +23,8 @@ const LABEL = { y: '가능', m: '조율', n: '안 돼요', u: '미입력', mix: 
  * 약속 화면 (앱 1차): 웹과 같은 useMeeting 훅으로 불러오고 실시간으로 맞춰요.
  * - 모두 겹쳐 보기: 좋은 시간 카드 3개(확정) + 큰 칸 겹쳐 보기(몇 명 되는지)
  * - 내 시간 칠하기: 큰 칸(요일 × 시간대)을 누르면 바로 칠해지고 0.8초 뒤 자동 저장, 되돌리기
- * 30분 단위 다듬기·후보 투표·장소·참석자 꼭/선택은 다음 단계에서.
+ * 만날 장소: 키워드로 찾아 정하기·길찾기 (중간 지점 찾기는 웹에서)
+ * 30분 단위 다듬기·후보 투표·참석자 꼭/선택은 다음 단계에서.
  */
 export default function BoardScreen({ route, navigation }) {
   const { mid } = route.params
@@ -150,13 +152,15 @@ ${meetingLink(mid)}` }) },
           <View style={[styles.banner, { backgroundColor: c['pen-strong'], borderRadius: radius.md }]}>
             <Text style={[type.caption, { color: c['pen-ink'] }]}>약속이 잡혔어요</Text>
             <Text style={{ fontSize: 20, lineHeight: 28, fontWeight: '800', color: c['pen-ink'] }}>{dayLabel(cfg, picked.d)} {timeText(cfg, picked.s, picked.dur)}</Text>
-            {cfg.place?.name ? <Text style={[type.caption, { color: c['pen-ink'] }]}>장소 · {cfg.place.name}</Text> : null}
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 6 }}>
               <Button small kind="plain" label="공지 보내기" onPress={() => Share.share({ message: `${cfg.title} 시간 확정\n${dayLabel(cfg, picked.d)} ${timeText(cfg, picked.s, picked.dur)}${cfg.place?.name ? `\n장소: ${cfg.place.name}` : ''}\n${meetingLink(mid)}` })} />
               <Button small kind="plain" label="확정 취소" onPress={() => updateCfg(cfg.autoConfirm ? { picked: null, autoConfirm: false } : { picked: null })} />
             </View>
           </View>
         ) : null}
+
+        {/* 장소: 시간이 잡혔거나 이미 정해 둔 장소가 있을 때 */}
+        {(picked || cfg.place) && <PlaceCard place={cfg.place} onChange={(place) => updateCfg({ place })} />}
 
         <View style={[styles.seg, { backgroundColor: c['rule-2'] }]}>
           {[['all', '모두 겹쳐 보기'], ['edit', '내 시간 칠하기']].map(([k, t]) => (
