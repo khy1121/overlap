@@ -6,11 +6,11 @@ const QUICK = [2, 4, 6, 8, 10] // 30분 칸 단위: 1~5시간
  * 만나는 시간 고르기: '미정', 1~5시간은 칩으로 바로, 그 밖은 '직접 입력'(시간, 30분 단위).
  * value/onChange는 30분 칸 수(예: 3 = 1시간 30분), 미정이면 null. max도 칸 수.
  */
-export default function DurationPicker({ value, onChange, max = 24, compact = false }) {
+export default function DurationPicker({ value, onChange, max = 24, compact = false, scroll = false }) {
   const [custom, setCustom] = useState(value != null && !QUICK.includes(value))
   const [text, setText] = useState(value ? String(value / 2) : '2')
   const chip = (on) =>
-    `min-h-[40px] rounded-[12px] border-0 px-3.5 text-sm font-semibold ${on ? 'bg-pen-strong text-pen-ink' : 'bg-rule2 text-ink hover:bg-rule'}`
+    `min-h-[40px] shrink-0 rounded-[12px] border-0 px-3.5 text-sm font-semibold ${on ? 'bg-pen-strong text-pen-ink' : 'bg-rule2 text-ink hover:bg-rule'}`
 
   function commit(raw) {
     const hours = Number(raw)
@@ -21,7 +21,7 @@ export default function DurationPicker({ value, onChange, max = 24, compact = fa
   }
 
   return (
-    <div className={`flex flex-wrap items-center gap-1.5 ${compact ? '' : 'mt-0.5'}`} role="group" aria-label="만나는 시간">
+    <div className={`flex items-center gap-1.5 ${scroll ? '-mx-1 overflow-x-auto px-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden' : 'flex-wrap'} ${compact ? '' : 'mt-0.5'}`} role="group" aria-label="만나는 시간">
       <button
         type="button"
         aria-pressed={value == null}
