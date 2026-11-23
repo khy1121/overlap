@@ -6,14 +6,12 @@ import { confirmedTime, fetchMyEntries, fetchMyMeetings, hm, meetingSpan } from 
 import { supabase } from '../lib/supabase'
 import { displayName } from '../lib/auth'
 import { type, useTheme } from '../lib/theme'
-import { openNewMeetingOnWeb } from '../lib/web'
 import { Avatar, Button, MeetingRow, Section } from '../ui'
 
 const md = (d) => `${d.getMonth() + 1}/${d.getDate()}`
 
 /**
  * 홈 (웹 홈과 같은 구성): [내가 칠할 약속 카드] → 다가오는 약속 → 조율 중, 아래 고정 '새 약속 만들기'.
- * 새 약속 만들기는 다음 단계에서 앱 화면으로 만들기 전까지 웹으로 열어요.
  */
 export default function HomeScreen({ session, navigation }) {
   const { c, radius } = useTheme()
@@ -95,7 +93,7 @@ export default function HomeScreen({ session, navigation }) {
         </Section>
       </ScrollView>
       <View style={[styles.fab, { backgroundColor: c.paper }]}>
-        <Button label="+ 새 약속 만들기" onPress={openNewMeetingOnWeb} />
+        <Button label="+ 새 약속 만들기" onPress={() => navigation.navigate('NewMeeting')} />
       </View>
     </View>
   )
