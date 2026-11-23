@@ -55,6 +55,20 @@ export function rangeText(cfg) {
   const hh = (h) => `${String(h).padStart(2, '0')}:00`
   return `${dayLabel(cfg, 0)} ${hh(dayRange(cfg, 0)[0])} – ${dayLabel(cfg, last)} ${hh(dayRange(cfg, last)[1])}`
 }
+/**
+ * 짧은 기간 표시 (약속 화면 머리 한 줄): '11/23(월)–11/30(월) · 매일 9–22시'
+ * 첫날 시작·마지막 날 끝을 따로 정했으면 그 시각만 덧붙여요.
+ */
+export function briefRange(cfg) {
+  const last = nDays(cfg) - 1
+  const day = (i) => `${md(cfg, i)}(${DAYS[dayOf(cfg, i).getDay()]})`
+  const span = last ? `${day(0)}–${day(last)}` : day(0)
+  const hours = `${last ? '매일 ' : ''}${cfg.from}–${cfg.to}시`
+  const split = []
+  if (last && cfg.startHour != null && cfg.startHour !== cfg.from) split.push(`첫날 ${cfg.startHour}시부터`)
+  if (last && cfg.endHour != null && cfg.endHour !== cfg.to) split.push(`마지막 날 ${cfg.endHour}시까지`)
+  return [span, hours, ...split].join(' · ')
+}
 /** 만나는 시간(30분 칸 수) → '1시간 30분'. 미정이면 '시간 미정' */
 export const durText = (dur) => (dur ? [Math.floor(dur / 2) && `${Math.floor(dur / 2)}시간`, dur % 2 && '30분'].filter(Boolean).join(' ') : '시간 미정')
 /** 만나는 시간이 미정인지 */

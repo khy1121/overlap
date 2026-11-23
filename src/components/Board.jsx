@@ -8,7 +8,7 @@ import { myRequests, requestFriend, resultText } from '../lib/friends'
 import { deleteMeeting, leaveMeeting } from '../lib/meetings'
 import { APP_ORIGIN } from '../lib/site'
 import { supabase } from '../lib/supabase'
-import { BRUSH_LABEL, dayLabel, durText, evaluate, nDays, nSlots, rangeText, summary, timeText, tm } from '../lib/schedule'
+import { BRUSH_LABEL, briefRange, dayLabel, durText, evaluate, nDays, nSlots, rangeText, summary, timeText, tm } from '../lib/schedule'
 import BoardMenu from './BoardMenu'
 import CalendarImport from './CalendarImport'
 import InvitePanel from './InvitePanel'
@@ -20,6 +20,7 @@ import SettingsBar from './SettingsBar'
 import SlotList from './SlotList'
 import SuggestionNote from './SuggestionNote'
 import TimeGrid from './TimeGrid'
+import TopTimes from './TopTimes'
 
 export default function Board({ mid, session }) {
   const toast = useToast()
@@ -276,7 +277,26 @@ export default function Board({ mid, session }) {
       onShowAll={() => setShowAll((v) => !v)}
     />
   )
-  // 모바일 후보 목록 (추천 카드의 '후보 전체 보기'로 펼쳐요)
+  // 모바일: 맨 위 '좋은 시간' 카드 3개 (결론부터). 카드를 고르면 시간표에서도 그 칸을 짚어 줘요
+  const topTimes = (
+    <TopTimes
+      cfg={cfg}
+      result={result}
+      byId={byId}
+      onPick={(w) => {
+        updateCfg({ picked: { d: w.d, s: w.s, dur: cfg.dur } })
+        setReconsider(false)
+        toast('확정했어요. 모두에게 보여요.')
+      }}
+      onCopy={(w) => copy(noticeText(w, cfg.dur, false))}
+      onInvite={() => { setInviteOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+      onSelect={(w) => { if (!paintOn) { setMode('all'); setSel({ d: w.d, s: w.s }) } }}
+      onWhen={setChosen}
+      showAll={showAll}
+      onShowAll={() => setShowAll((v) => !v)}
+    />
+  )
+  // 모바일 후보 목록 ('후보 전체 보기'로 펼쳐요)
   const slotLists = (
     <>
       <SlotList
@@ -327,15 +347,20 @@ export default function Board({ mid, session }) {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>
           </button>
         </div>
-        <div className="flex flex-wrap items-center gap-x-1.5 pl-1 text-[13px] text-ink2">
+        {/* 기간 · 시간대 · 길이 · 인원 한 줄. 누르면 약속 설정 */}
+        <button
+          type="button"
+          className="flex min-w-0 items-center gap-1.5 self-start border-0 bg-transparent py-0.5 pl-1 text-left text-[13px] text-ink2 hover:text-ink"
+          aria-label={`약속 설정 바꾸기: ${briefRange(cfg)}, ${durText(cfg.dur)}, ${cfg.count}명 예상`}
+          onClick={() => setSettingsOpen(true)}
+        >
           <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${live === 'live' ? 'bg-yes' : live === 'off' ? 'bg-no' : 'bg-ink2'}`} aria-hidden="true" />
-          <span className="tabular">{rangeText(cfg)}</span>
-          <span>· {cfg.count}명 예상 · {durText(cfg.dur)}</span>
-          {nDays(cfg) > 2 && <span>· 가운데 날 {String(cfg.from).padStart(2, '0')}:00–{String(cfg.to).padStart(2, '0')}:00</span>}
-          <span role="status" className={live === 'live' ? 'sr-only' : ''}>
-            {live === 'live' ? '실시간 공유 중' : live === 'off' ? '· 연결 끊김, 새로고침해 주세요' : '· 연결 중…'}
-          </span>
-        </div>
+          <span className="tabular truncate">{briefRange(cfg)} · {durText(cfg.dur)} · {cfg.count}명</span>
+        </button>
+        {live !== 'live' && (
+          <span role="status" className="pl-1 text-[12px] text-no">{live === 'off' ? '연결 끊김 · 새로고침해 주세요' : '연결 중…'}</span>
+        )}
+        {live === 'live' && <span role="status" className="sr-only">실시간 공유 중</span>}
       </header>
 
       {settingsOpen && (
@@ -401,7 +426,7 @@ export default function Board({ mid, session }) {
           />
 
           {/* 모바일: 시간표 바로 위에 추천 카드 하나 (칠하는 중·확정 후엔 숨김) */}
-          {narrow && !paintOn && (!picked || reconsider) && suggestion(true)}
+          {narrow && !paintOn && (!picked || reconsider) && topTimes}
           {narrow && !paintOn && (!picked || reconsider) && showAll && slotLists}
 
           {!narrow && placeOpen && (
