@@ -245,7 +245,8 @@ export default function PlacePanel({ mid, cfg, people, myPid, onPlace, onClose }
           </Part>
 
           {/* ② 중간 지점 */}
-          <Part title="가운데 역 · 가게" aside={<OriginStatus people={people} myPid={myPid} setCount={setCount} />}>
+          <Part title="가운데 역 · 가게">
+            <OriginStatus people={people} myPid={myPid} setCount={setCount} />
             {setCount < 2 ? (
               <p className="m-0 rounded-[12px] bg-rule2 px-3.5 py-3 text-[13px] text-ink2">두 명 이상 출발지를 넣으면 가운데쯤의 역과 가게를 추천해요. 초대한 사람들에게도 입력을 부탁해 보세요.</p>
             ) : stations === null ? (
@@ -342,19 +343,39 @@ function PlaceRow({ p, sub, on, onChoose }) {
   )
 }
 
-/** 출발지 입력 현황 한 줄: 겹친 아바타(넣은 사람은 초록 테두리) + k/n명 */
+/**
+ * 출발지 입력 현황: 평소엔 겹친 아바타 + k/n명 한 줄, 누르면 사람별 이름·동네가 펼쳐져요
+ * (터치 화면에서도 누가 아직 안 넣었는지 볼 수 있게)
+ */
 function OriginStatus({ people, myPid, setCount }) {
+  const [open, setOpen] = useState(false)
+  const more = people.length - 5
   return (
-    <span className="flex items-center gap-2" aria-label={`출발지 입력 ${setCount}/${people.length}명`}>
-      <span className="flex -space-x-1.5" aria-hidden="true">
-        {people.slice(0, 5).map((p) => (
-          <span key={p.id} className={`block rounded-full p-[2px] ${p.origin_set ? 'bg-yes' : 'bg-rule'}`} title={`${p.id === myPid ? '나' : p.name || '이름 없음'}: ${p.origin_set ? p.origin_label || '입력함' : '아직'}`}>
-            <Avatar name={p.name} url={p.avatar_url} size={24} className={p.origin_set ? '' : 'opacity-50'} />
-          </span>
-        ))}
-      </span>
-      <span className="tabular text-xs text-ink2">출발지 {setCount}/{people.length}명</span>
-    </span>
+    <div className="flex flex-col gap-1.5">
+      <button type="button" className="flex min-h-[40px] items-center gap-2 rounded-[12px] border-0 bg-rule2 px-3 text-left" aria-expanded={open} onClick={() => setOpen((v) => !v)}>
+        <span className="flex -space-x-1.5" aria-hidden="true">
+          {people.slice(0, 5).map((p) => (
+            <span key={p.id} className={`block rounded-full p-[2px] ${p.origin_set ? 'bg-yes' : 'bg-rule'}`}>
+              <Avatar name={p.name} url={p.avatar_url} size={22} className={p.origin_set ? '' : 'opacity-50'} />
+            </span>
+          ))}
+        </span>
+        {more > 0 && <span className="text-[12px] text-ink2">+{more}</span>}
+        <span className="min-w-0 flex-1 text-[13px] font-semibold">출발지 입력 {setCount}/{people.length}명</span>
+        <span className="text-[12px] text-ink2">{open ? '접기' : '누가 넣었나요?'}</span>
+      </button>
+      {open && (
+        <ul className="m-0 flex list-none flex-col gap-0.5 p-0">
+          {people.map((p) => (
+            <li key={p.id} className="flex items-center gap-2 px-1 py-1 text-[13px]">
+              <span className={`block rounded-full p-[2px] ${p.origin_set ? 'bg-yes' : 'bg-rule'}`}><Avatar name={p.name} url={p.avatar_url} size={22} /></span>
+              <span className="min-w-0 flex-1 truncate font-semibold">{p.id === myPid ? '나' : p.name || '이름 없음'}</span>
+              <span className="shrink-0 text-ink2">{p.origin_set ? p.origin_label || '입력함' : '아직 안 넣었어요'}</span>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }
 
