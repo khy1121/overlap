@@ -65,7 +65,7 @@ export default function InviteGate({ mid }) {
           {error && <p className="m-0 text-[13px] text-no" role="alert">{error}</p>}
           <KakaoButton onClick={kakao} disabled={busy} label="카카오로 바로 참여하기" />
           <button type="button" className="min-h-[40px] border-0 bg-transparent text-[13px] font-semibold text-ink2" aria-expanded={formOpen} onClick={() => setFormOpen((o) => !o)}>
-            {formOpen ? '이름·생년월일 가입 접기' : '이름·생년월일로 참여하기'}
+            {formOpen ? '접기' : '이름·생년월일로 가입 · 로그인'}
           </button>
         </div>
       </div>
