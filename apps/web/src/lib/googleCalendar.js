@@ -1,6 +1,8 @@
 // Google 캘린더 free/busy 권한만 따로 받는다 (Google Identity Services 토큰 방식).
 // 로그인과는 별개이며, 일정 제목·내용은 읽을 수 없는 범위다.
-export const CAL_SCOPE = 'https://www.googleapis.com/auth/calendar.freebusy'
+import { CAL_SCOPE } from '@overlap/core/api/calendar'
+
+export { CAL_SCOPE }
 export const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID || ''
 
 let loading

@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { blocked, nDays, nSlots, slotRange } from '@overlap/core/schedule'
+import { applyBusy, fetchBusy } from '@overlap/core/api/calendar'
 
 /** Google 캘린더 free/busy만 읽어서 바쁜 칸을 찾는다. 일정 제목·내용은 받지 않는다. */
 export default function CalendarImport({ cfg, token, cells, onApply, onClose, onExpired }) {
@@ -10,32 +10,16 @@ export default function CalendarImport({ cfg, token, cells, onApply, onClose, on
   useEffect(() => {
     let cancelled = false
     ;(async () => {
-      const [t0] = slotRange(cfg, 0, 0)
-      const [, t1] = slotRange(cfg, nDays(cfg) - 1, nSlots(cfg) - 1)
+      // free/busy 읽기·칸 나누기는 @overlap/core (앱과 같아요)
       try {
-        const r = await fetch('https://www.googleapis.com/calendar/v3/freeBusy', {
-          method: 'POST',
-          headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' },
-          body: JSON.stringify({ timeMin: new Date(t0).toISOString(), timeMax: new Date(t1).toISOString(), items: [{ id: 'primary' }] }),
-        })
-        if (r.status === 401 || r.status === 403) {
+        const { busyKeys, freeKeys } = await fetchBusy(token, cfg)
+        if (!cancelled) setState({ status: 'ready', busyKeys, freeKeys })
+      } catch (e) {
+        if (e.code === 'expired') {
           onExpired()
           if (!cancelled) setState({ status: 'error', message: '캘린더 권한이 만료됐거나 허용되지 않았어요. 버튼을 다시 눌러 주세요.' })
           return
         }
-        const j = await r.json()
-        const busy = (j.calendars?.primary?.busy || []).map((b) => [Date.parse(b.start), Date.parse(b.end)])
-        const busyKeys = []
-        const freeKeys = []
-        for (let d = 0; d < nDays(cfg); d++) {
-          for (let s = 0; s < nSlots(cfg); s++) {
-            if (blocked(cfg, d, s)) continue
-            const [a, b] = slotRange(cfg, d, s)
-            ;(busy.some(([x, y]) => x < b && y > a) ? busyKeys : freeKeys).push(`${d}-${s}`)
-          }
-        }
-        if (!cancelled) setState({ status: 'ready', busyKeys, freeKeys })
-      } catch {
         if (!cancelled) setState({ status: 'error', message: '캘린더를 불러오지 못했어요. 잠시 후 다시 시도해 주세요.' })
       }
     })()
@@ -45,10 +29,7 @@ export default function CalendarImport({ cfg, token, cells, onApply, onClose, on
   }, [cfg, token, onExpired])
 
   function apply() {
-    const next = { ...cells }
-    let changed = 0
-    if (markBusy) state.busyKeys.forEach((k) => { if (next[k] !== 'n') { next[k] = 'n'; changed++ } })
-    if (fillFree) state.freeKeys.forEach((k) => { if (!next[k]) { next[k] = 'y'; changed++ } })
+    const { next, changed } = applyBusy(cells, state, { markBusy, fillFree })
     onApply(next, changed)
   }
 

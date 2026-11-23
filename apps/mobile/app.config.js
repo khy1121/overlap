@@ -41,6 +41,8 @@ module.exports = {
       // Expo 푸시 토큰을 받으려면 EAS 프로젝트 id가 필요해요 (`eas init` 후 .env.local에 EXPO_PROJECT_ID)
       ...(env.EXPO_PROJECT_ID ? { eas: { projectId: env.EXPO_PROJECT_ID } } : {}),
       supabaseUrl: env.EXPO_PUBLIC_SUPABASE_URL || env.VITE_SUPABASE_URL,
+      // Google 캘린더 연결: 웹과 같은 공개 클라이언트 id (비밀값 아님)
+      googleClientId: env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || env.VITE_GOOGLE_CLIENT_ID,
       supabaseKey: env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY || env.VITE_SUPABASE_PUBLISHABLE_KEY,
     },
   },
