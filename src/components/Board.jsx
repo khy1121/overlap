@@ -9,9 +9,9 @@ import { deleteMeeting, leaveMeeting } from '../lib/meetings'
 import { APP_ORIGIN } from '../lib/site'
 import { supabase } from '../lib/supabase'
 import { BRUSH_LABEL, dayLabel, durText, evaluate, nDays, nSlots, rangeText, summary, timeText, tm } from '../lib/schedule'
+import BoardMenu from './BoardMenu'
 import CalendarImport from './CalendarImport'
 import InvitePanel from './InvitePanel'
-import MeetingExit from './MeetingExit'
 import Palette from './Palette'
 import PeopleBar from './PeopleBar'
 import PlacePanel from './PlacePanel'
@@ -34,15 +34,13 @@ export default function Board({ mid, session }) {
   const [inviteOpen, setInviteOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [placeOpen, setPlaceOpen] = useState(false)
-  // 좁은 화면은 시간표 / 추천 / 장소를 탭으로 나눠 한 번에 하나만 보여 줘요 (넓은 화면은 나란히)
+  const [menuOpen, setMenuOpen] = useState(false)
+  const [chosen, setChosen] = useState(null) // 추천 카드에서 지금 보고 있는 후보(시작 시각 칩 반영)
+  const [showAll, setShowAll] = useState(false) // 모바일: 후보 목록 펼침
+  const [reconsider, setReconsider] = useState(false) // 확정 후 '다른 시간 보기'
+  // 좁은 화면: 탭 없이 한 화면에 [추천 카드 → 시간표]. 장소는 누르면 시간표 자리를 대신해요.
+  // 넓은 화면: 시간표 옆에 추천·목록·장소 카드를 나란히.
   const narrow = useMedia('(max-width: 919px)')
-  const [tab, setTab] = useState('time')
-  const tabsRef = useRef(null)
-  const goTab = useCallback((t) => {
-    setTab(t)
-    const el = tabsRef.current
-    if (el && el.getBoundingClientRect().top < 0) el.scrollIntoView({ block: 'start' })
-  }, [])
   const [calToken, setCalToken] = useState(null)
   const [calOpen, setCalOpen] = useState(false)
   const [announce, setAnnounce] = useState('')
@@ -102,10 +100,22 @@ export default function Board({ mid, session }) {
       window.history.replaceState(null, '', `/?m=${mid}`)
       setInviteOpen(true)
       const invited = Number(params.get('invited')) || 0
-      toast(invited ? `약속을 만들고 친구 ${invited}명을 초대했어요` : '약속을 만들었어요. 함께할 사람들을 초대해 보세요.')
+      const failed = Number(params.get('failed')) || 0 // 새 약속 화면에서 초대하지 못한 친구 수
+      const head = invited ? `약속을 만들고 친구 ${invited}명을 초대했어요` : '약속을 만들었어요'
+      toast(failed ? `${head}. 친구 ${failed}명은 초대하지 못했어요. 초대 창에서 다시 초대해 주세요.` : invited ? head : `${head}. 함께할 사람들을 초대해 보세요.`)
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [m.status])
+
+  // 처음 열 때: 이미 칠했으면 '모두 겹쳐 보기'(추천과 함께 보는 화면),
+  // 아직 안 칠했고 확정 전이면 바로 칠하기 모드로 열어서 '내 일정 등록'을 한 번 덜 누르게 해요.
+  const modeInit = useRef(false)
+  useEffect(() => {
+    if (m.status !== 'ready' || !myPid || modeInit.current) return
+    modeInit.current = true
+    if (Object.keys(byId[myPid]?.cells || {}).length) setMode('all')
+    else if (canEdit(myPid) && !cfg?.picked) setDraft({})
+  }, [m.status, myPid, byId, canEdit, cfg])
 
   useEffect(() => {
     if (cfg) document.title = `${cfg.title} · Overlap`
@@ -150,7 +160,7 @@ export default function Board({ mid, session }) {
     setDraft(next)
   }
 
-  const startEdit = () => { setMode('edit'); setSel(null); setTab('time'); setDraft({ ...myCells }) }
+  const startEdit = () => { setMode('edit'); setSel(null); setPlaceOpen(false); setDraft({ ...myCells }) }
   function cancelEdit() {
     setDraft(null)
     setCalOpen(false)
@@ -196,51 +206,135 @@ export default function Board({ mid, session }) {
 
   const picked = cfg.picked && cfg.picked.d < nDays(cfg) && cfg.picked.s + (cfg.picked.dur || 1) <= nSlots(cfg) ? cfg.picked : null
   const originCount = people.filter((p) => p.origin_set).length
-  // 좁은 화면 탭: 편집 중에는 항상 시간표
-  const showTime = !narrow || paintOn || tab === 'time'
-  const showSuggest = !narrow || (!paintOn && tab === 'suggest')
-  const showPlace = narrow && !paintOn && tab === 'place'
-  function openPlace() {
-    if (narrow) goTab('place')
-    else setPlaceOpen((o) => !o)
-  }
+  // 좁은 화면에서 장소를 열면 시간표 자리를 장소 화면이 대신해요 (칠하는 중엔 항상 시간표)
+  const placeFull = narrow && placeOpen && !paintOn
   const selDetail = mode === 'all' && sel
     ? ['y', 'm', 'n', 'u'].map((k) => [k, people.filter((p) => (p.cells[`${sel.d}-${sel.s}`] || 'u') === k)]).filter(([, ps]) => ps.length)
     : null
+  const best = result.entered && list.length ? list[cand % list.length] : null
+  const openSuggestion = (w) => {
+    setMode('all')
+    setSel({ d: w.d, s: w.s })
+    const i = list.findIndex((x) => x.d === w.d && x.s === w.s)
+    if (i >= 0) setCand(i)
+  }
+  const isOwner = cfg.owner === uid
+  async function exitMeeting() {
+    try {
+      if (isOwner) await deleteMeeting(mid)
+      else await leaveMeeting(mid, uid)
+      setDraft(null) // 칠하던 내용이 있어도 '떠나시겠어요?' 확인 없이 이동
+      try { sessionStorage.setItem('overlap:flash', isOwner ? '약속을 삭제했어요' : '약속에서 나왔어요') } catch { /* 저장소 막힘 */ }
+      window.location.href = '/'
+    } catch (e) {
+      toast(e.message)
+    }
+  }
+  // ⋯ 메뉴: 자주 안 쓰는 기능
+  const menuItems = [
+    { key: 'settings', label: '약속 설정 바꾸기', desc: '날짜 · 시간대 · 길이 · 인원', onClick: () => setSettingsOpen(true) },
+    GOOGLE_CLIENT_ID && canEdit(myPid) && {
+      key: 'calendar',
+      label: 'Google 캘린더에서 바쁜 시간 가져오기',
+      desc: '바쁜 시간을 불가로 칠해 줘요 (저장 전에 확인)',
+      onClick: () => { if (!paintOn) startEdit(); startCalendar() },
+    },
+    {
+      key: 'place',
+      label: cfg.place ? '장소 바꾸기' : '장소 정하기',
+      desc: cfg.place ? cfg.place.name : `이름으로 찾기 · 중간 지점 추천 (출발지 ${originCount}/${people.length}명)`,
+      onClick: () => setPlaceOpen(true),
+    },
+    picked
+      ? { key: 'notice', label: '공지 문구 복사', desc: '확정된 시간·장소와 링크', onClick: () => copy(noticeText(picked, picked.dur, true)) }
+      : (chosen || best) && { key: 'suggest', label: '제안 문구 복사', desc: '카톡에 붙여 넣을 추천 시간 안내', onClick: () => copy(noticeText(chosen || best, cfg.dur, false)) },
+  ].filter(Boolean)
+
+  const suggestion = (compact) => (
+    <SuggestionNote
+      compact={compact}
+      cfg={cfg}
+      result={result}
+      list={list}
+      cand={cand}
+      byId={byId}
+      swapKey={list.length ? `${list[cand % list.length].d}-${list[cand % list.length].s}-${cfg.dur}` : 'none'}
+      onNext={() => {
+        const next = cand + 1
+        setCand(next)
+        // 모바일: 다음 후보를 시간표에서도 바로 짚어 줘요
+        if (compact && list.length) { const w = list[next % list.length]; setMode('all'); setSel({ d: w.d, s: w.s }) }
+      }}
+      onPick={(w) => {
+        updateCfg({ picked: { d: w.d, s: w.s, dur: cfg.dur } })
+        toast('확정했어요. 모두에게 보여요.')
+      }}
+      onCopy={(w) => copy(noticeText(w, cfg.dur, false))}
+      onInvite={() => { setInviteOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
+      onWhen={setChosen}
+      showAll={showAll}
+      onShowAll={() => setShowAll((v) => !v)}
+    />
+  )
+  // 모바일 후보 목록 (추천 카드의 '후보 전체 보기'로 펼쳐요)
+  const slotLists = (
+    <>
+      <SlotList
+        title="모두 가능한 시간"
+        round
+        count={result.all.length}
+        hint="전원이 '가능'으로 표시한 시간이에요."
+        items={result.all}
+        empty={result.entered ? '전원이 되는 시간은 아직 없어요. 아래 추천 시간을 확인해 보세요.' : '입력이 모이면 여기에 나타나요.'}
+        cfg={cfg}
+        n={n}
+        byId={byId}
+        onOpen={openSuggestion}
+      />
+      <SlotList
+        title="추천 시간"
+        hint="가능한 사람이 많고 불가가 적은 순서예요. '조율'은 반만 쳐요."
+        items={result.rec}
+        empty="입력이 모이면 여기에 나타나요."
+        cfg={cfg}
+        n={n}
+        byId={byId}
+        onOpen={openSuggestion}
+      />
+    </>
+  )
 
   return (
-    <div className={`flex flex-col gap-[18px] ${lockable ? (paintOn ? 'pb-36' : 'pb-24') : ''}`}>
-      <BackButton className="-mb-3 self-start" />
-      <header className="flex flex-wrap items-end justify-between gap-x-4 gap-y-2">
-        <div className="min-w-0 flex-[1_1_320px]">
+    <div className={`flex flex-col ${narrow ? 'gap-3' : 'gap-[18px]'} ${lockable ? (paintOn ? 'pb-36' : 'pb-24') : ''}`}>
+      {/* 머리: 뒤로 · 제목 · 초대 · ⋯ 를 한 줄에, 아래에 기간·인원 한 줄 */}
+      <header className="flex flex-col gap-0.5">
+        <div className="flex items-center gap-1">
+          <BackButton showLabel={false} className="shrink-0" />
           <input
             key={cfg.title}
             aria-label="약속 이름"
             maxLength={40}
             defaultValue={cfg.title}
-            className="w-full max-w-[560px] border-0 border-b-2 border-transparent bg-transparent p-0 font-display text-[clamp(26px,4.4vw,36px)] font-extrabold tracking-tight hover:border-rule focus:border-rule focus-visible:border-pen focus-visible:outline-none"
+            className="min-w-0 flex-1 border-0 border-b-2 border-transparent bg-transparent p-0 font-display text-[clamp(20px,3.6vw,30px)] font-extrabold tracking-tight hover:border-rule focus:border-rule focus-visible:border-pen focus-visible:outline-none"
             onBlur={(e) => {
               const v = e.target.value.trim() || '우리 언제 만나?'
               if (v !== cfg.title) updateCfg({ title: v })
             }}
             onKeyDown={(e) => e.key === 'Enter' && e.target.blur()}
           />
-          <div className="mt-0.5 text-sm text-ink2">
-            <span className="tabular font-mono text-ink">{rangeText(cfg)}</span>
-            {` · ${cfg.count}명 예상 · ${durText(cfg.dur)}`}
-            {nDays(cfg) > 2 && <> · 가운데 날은 <span className="tabular font-mono text-ink">{String(cfg.from).padStart(2, '0')}:00–{String(cfg.to).padStart(2, '0')}:00</span></>}
-          </div>
-        </div>
-        <div className="flex flex-wrap items-center gap-2.5">
-          <span className="flex items-center gap-1.5 text-xs text-ink2" role="status">
-            <span className={`h-[7px] w-[7px] rounded-full ${live === 'live' ? 'bg-yes shadow-[0_0_0_3px_var(--yes-soft)]' : live === 'off' ? 'bg-no' : 'bg-ink2'}`} />
-            {live === 'live' ? '실시간 공유 중' : live === 'off' ? '연결 끊김 · 새로고침해 주세요' : '연결 중…'}
-          </span>
-          <button className="btn-ghost" aria-expanded={settingsOpen} onClick={() => setSettingsOpen((o) => !o)}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></svg>
-            설정
+          <button className="btn-soft btn-sm shrink-0" onClick={() => setInviteOpen((o) => !o)} aria-expanded={inviteOpen}>초대</button>
+          <button className="btn-ghost btn-sm shrink-0 !px-2" aria-label="약속 메뉴" aria-haspopup="dialog" onClick={() => setMenuOpen(true)}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><circle cx="5" cy="12" r="1.8" /><circle cx="12" cy="12" r="1.8" /><circle cx="19" cy="12" r="1.8" /></svg>
           </button>
-          <button className="btn-soft" onClick={() => setInviteOpen((o) => !o)}>초대하기</button>
+        </div>
+        <div className="flex flex-wrap items-center gap-x-1.5 pl-1 text-[13px] text-ink2">
+          <span className={`h-[7px] w-[7px] shrink-0 rounded-full ${live === 'live' ? 'bg-yes' : live === 'off' ? 'bg-no' : 'bg-ink2'}`} aria-hidden="true" />
+          <span className="tabular">{rangeText(cfg)}</span>
+          <span>· {cfg.count}명 예상 · {durText(cfg.dur)}</span>
+          {nDays(cfg) > 2 && <span>· 가운데 날 {String(cfg.from).padStart(2, '0')}:00–{String(cfg.to).padStart(2, '0')}:00</span>}
+          <span role="status" className={live === 'live' ? 'sr-only' : ''}>
+            {live === 'live' ? '실시간 공유 중' : live === 'off' ? '· 연결 끊김, 새로고침해 주세요' : '· 연결 중…'}
+          </span>
         </div>
       </header>
 
@@ -254,123 +348,106 @@ export default function Board({ mid, session }) {
 
       {inviteOpen && <InvitePanel mid={mid} cfg={cfg} link={link} onClose={() => setInviteOpen(false)} />}
 
-      {picked && (
-        <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-md bg-pen-strong px-4 py-3 text-pen-ink">
-          <div className="min-w-0">
-            <div className="text-xs opacity-85">확정된 약속 시간</div>
-            <strong className="font-display text-xl font-extrabold">{dayLabel(cfg, picked.d)} {timeText(cfg, picked.s, picked.dur)}</strong>
-            {/* 장소가 정해졌으면 이름과 지도 링크만 (정하기·바꾸기는 '장소' 탭 / 오른쪽 '만날 장소' 카드에서) */}
-            {cfg.place && (
-              <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px]">
-                <PlaceLine place={cfg.place} originCount={originCount} total={people.length} linkClass="font-semibold text-pen-ink underline" />
+      {placeFull ? (
+        <>
+          <button className="btn-ghost btn-sm -ml-2 self-start" onClick={() => setPlaceOpen(false)}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="m15 18-6-6 6-6" /></svg>
+            시간표로 돌아가기
+          </button>
+          <PlacePanel mid={mid} cfg={cfg} people={people} myPid={myPid} onPlace={(place) => updateCfg({ place })} />
+        </>
+      ) : (
+        <>
+          {picked && (
+            <div className="flex flex-wrap items-center justify-between gap-2.5 rounded-md bg-pen-strong px-4 py-3 text-pen-ink">
+              <div className="min-w-0">
+                <div className="text-xs opacity-85">약속이 잡혔어요</div>
+                <strong className="font-display text-xl font-extrabold">{dayLabel(cfg, picked.d)} {timeText(cfg, picked.s, picked.dur)}</strong>
+                {cfg.place && (
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px]">
+                    <PlaceLine place={cfg.place} originCount={originCount} total={people.length} linkClass="font-semibold text-pen-ink underline" />
+                  </div>
+                )}
               </div>
-            )}
-          </div>
-          <div className="flex flex-wrap gap-1.5">
-            <button className="btn btn-sm bg-[color-mix(in_oklab,var(--pen-ink)_18%,transparent)] text-pen-ink hover:bg-[color-mix(in_oklab,var(--pen-ink)_28%,transparent)]" onClick={() => copy(noticeText(picked, picked.dur, true))}>공지 문구 복사</button>
-            <button className="btn btn-sm bg-transparent text-pen-ink hover:bg-[color-mix(in_oklab,var(--pen-ink)_18%,transparent)]" onClick={() => updateCfg({ picked: null })}>확정 취소</button>
-          </div>
-        </div>
-      )}
-
-      <PeopleBar
-        people={people}
-        myPid={myPid}
-        target={tgt}
-        mode={mode}
-        n={n}
-        canEdit={canEdit}
-        editing={editing}
-        setEditing={setEditing}
-        onSelect={selectPerson}
-        onRename={(pid, name) => {
-          setEditing(null)
-          if (byId[pid] && byId[pid].name !== name) updatePerson(pid, { name })
-        }}
-        relation={(userId) => (rel[userId] === 'friend' ? 'friend' : rel[userId] === 'pending' ? 'pending' : 'none')}
-        onFriend={addFriend}
-      />
-
-      {narrow && !paintOn && (
-        <nav
-          ref={tabsRef}
-          className="sticky z-20 flex gap-1 rounded-full bg-rule2 p-1 shadow-soft"
-          style={{ top: 'max(8px, env(safe-area-inset-top, 0px))' }}
-          role="tablist"
-          aria-label="약속 화면"
-        >
-          {[
-            ['time', '시간표', null],
-            ['suggest', '추천 시간', result.all.length || null],
-            ['place', '장소', cfg.place ? '✓' : originCount ? `${originCount}/${people.length}` : null],
-          ].map(([k, label, badge]) => (
-            <button
-              key={k}
-              role="tab"
-              aria-selected={tab === k}
-              className={`flex min-h-[40px] flex-1 items-center justify-center gap-1 rounded-full border-0 px-2 text-[14px] font-semibold ${tab === k ? 'bg-sheet text-ink shadow-soft' : 'bg-transparent text-ink2'}`}
-              onClick={() => goTab(k)}
-            >
-              {label}
-              {badge && <span className={`rounded-full px-1.5 text-[11px] leading-[18px] ${tab === k ? 'bg-pen-soft text-accent' : 'bg-sheet text-ink2'}`}>{badge}</span>}
-            </button>
-          ))}
-        </nav>
-      )}
-
-      {(narrow ? showPlace : placeOpen) && (
-        <PlacePanel
-          mid={mid}
-          cfg={cfg}
-          people={people}
-          myPid={myPid}
-          onPlace={(place) => updateCfg({ place })}
-          onClose={narrow ? undefined : () => setPlaceOpen(false)}
-        />
-      )}
-
-      <div className={`grid grid-cols-1 items-start gap-5 min-[920px]:grid-cols-[minmax(0,1fr)_340px] ${showPlace ? 'hidden' : ''}`}>
-        <section className={`sheet ${showTime ? '' : 'hidden'}`} aria-label="시간 입력">
-
-          {paintOn ? (
-            <div className="mb-1.5 flex min-h-[42px] flex-wrap items-center gap-2">
-              <span className="text-[15px] font-bold">{hasMine ? '내 일정 수정 중' : '내 일정 등록 중'}</span>
-              {Object.keys(draft).length > 0 && (
-                <button className="btn-ghost btn-sm text-no hover:text-no" onClick={() => setDraft({})}>모두 지우기</button>
-              )}
-            </div>
-          ) : (
-            <div className="mb-1.5 flex flex-wrap items-center justify-between gap-2.5">
-              <div className="inline-flex gap-1 rounded-full bg-rule2 p-1" role="group" aria-label="보기">
-                {[['edit', '내 일정'], ['all', '전체 겹쳐 보기']].map(([k, label]) => (
-                  <button
-                    key={k}
-                    aria-pressed={mode === k}
-                    className={`min-h-[34px] rounded-full border-0 px-3.5 text-[13px] font-semibold ${mode === k ? 'bg-sheet text-ink shadow-soft' : 'bg-transparent text-ink2 hover:text-ink'}`}
-                    onClick={() => setMode(k)}
-                  >
-                    {label}
+              <div className="flex flex-wrap gap-1.5">
+                <button className="btn btn-sm bg-[color-mix(in_oklab,var(--pen-ink)_18%,transparent)] text-pen-ink hover:bg-[color-mix(in_oklab,var(--pen-ink)_28%,transparent)]" onClick={() => copy(noticeText(picked, picked.dur, true))}>공지 복사</button>
+                {narrow && (
+                  <button className="btn btn-sm bg-transparent text-pen-ink hover:bg-[color-mix(in_oklab,var(--pen-ink)_18%,transparent)]" aria-expanded={reconsider} onClick={() => setReconsider((v) => !v)}>
+                    {reconsider ? '추천 접기' : '다른 시간 보기'}
                   </button>
-                ))}
+                )}
+                <button className="btn btn-sm bg-transparent text-pen-ink hover:bg-[color-mix(in_oklab,var(--pen-ink)_18%,transparent)]" onClick={() => updateCfg({ picked: null })}>확정 취소</button>
               </div>
-              {!lockable && canEdit(myPid) && (
-                <button className="btn-primary" onClick={startEdit}>
-                  <PenIcon /> {editLabel}
-                </button>
-              )}
             </div>
           )}
 
-          {paintOn && !lockable && (
-            <div className="sticky z-[5] mb-1 flex items-center gap-2 bg-sheet py-2" style={{ top: 'env(safe-area-inset-top, 0px)' }}>
-              <Palette brush={brush} setBrush={setBrush} className="min-w-0 flex-1" />
-              <button className="btn min-h-[44px]" onClick={cancelEdit}>취소</button>
-              <button className="btn-primary min-h-[44px]" onClick={saveEdit}>저장</button>
-            </div>
+          <PeopleBar
+            compact={narrow}
+            people={people}
+            myPid={myPid}
+            target={tgt}
+            mode={mode}
+            n={n}
+            canEdit={canEdit}
+            editing={editing}
+            setEditing={setEditing}
+            onSelect={selectPerson}
+            onRename={(pid, name) => {
+              setEditing(null)
+              if (byId[pid] && byId[pid].name !== name) updatePerson(pid, { name })
+            }}
+            relation={(userId) => (rel[userId] === 'friend' ? 'friend' : rel[userId] === 'pending' ? 'pending' : 'none')}
+            onFriend={addFriend}
+          />
+
+          {/* 모바일: 시간표 바로 위에 추천 카드 하나 (칠하는 중·확정 후엔 숨김) */}
+          {narrow && !paintOn && (!picked || reconsider) && suggestion(true)}
+          {narrow && !paintOn && (!picked || reconsider) && showAll && slotLists}
+
+          {!narrow && placeOpen && (
+            <PlacePanel mid={mid} cfg={cfg} people={people} myPid={myPid} onPlace={(place) => updateCfg({ place })} onClose={() => setPlaceOpen(false)} />
           )}
-          {paintOn && (
-            <>
-              {calOpen && calToken && (
+
+          <div className="grid grid-cols-1 items-start gap-5 min-[920px]:grid-cols-[minmax(0,1fr)_340px]">
+            <section className={narrow ? '' : 'sheet'} aria-label="시간 입력">
+              {paintOn ? (
+                <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className="text-[15px] font-bold">{hasMine ? '내 일정 수정 중' : '내 일정 등록 중'}</span>
+                  <span className="text-xs text-ink2">{lockable ? '톡 치면 한 칸, 꾹 눌러 끌면 여러 칸' : '누르거나 드래그해서 칠해요'}</span>
+                  {Object.keys(draft).length > 0 && (
+                    <button className="btn-ghost btn-sm ml-auto text-no hover:text-no" onClick={() => setDraft({})}>모두 지우기</button>
+                  )}
+                </div>
+              ) : (
+                <div className="mb-2 flex items-center justify-between gap-2.5">
+                  <div className="inline-flex flex-1 gap-1 rounded-full bg-rule2 p-1 min-[920px]:flex-none" role="group" aria-label="보기">
+                    {[['all', '모두 겹쳐 보기'], ['edit', '내 일정']].map(([k, label]) => (
+                      <button
+                        key={k}
+                        aria-pressed={mode === k}
+                        className={`min-h-[34px] flex-1 rounded-full border-0 px-3.5 text-[13px] font-semibold ${mode === k ? 'bg-sheet text-ink shadow-soft' : 'bg-transparent text-ink2 hover:text-ink'}`}
+                        onClick={() => setMode(k)}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                  {!lockable && canEdit(myPid) && (
+                    <button className="btn-primary" onClick={startEdit}>
+                      <PenIcon /> {editLabel}
+                    </button>
+                  )}
+                </div>
+              )}
+
+              {paintOn && !lockable && (
+                <div className="sticky z-[5] mb-1 flex items-center gap-2 bg-sheet py-2" style={{ top: 'env(safe-area-inset-top, 0px)' }}>
+                  <Palette brush={brush} setBrush={setBrush} className="min-w-0 flex-1" />
+                  <button className="btn min-h-[44px]" onClick={cancelEdit}>취소</button>
+                  <button className="btn-primary min-h-[44px]" onClick={saveEdit}>저장</button>
+                </div>
+              )}
+              {paintOn && calOpen && calToken && (
                 <CalendarImport
                   cfg={cfg}
                   token={calToken}
@@ -384,75 +461,28 @@ export default function Board({ mid, session }) {
                   }}
                 />
               )}
-              <div className="mb-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink2">
-                {GOOGLE_CLIENT_ID && (
-                  <button className="btn" onClick={startCalendar}>
-                    <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true">
-                      <rect x="3" y="5" width="18" height="16" rx="2" fill="none" stroke="currentColor" strokeWidth="2" />
-                      <path d="M3 10h18M8 3v4M16 3v4" stroke="currentColor" strokeWidth="2" />
-                    </svg>
-                    내 Google 캘린더에서 바쁜 시간 가져오기
-                  </button>
-                )}
-                <span>
-                  {lockable
-                    ? '칸을 톡 치면 한 칸, 길게 누른 채 끌면 여러 칸이 칠해져요. 그냥 쓸면 스크롤돼요.'
-                    : '칸을 누르거나 드래그해서 칠해요. 요일·시간을 누르면 그 줄 전체가 칠해져요.'}{' '}
-                  다 칠했으면 저장을 눌러 주세요.
-                </span>
-              </div>
-            </>
-          )}
-          {!paintOn && mode === 'edit' && (
-            <p className="mb-2.5 mt-0 text-xs text-ink2">
-              {hasMine ? '내가 입력한 일정이에요.' : '아직 내 일정을 입력하지 않았어요.'} ‘{editLabel}’을 누르면 칠할 수 있어요.
-            </p>
-          )}
 
-          <TimeGrid
-            cfg={cfg}
-            people={shownPeople}
-            mode={mode}
-            cells={draft ?? myCells}
-            canPaint={paintOn}
-            onLockedTap={canEdit(myPid) ? () => toast(`‘${editLabel}’ 버튼을 누르면 칠할 수 있어요`) : undefined}
-            brush={brush}
-            sel={sel}
-            onSelect={setSel}
-            onCommit={commitCells}
-            onFill={fill}
-            onAnnounce={(c) => {
-              const v = (draft ?? myCells)[`${c.d}-${c.s}`]
-              setAnnounce(`${dayLabel(cfg, c.d)} ${tm(cfg, c.s)}${mode === 'edit' ? ` ${BRUSH_LABEL[v] || '미입력'}` : ''}`)
-            }}
-          />
+              <TimeGrid
+                cfg={cfg}
+                people={shownPeople}
+                mode={mode}
+                cells={draft ?? myCells}
+                canPaint={paintOn}
+                onLockedTap={canEdit(myPid) ? () => toast(`‘${editLabel}’ 버튼을 누르면 칠할 수 있어요`) : undefined}
+                brush={brush}
+                sel={sel}
+                onSelect={setSel}
+                onCommit={commitCells}
+                onFill={fill}
+                onAnnounce={(c) => {
+                  const v = (draft ?? myCells)[`${c.d}-${c.s}`]
+                  setAnnounce(`${dayLabel(cfg, c.d)} ${tm(cfg, c.s)}${mode === 'edit' ? ` ${BRUSH_LABEL[v] || '미입력'}` : ''}`)
+                }}
+              />
 
-          <div className="mt-3 flex flex-wrap items-center gap-x-3.5 gap-y-1.5 text-xs text-ink2">
-            {mode === 'edit' ? (
-              <>
-                <span className="inline-flex items-center gap-1.5"><i className="sw y" />가능</span>
-                <span className="inline-flex items-center gap-1.5"><i className="sw m" />조율 가능</span>
-                <span className="inline-flex items-center gap-1.5"><i className="sw n" />불가</span>
-                <span className="inline-flex items-center gap-1.5"><i className="sw e" />미입력</span>
-                <span>같은 색으로 다시 칠하면 지워져요</span>
-              </>
-            ) : (
-              <>
-                <span>가능한 사람</span>
-                <span className="font-mono">0</span>
-                <span className="inline-block h-2.5 w-[90px] rounded-sm bg-[linear-gradient(90deg,var(--cell),var(--yes))]" />
-                <span className="font-mono">{n}명</span>
-                <span>칸을 누르면 누가 되는지 보여요</span>
-              </>
-            )}
-          </div>
-
-          {mode === 'all' && (
-            <div className="mt-3 min-h-[44px] border-t border-dashed border-rule pt-2.5 text-[13px]" aria-live="polite">
-              {!sel ? (
-                '칸을 눌러 그 시간에 누가 되는지 확인하세요.'
-              ) : (
-                <>
+              {/* 범례는 한 줄로. 겹쳐 보기에서 칸을 누르면 그 자리에 누가 되는지 보여요 */}
+              {mode === 'all' && sel ? (
+                <div className="mt-2.5 text-[13px]" aria-live="polite">
                   <b className="font-mono font-semibold">{dayLabel(cfg, sel.d)} {tm(cfg, sel.s)}–{tm(cfg, sel.s + 1)}</b>
                   <div className="mt-1 flex flex-wrap gap-x-3.5 gap-y-1">
                     {selDetail.map(([k, ps]) => (
@@ -462,107 +492,65 @@ export default function Board({ mid, session }) {
                       </span>
                     ))}
                   </div>
-                </>
+                </div>
+              ) : (
+                <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink2">
+                  {mode === 'edit' ? (
+                    <>
+                      <span className="inline-flex items-center gap-1.5"><i className="sw y" />가능</span>
+                      <span className="inline-flex items-center gap-1.5"><i className="sw m" />조율</span>
+                      <span className="inline-flex items-center gap-1.5"><i className="sw n" />불가</span>
+                      <span className="inline-flex items-center gap-1.5"><i className="sw e" />미입력</span>
+                      {!paintOn && <span>{hasMine ? '내가 칠한 시간이에요' : '아직 칠하지 않았어요'}</span>}
+                      {paintOn && <span>같은 색으로 다시 칠하면 지워져요 · 다 칠했으면 저장</span>}
+                    </>
+                  ) : (
+                    <>
+                      <span className="font-mono">0</span>
+                      <span className="inline-block h-2.5 w-[72px] rounded-sm bg-[linear-gradient(90deg,var(--cell),var(--yes))]" />
+                      <span className="font-mono">{n}명</span>
+                      <span>· 칸을 누르면 누가 되는지 보여요</span>
+                    </>
+                  )}
+                </div>
               )}
-            </div>
-          )}
-        </section>
-
-        <aside id="suggest" className={`flex scroll-mt-4 flex-col gap-5 ${showSuggest ? '' : 'hidden'}`}>
-          {/* 넓은 화면: 확정 전후 언제든 장소를 정할 수 있게 (좁은 화면은 '장소' 탭) */}
-          {!narrow && (
-            <section className="sheet flex flex-col gap-2" aria-label="만날 장소">
-              <h2 className="m-0 text-[17px] font-bold">만날 장소</h2>
-              <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px] text-ink2">
-                <PlaceLine place={cfg.place} originCount={originCount} total={people.length} linkClass="font-semibold text-accent underline" />
-              </div>
-              <button className="btn-soft self-start" aria-expanded={placeOpen} onClick={openPlace}>
-                {placeOpen ? '장소 창 닫기' : cfg.place ? '장소 바꾸기' : '장소 정하기'}
-              </button>
             </section>
-          )}
-          <SuggestionNote
-            cfg={cfg}
-            result={result}
-            list={list}
-            cand={cand}
-            byId={byId}
-            swapKey={list.length ? `${list[cand % list.length].d}-${list[cand % list.length].s}-${cfg.dur}` : 'none'}
-            onNext={() => setCand((c) => c + 1)}
-            onPick={(w) => {
-              updateCfg({ picked: { d: w.d, s: w.s, dur: cfg.dur } })
-              toast('확정했어요. 모두에게 보여요.')
-            }}
-            onCopy={(w) => copy(noticeText(w, cfg.dur, false))}
-            onInvite={() => { setInviteOpen(true); window.scrollTo({ top: 0, behavior: 'smooth' }) }}
-          />
-          <SlotList
-            title="모두 가능한 시간"
-            round
-            count={result.all.length}
-            hint="전원이 '가능'으로 표시한 시간이에요."
-            items={result.all}
-            empty={result.entered ? '전원이 되는 시간은 아직 없어요. 아래 추천 시간을 확인해 보세요.' : '입력이 모이면 여기에 나타나요.'}
-            cfg={cfg}
-            n={n}
-            byId={byId}
-            onOpen={(w) => {
-              setMode('all')
-              setSel({ d: w.d, s: w.s })
-              if (narrow) goTab('time')
-              const i = list.findIndex((x) => x.d === w.d && x.s === w.s)
-              if (i >= 0) setCand(i)
-            }}
-          />
-          <SlotList
-            title="추천 시간"
-            hint="가능한 사람이 많고 불가가 적은 순서예요. '조율'은 반만 쳐요."
-            items={result.rec}
-            empty="입력이 모이면 여기에 나타나요."
-            cfg={cfg}
-            n={n}
-            byId={byId}
-            onOpen={(w) => {
-              setMode('all')
-              setSel({ d: w.d, s: w.s })
-              if (narrow) goTab('time')
-              const i = list.findIndex((x) => x.d === w.d && x.s === w.s)
-              if (i >= 0) setCand(i)
-            }}
-          />
-        </aside>
-      </div>
-      {!paintOn && (
-        <MeetingExit
-          isOwner={cfg.owner === uid}
-          onConfirm={async () => {
-            const owner = cfg.owner === uid
-            try {
-              if (owner) await deleteMeeting(mid)
-              else await leaveMeeting(mid, uid)
-              setDraft(null) // 칠하던 내용이 있어도 '떠나시겠어요?' 확인 없이 이동
-              try { sessionStorage.setItem('overlap:flash', owner ? '약속을 삭제했어요' : '약속에서 나왔어요') } catch { /* 저장소 막힘 */ }
-              window.location.href = '/'
-            } catch (e) {
-              toast(e.message)
-            }
-          }}
-        />
+
+            {/* 넓은 화면만: 오른쪽에 장소 · 추천 · 목록 */}
+            {!narrow && (
+              <aside id="suggest" className="flex flex-col gap-5">
+                <section className="sheet flex flex-col gap-2" aria-label="만날 장소">
+                  <h2 className="m-0 text-[17px] font-bold">만날 장소</h2>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[13px] text-ink2">
+                    <PlaceLine place={cfg.place} originCount={originCount} total={people.length} linkClass="font-semibold text-accent underline" />
+                  </div>
+                  <button className="btn-soft self-start" aria-expanded={placeOpen} onClick={() => setPlaceOpen((o) => !o)}>
+                    {placeOpen ? '장소 창 닫기' : cfg.place ? '장소 바꾸기' : '장소 정하기'}
+                  </button>
+                </section>
+                {suggestion(false)}
+                {slotLists}
+              </aside>
+            )}
+          </div>
+        </>
       )}
-      {lockable && !settingsOpen && !showPlace && (
+
+      {menuOpen && <BoardMenu items={menuItems} isOwner={isOwner} onExit={exitMeeting} onClose={() => setMenuOpen(false)} />}
+
+      {lockable && !settingsOpen && (
         <MobileBar
           painting={paintOn}
           canPaint={canEdit(myPid)}
           editLabel={editLabel}
           brush={brush}
           setBrush={setBrush}
-          best={result.entered && list.length ? list[cand % list.length] : null}
-          bestText={(w) => `${dayLabel(cfg, w.d)} ${tm(cfg, w.s)}`}
-          bestCount={(w) => `${w.g.y.length + w.g.m.length}/${n}명`}
+          placeLabel={cfg.place ? cfg.place.name : originCount ? `장소 · 출발지 ${originCount}/${people.length}` : '장소 정하기'}
+          placeOpen={placeFull}
+          onPlace={() => setPlaceOpen((o) => !o)}
           onStart={startEdit}
           onCancel={cancelEdit}
           onSave={saveEdit}
-          onBest={() => (narrow ? goTab('suggest') : document.getElementById('suggest')?.scrollIntoView({ behavior: 'smooth', block: 'center' }))}
         />
       )}
       <div className="sr-only" aria-live="polite">{announce}</div>
@@ -588,8 +576,8 @@ function PenIcon() {
   )
 }
 
-/** 모바일 하단 고정 바: 평소엔 추천 시간 + '내 일정 등록/수정', 편집 중엔 칠하기 도구 + 취소·저장. */
-function MobileBar({ painting, canPaint, editLabel, brush, setBrush, best, bestText, bestCount, onStart, onCancel, onSave, onBest }) {
+/** 모바일 하단 고정 바: 평소엔 [장소] + [내 일정 등록/수정], 편집 중엔 칠하기 도구 + 취소·저장. */
+function MobileBar({ painting, canPaint, editLabel, brush, setBrush, placeLabel, placeOpen, onPlace, onStart, onCancel, onSave }) {
   return (
     <div
       className="fixed inset-x-0 bottom-0 z-30 border-t border-rule bg-[color-mix(in_oklab,var(--sheet)_92%,transparent)] px-3 pt-2.5 shadow-[0_-8px_24px_-12px_rgba(42,40,56,.18)] backdrop-blur"
@@ -605,18 +593,11 @@ function MobileBar({ painting, canPaint, editLabel, brush, setBrush, best, bestT
         </div>
       ) : (
         <div className="mx-auto flex max-w-[560px] items-center gap-2">
-          {best ? (
-            <button type="button" className="btn-ghost min-h-[44px] min-w-0 flex-1 justify-start px-2 text-left" onClick={onBest}>
-              <span className="min-w-0">
-                <span className="block text-[11px] font-medium text-ink2">추천 시간</span>
-                <span className="block truncate text-sm text-ink">{bestText(best)} <span className="text-ink2">· {bestCount(best)}</span></span>
-              </span>
-            </button>
-          ) : (
-            <span className="min-w-0 flex-1 px-2 text-[13px] text-ink2">되는 시간을 칠하면 추천해 드려요</span>
-          )}
+          <button type="button" className={`btn min-h-[48px] min-w-0 ${canPaint ? 'max-w-[45%] shrink' : 'flex-1'}`} aria-pressed={placeOpen} onClick={onPlace}>
+            <span className="truncate">{placeOpen ? '시간표 보기' : placeLabel}</span>
+          </button>
           {canPaint && (
-            <button type="button" className="btn-primary min-h-[44px] px-4" onClick={onStart}>
+            <button type="button" className="btn-primary min-h-[48px] flex-1" onClick={onStart}>
               <PenIcon />
               {editLabel}
             </button>
