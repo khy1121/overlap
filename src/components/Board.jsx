@@ -24,6 +24,7 @@ import SuggestionNote from './SuggestionNote'
 import TimeGrid from './TimeGrid'
 import TopTimes from './TopTimes'
 import CandidatePoll from './CandidatePoll'
+import { fetchMyHabits, habitCells } from '../lib/habits'
 import RolesSheet from './RolesSheet'
 
 export default function Board({ mid, session }) {
@@ -84,6 +85,9 @@ export default function Board({ mid, session }) {
   const [bounds, setBoundsState] = useState(() => {
     try { const v = JSON.parse(localStorage.getItem(boundsKey)); return Array.isArray(v) && v.every(Number.isInteger) ? v : DEFAULT_BOUNDS } catch { return DEFAULT_BOUNDS }
   })
+  // 자주 되던 시간 (지난 약속의 내 응답에서)
+  const [habits, setHabits] = useState(null)
+  useEffect(() => { fetchMyHabits(session.user.id, mid).then(setHabits) }, [session.user.id, mid])
   const setBounds = (v) => { setBoundsState(v); try { localStorage.setItem(boundsKey, JSON.stringify(v)) } catch { /* 저장소 막힘 */ } }
   // 늦게 온 사람: 후보만 투표 (열 때의 후보를 고정해요. 투표하면서 순서가 바뀌지 않게)
   const [poll, setPoll] = useState(null)
@@ -235,6 +239,13 @@ export default function Board({ mid, session }) {
     const next = {}
     for (let d = 0; d < nDays(cfg); d++) for (const part of partsOf(cfg)) for (const k of keysOf(cfg, d, part)) next[k] = 'y'
     return next
+  }
+  // 자주 되던 시간: 지난 약속 2개 이상에서 계산되고 채울 칸이 있을 때만
+  const habit = habits?.meetings >= 2 ? { meetings: habits.meetings, ...habitCells(cfg, habits) } : null
+  const habitOk = habit && habit.filled > 0
+  function fillHabit() {
+    applyDraft({ ...draft, ...habit.cells })
+    toast(`자주 되던 시간 ${habit.filled}칸을 채웠어요. 안 되는 칸만 고쳐 주세요`)
   }
   function undo() {
     const prev = undoStack[undoStack.length - 1]
@@ -589,6 +600,7 @@ export default function Board({ mid, session }) {
                     </span>
                     <button className="btn-ghost btn-sm" disabled={!undoStack.length} onClick={undo}>되돌리기</button>
                     <button className="btn-ghost btn-sm" onClick={() => applyDraft(allYes())}>전부 가능</button>
+                    {habitOk && <button className="btn-ghost btn-sm" onClick={fillHabit}>자주 되던 시간</button>}
                     {Object.keys(draft).length > 0 && (
                       <button className="btn-ghost btn-sm text-no hover:text-no" onClick={() => applyDraft({})}>모두 지우기</button>
                     )}
@@ -701,6 +713,8 @@ export default function Board({ mid, session }) {
         <InputStartSheet
           waiting={people.filter((p) => p.id !== myPid && Object.keys(p.cells || {}).length).length}
           canCalendar={Boolean(GOOGLE_CLIENT_ID)}
+          habit={habitOk ? habit : null}
+          onHabit={() => { setFine(false); fillHabit() }}
           onSubtract={() => { setFine(false); applyDraft(allYes()); toast('전부 가능으로 채웠어요. 안 되는 칸만 눌러 주세요') }}
           onSelect={() => setFine(false)}
           onCalendar={() => { setFine(true); startCalendar() }}
