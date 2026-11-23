@@ -32,3 +32,15 @@ export function displayName(user) {
   const m = user?.user_metadata || {}
   return m.full_name || m.name || m.nickname || m.preferred_username || m.user_name || ''
 }
+
+/**
+ * 앱 소셜 로그인(카카오) 돌아온 주소 읽기: overlap://auth-callback?code=… → { code }
+ * 취소·실패면 { error } (카카오·Supabase가 보낸 설명을 그대로 쓰지 않고 짧은 문구로)
+ */
+export function readAuthCallback(url) {
+  const q = String(url || '').split(/[?#]/).slice(1).join('&')
+  const p = Object.fromEntries(q.split('&').filter(Boolean).map((kv) => { const [k, v = ''] = kv.split('='); return [k, decodeURIComponent(v.replace(/\+/g, ' '))] }))
+  if (p.code) return { code: p.code }
+  if (p.error === 'access_denied') return { error: '카카오 로그인을 취소했어요.' }
+  return { error: '카카오 로그인을 마치지 못했어요. 다시 시도해 주세요.' }
+}

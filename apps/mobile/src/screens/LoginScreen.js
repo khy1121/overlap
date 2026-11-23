@@ -1,19 +1,20 @@
 import { useState } from 'react'
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native'
 import { ageOf, dotted, parseBirth } from '@overlap/core/identity'
-import { signIn, signUp } from '../lib/auth'
+import { signIn, signInWithKakao, signUp } from '../lib/auth'
 import { type, useTheme } from '../lib/theme'
 
 /**
  * 이름·생년월일 로그인 / 회원가입 (웹 AuthForm과 같은 규칙).
- * 카카오 로그인은 앱용 흐름이 필요해서 #19에서 붙여요.
+ * 맨 위 [카카오로 시작하기]는 앱 안 브라우저로 카카오 로그인 후 앱으로 돌아와요 (처음이면 자동 가입).
  */
 export default function LoginScreen() {
-  const { c, radius } = useTheme()
+  const { c, radius, brand } = useTheme()
   const [tab, setTab] = useState('login')
   const [form, setForm] = useState({ name: '', birth: '', password: '', confirm: '' })
   const [error, setError] = useState('')
   const [busy, setBusy] = useState(false)
+  const [kakaoBusy, setKakaoBusy] = useState(false)
   const signup = tab === 'signup'
   const set = (k) => (v) => setForm((f) => ({ ...f, [k]: v }))
 
@@ -36,6 +37,18 @@ export default function LoginScreen() {
     }
   }
 
+  async function kakao() {
+    setError('')
+    setKakaoBusy(true)
+    try {
+      await signInWithKakao()
+    } catch (e) {
+      setError(e.message)
+    } finally {
+      setKakaoBusy(false)
+    }
+  }
+
   const input = [styles.input, { backgroundColor: c['rule-2'], color: c.ink, borderRadius: radius.md }]
   const label = [type.caption, { color: c['ink-2'], fontWeight: '600' }]
   return (
@@ -47,7 +60,21 @@ export default function LoginScreen() {
         </Text>
         <Text style={[type.body, { color: c['ink-2'], marginTop: 6 }]}>각자 되는 시간을 칠하면 겹치는 시간을 골라 제안해요.</Text>
 
-        <View style={[styles.card, { backgroundColor: c.sheet, borderRadius: radius.lg }]}>
+        <Pressable
+          accessibilityRole="button"
+          onPress={kakao}
+          disabled={kakaoBusy || busy}
+          style={({ pressed }) => [styles.primary, { marginTop: 20, backgroundColor: pressed ? brand['kakao-hover'] : brand.kakao, borderRadius: radius.md, opacity: kakaoBusy ? 0.8 : 1 }]}
+        >
+          {kakaoBusy ? <ActivityIndicator color="#191919" /> : <Text style={[type.heading, { color: '#191919' }]}>카카오로 시작하기</Text>}
+        </Pressable>
+        <View style={styles.or}>
+          <View style={[styles.orLine, { backgroundColor: c.rule }]} />
+          <Text style={[type.caption, { color: c['ink-2'] }]}>또는 이름·생년월일로</Text>
+          <View style={[styles.orLine, { backgroundColor: c.rule }]} />
+        </View>
+
+        <View style={[styles.card, { marginTop: 0, backgroundColor: c.sheet, borderRadius: radius.lg }]}>
           <View style={[styles.seg, { backgroundColor: c['rule-2'] }]} accessibilityRole="tablist">
             {[['login', '로그인'], ['signup', '회원가입']].map(([k, t]) => (
               <Pressable
@@ -104,6 +131,8 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
+  or: { flexDirection: 'row', alignItems: 'center', gap: 10, marginVertical: 14 },
+  orLine: { flex: 1, height: StyleSheet.hairlineWidth },
   wrap: { padding: 20, paddingTop: 72, gap: 4 },
   card: { marginTop: 24, padding: 20, gap: 8 },
   seg: { flexDirection: 'row', borderRadius: 999, padding: 4, marginBottom: 8 },
