@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
 import { MAX_DAYS, durText, nSlots, rangeError, rangeText } from '../lib/schedule'
 import { TIME_PRESETS, addDays, chip, datePresets, daysBetween, tile } from '../lib/presets'
@@ -23,6 +23,10 @@ export default function NewMeeting() {
   const [customTime, setCustomTime] = useState(false)
   const [countTouched, setCountTouched] = useState(false)
   const [busy, setBusy] = useState(false)
+  // 화면 안에서 바로 보이는 안내 (토스트는 아래 고정 바에 가려질 수 있어서)
+  const [titleErr, setTitleErr] = useState(false)
+  const [submitErr, setSubmitErr] = useState('')
+  const titleRef = useRef(null)
   const [friends, setFriends] = useState(null)
   const [picked, setPicked] = useState(() => new Set())
   const patch = (p) => setForm((f) => ({ ...f, ...p }))
@@ -71,7 +75,12 @@ export default function NewMeeting() {
 
   async function create(e) {
     e.preventDefault()
-    if (!form.title.trim()) return toast('약속 이름을 정해 주세요')
+    setSubmitErr('')
+    if (!form.title.trim()) {
+      setTitleErr(true)
+      titleRef.current?.focus()
+      return
+    }
     if (err) return toast(err)
     setBusy(true)
     const args = {
@@ -89,14 +98,16 @@ export default function NewMeeting() {
     if (error) {
       setBusy(false)
       const outdated = /function|p_days|dur_check|null value/i.test(error.message)
-      return toast(outdated ? '서버 업데이트가 아직이라 이 설정(기간·만나는 시간)으로는 만들 수 없어요.' : `약속을 만들지 못했어요: ${error.message}`)
+      const msg = outdated ? '서버 업데이트가 아직이라 이 설정(기간·만나는 시간)으로는 만들 수 없어요.' : `약속을 만들지 못했어요: ${error.message}`
+      setSubmitErr(msg)
+      return toast(msg)
     }
     // 고른 친구를 바로 초대
     const ids = [...picked]
     const results = await Promise.all(ids.map((target) => supabase.rpc('invite_friend', { mid, target })))
     const failed = results.filter((r) => r.error).length
-    if (failed) toast(`친구 ${failed}명은 초대하지 못했어요. 약속 화면에서 다시 초대해 주세요.`)
-    window.location.href = `/?m=${mid}&new=1${ids.length - failed ? `&invited=${ids.length - failed}` : ''}`
+    // 초대 실패 수는 약속 화면 안내에 함께 보여요 (바로 이동해서 여기 토스트는 안 보여요)
+    window.location.href = `/?m=${mid}&new=1${ids.length - failed ? `&invited=${ids.length - failed}` : ''}${failed ? `&failed=${failed}` : ''}`
   }
 
   const hourSelect = (label, value, first, onPick) => (
@@ -118,7 +129,19 @@ export default function NewMeeting() {
       {/* 질문 5개를 한 줄 제목 + 칩 한 줄로. 고른 값은 제목 오른쪽에 보여요 (스크롤 없이 한 화면) */}
       <form className="flex flex-col gap-5 pb-36" onSubmit={create}>
         <Q title="무슨 약속이에요?">
-          <input className="field-input text-[16px]" maxLength={40} placeholder="약속 이름" autoFocus value={form.title} onChange={(e) => patch({ title: e.target.value })} aria-label="약속 이름" />
+          <input
+            ref={titleRef}
+            className={`field-input text-[16px] ${titleErr ? '!border-no' : ''}`}
+            maxLength={40}
+            placeholder="약속 이름"
+            autoFocus
+            value={form.title}
+            onChange={(e) => { patch({ title: e.target.value }); setTitleErr(false) }}
+            aria-label="약속 이름"
+            aria-invalid={titleErr}
+            aria-describedby={titleErr ? 'title-err' : undefined}
+          />
+          {titleErr && <p id="title-err" className="m-0 text-[13px] font-semibold text-no" role="alert">약속 이름을 정해 주세요. 아래 추천을 눌러도 돼요.</p>}
           <div className={scrollRow}>
             {TITLE_IDEAS.map((t) => (
               <button key={t} type="button" className={`${chip(form.title === t)} !min-h-[32px] shrink-0 !px-3 !text-[13px]`} onClick={() => patch({ title: t })}>{t}</button>
@@ -177,7 +200,7 @@ export default function NewMeeting() {
               {!one && (
                 <label className="flex items-center gap-2 text-[13px] text-ink2">
                   <input type="checkbox" checked={form.split} onChange={(e) => patch({ split: e.target.checked, startHour: from, endHour: to })} />
-                  첫날 시작·마지막 날 끝 시각은 따로 정하기
+                  첫날 시작·마지막 날 끝 시각은 따로 정하기 (예: 오늘 12시 ~ 모레 22시)
                 </label>
               )}
               {split && (
@@ -202,9 +225,9 @@ export default function NewMeeting() {
           aside={(
             // 예상 인원(나 포함): 제목 줄 오른쪽 작은 스테퍼
             <span className="inline-flex items-center gap-0.5 text-[13px] font-semibold text-accent" role="group" aria-label="예상 인원 (나 포함)">
-              <button type="button" className="grid h-8 w-8 place-items-center rounded-full border-0 bg-transparent text-lg text-ink2 hover:bg-rule2" aria-label="인원 줄이기" onClick={() => setCount(form.count - 1)}>−</button>
+              <button type="button" className="grid h-11 w-11 place-items-center rounded-full border-0 bg-transparent text-lg text-ink2 hover:bg-rule2" aria-label="인원 줄이기" onClick={() => setCount(form.count - 1)}>−</button>
               <output className="tabular" aria-live="polite">나 포함 {form.count}명</output>
-              <button type="button" className="grid h-8 w-8 place-items-center rounded-full border-0 bg-transparent text-lg text-ink2 hover:bg-rule2" aria-label="인원 늘리기" onClick={() => setCount(form.count + 1)}>+</button>
+              <button type="button" className="grid h-11 w-11 place-items-center rounded-full border-0 bg-transparent text-lg text-ink2 hover:bg-rule2" aria-label="인원 늘리기" onClick={() => setCount(form.count + 1)}>+</button>
             </span>
           )}
         >
@@ -212,7 +235,7 @@ export default function NewMeeting() {
           {friends?.length === 0 && <p className="m-0 text-[13px] text-ink2">저장된 친구가 없어요. 만든 뒤 카톡·링크로 초대할 수 있어요.</p>}
           {friends?.length > 0 && (
             <ul className={`m-0 list-none p-0 ${scrollRow}`}>
-              {friends.length > 1 && (
+              {friends.length > 0 && (
                 <li className="shrink-0">
                   <button
                     type="button"
@@ -223,7 +246,7 @@ export default function NewMeeting() {
                       if (!countTouched) patch({ count: Math.max(4, (all ? 0 : friends.length) + 1) })
                     }}
                   >
-                    {picked.size === friends.length ? '모두 해제' : '모두'}
+                    {picked.size === friends.length ? '모두 해제' : '모두 선택'}
                   </button>
                 </li>
               )}
@@ -239,6 +262,7 @@ export default function NewMeeting() {
                     >
                       <Avatar name={f.name} size={30} className={on ? '!bg-sheet !text-accent' : '!bg-sheet'} />
                       {f.name || '이름 없음'}
+                      {on && <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5" /></svg>}
                     </button>
                   </li>
                 )
@@ -253,11 +277,13 @@ export default function NewMeeting() {
           style={{ paddingBottom: 'max(12px, env(safe-area-inset-bottom, 0px))' }}
         >
           <div className="mx-auto flex max-w-[560px] flex-col gap-2">
-            {err ? (
-              <p className="m-0 text-center text-[13px] font-semibold text-no" role="alert">{err}</p>
+            {err || submitErr ? (
+              <p className="m-0 text-center text-[13px] font-semibold text-no" role="alert">{err || submitErr}</p>
             ) : (
-              <p className="tabular m-0 truncate text-center text-[13px] text-ink2">
-                {rangeText(cfg)} · {durText(form.dur)} · {form.count}명
+              <p className="tabular m-0 text-center text-[13px] leading-snug text-ink2">
+                {rangeText(cfg)}
+                <br />
+                {days > 2 && `가운데 날 ${from}–${to}시 · `}{durText(form.dur)} · {form.count}명{picked.size ? ` · 친구 ${picked.size}명 바로 초대` : ''}
               </p>
             )}
             <button className="btn-primary btn-lg disabled:opacity-50" type="submit" disabled={busy || Boolean(err)}>
