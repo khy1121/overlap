@@ -14,7 +14,9 @@
     "./api/meetings": "./src/api/meetings.js",
     "./api/friends": "./src/api/friends.js",
     "./api/habits": "./src/api/habits.js",
-    "./tokens": "./src/tokens.js"
+    "./tokens": "./src/tokens.js",
+    "./identity": "./src/identity.js",
+    "./api/auth": "./src/api/auth.js"
   },
   "scripts": {
     "test": "vitest run"

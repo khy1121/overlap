@@ -23,6 +23,15 @@ npm run dev                  # 웹 개발 서버 (apps/web)
 npm run build                # 웹 빌드 → apps/web/dist
 ```
 
+### 앱 (React Native, Expo)
+
+```bash
+npm run mobile               # Expo 개발 서버 → Android 에뮬레이터나 폰의 Expo Go 앱으로 열기
+```
+
+- Supabase 주소·키는 루트 `.env.local`(`VITE_…`)을 그대로 읽어요 (`apps/mobile/app.config.js`)
+- 로직·조회·색은 웹과 같은 `@overlap/core`를 써요
+
 웹에만 옵션을 넘길 때는 `npm run dev -w @overlap/web -- --port 5180`처럼 써요.
 
 ## 폴더 구조
@@ -32,12 +41,13 @@ npm run build                # 웹 빌드 → apps/web/dist
 ```
 apps/
   web/                  웹앱 (Vite + React). Vercel이 여기를 빌드해요 (vercel.json → apps/web/dist)
+  mobile/               앱 (Expo SDK 52 + React Native). iOS·Android
     src/
       components/       화면 컴포넌트 (Board = 약속 화면, TimeGrid = 시간표 등)
       hooks/            useMeeting (불러오기·실시간·저장), useToast
       lib/              supabase 클라이언트, 로그인, 시간 계산(schedule.js)
       styles/           Tailwind + SCSS (색 토큰, 시간표 무늬)
-packages/               웹·앱 공통 코드 (예정: packages/core)
+packages/core/          웹·앱 공통: 시간 계산·추천, 조회 함수, 로그인 규칙, 디자인 토큰 (테스트: npm test)
 supabase/migrations/    DB 구조와 보안 규칙(RLS)
 supabase/functions/     가입·푸시·탈퇴 등 Edge Function
 android/                Play 스토어용 Android 앱 (TWA)

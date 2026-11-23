@@ -2,30 +2,10 @@ import { useState } from 'react'
 import { signIn, signInWithKakao, signUp } from '../lib/auth'
 
 // 생년월일: 달력 대신 숫자로 입력 (8자리 19990315 또는 6자리 990315). 입력하는 동안 1999.03.15처럼 점을 찍어요.
-const dotted = (digits) => [digits.slice(0, 4), digits.slice(4, 6), digits.slice(6, 8)].filter(Boolean).join('.')
+// 날짜 해석·만 나이 계산은 @overlap/core/identity (앱과 같은 규칙)
+import { ageOf, dotted, parseBirth } from '@overlap/core/identity'
 
-/** 입력값 → 'YYYY-MM-DD' (잘못된 날짜면 null) */
-export function parseBirth(value) {
-  let d = value.replace(/\D/g, '')
-  if (d.length === 6) {
-    const yy = Number(d.slice(0, 2))
-    const now = new Date().getFullYear() % 100
-    d = `${yy > now ? 19 : 20}${d}`
-  }
-  if (d.length !== 8) return null
-  const [y, m, day] = [Number(d.slice(0, 4)), Number(d.slice(4, 6)), Number(d.slice(6, 8))]
-  const date = new Date(y, m - 1, day)
-  if (date.getFullYear() !== y || date.getMonth() !== m - 1 || date.getDate() !== day) return null
-  if (y < 1900 || date > new Date()) return null
-  return `${d.slice(0, 4)}-${d.slice(4, 6)}-${d.slice(6, 8)}`
-}
-
-/** 'YYYY-MM-DD' → 만 나이 */
-export function ageOf(iso) {
-  const [y, m, d] = iso.split('-').map(Number)
-  const now = new Date()
-  return now.getFullYear() - y - (now.getMonth() + 1 < m || (now.getMonth() + 1 === m && now.getDate() < d) ? 1 : 0)
-}
+export { ageOf, parseBirth }
 
 function BirthInput({ value, onChange }) {
   return (

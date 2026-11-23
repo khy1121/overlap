@@ -20,3 +20,5 @@ jobs:
         run: npm test
       - name: 웹 빌드 (@overlap/web)
         run: npm run build
+      - name: 앱 번들 확인 (@overlap/mobile, Android)
+        run: npm run check:bundle -w @overlap/mobile

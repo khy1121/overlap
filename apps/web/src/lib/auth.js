@@ -1,36 +1,11 @@
 import { supabase } from './supabase'
-import { loginEmail, normalizeName } from './identity'
+import * as core from '@overlap/core/api/auth'
+import { sha256Hex } from './identity'
 
-export async function signIn({ name, birth, password }) {
-  const email = await loginEmail(name, birth)
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
-  if (error) {
-    if (/invalid login/i.test(error.message)) throw new Error('이름, 생년월일, 비밀번호를 다시 확인해 주세요.')
-    throw new Error(`로그인하지 못했어요: ${error.message}`)
-  }
-}
-
-export async function signUp({ name, birth, password }) {
-  const { error } = await supabase.functions.invoke('signup', {
-    body: { name: normalizeName(name), birth, password },
-  })
-  if (error) {
-    let message = '가입하지 못했어요. 잠시 후 다시 시도해 주세요.'
-    try {
-      const body = await error.context.json()
-      if (body?.message) message = body.message
-    } catch {
-      /* 응답 본문이 없으면 기본 문구 */
-    }
-    throw new Error(message)
-  }
-  await signIn({ name, birth, password })
-}
-
-export function displayName(user) {
-  const m = user?.user_metadata || {}
-  return m.full_name || m.name || m.nickname || m.preferred_username || m.user_name || ''
-}
+// 이름·생년월일 로그인·가입은 @overlap/core (웹 클라이언트와 SHA-256을 넣어 줘요)
+export const signIn = (form) => core.signIn(supabase, form, sha256Hex)
+export const signUp = (form) => core.signUp(supabase, form, sha256Hex)
+export { displayName } from '@overlap/core/api/auth'
 
 // 카카오 로그인 후 돌아올 주소: 초대 링크(?m=…)로 들어왔으면 그 약속으로 다시
 function backHere() {
