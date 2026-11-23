@@ -21,7 +21,8 @@
     "./site": "./src/site.js",
     "./hooks/useMeeting": "./src/hooks/useMeeting.js",
     "./newMeeting": "./src/newMeeting.js",
-    "./api/notify": "./src/api/notify.js"
+    "./api/notify": "./src/api/notify.js",
+    "./api/places": "./src/api/places.js"
   },
   "scripts": {
     "test": "vitest run"
