@@ -11,7 +11,7 @@ import { supabase } from '../lib/supabase'
 import { BRUSH_LABEL, briefRange, dayLabel, durText, evaluate, nDays, nSlots, rangeText, summary, timeText, tm } from '../lib/schedule'
 import BoardMenu from './BoardMenu'
 import CalendarImport from './CalendarImport'
-import CoarseGrid, { DEFAULT_BOUNDS, keysOf, partsOf } from './CoarseGrid'
+import CoarseGrid, { BoundsEditor, DEFAULT_BOUNDS, keysOf, partsOf } from './CoarseGrid'
 import InputStartSheet from './InputStartSheet'
 import InvitePanel from './InvitePanel'
 import Palette from './Palette'
@@ -80,6 +80,7 @@ export default function Board({ mid, session }) {
   const flushRef = useRef(null)
   const [fine, setFine] = useState(false) // 칠하는 중 보기: false = 큰 칸(요일 × 시간대), true = 30분 칸
   const [startOpen, setStartOpen] = useState(false) // 처음 들어온 사람에게 입력 방법 고르기
+  const [boundsOpen, setBoundsOpen] = useState(false) // 도구 막대의 '시간대 바꾸기' 펼침
   // 큰 칸 시간대 나누는 시각 (사용자 맞춤, 이 기기에 저장)
   const boundsKey = `overlap:parts:${session.user.id}`
   const [bounds, setBoundsState] = useState(() => {
@@ -588,30 +589,44 @@ export default function Board({ mid, session }) {
                 </div>
               )}
               {paintOn && (
-                // 칠하는 중: 저장 상태 · 되돌리기 · 모두 지우기 (저장 버튼 없음)
-                <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className={`text-[13px] font-semibold ${saveState === 'saved' ? 'text-yes' : 'text-ink2'}`} role="status">{saveText}</span>
-                  <span className="text-xs text-ink2">{!fine ? '칸을 누를 때마다 가능 → 안 돼요 → 조율' : lockable ? '톡 치면 한 칸, 꾹 눌러 끌면 여러 칸' : '누르거나 드래그해서 칠해요'}</span>
-                  <span className="ml-auto flex items-center gap-1">
-                    <span className="inline-flex gap-0.5 rounded-full bg-rule2 p-0.5" role="group" aria-label="칸 크기">
-                      {[[false, '큰 칸'], [true, '30분']].map(([v, label]) => (
-                        <button key={label} aria-pressed={fine === v} className={`min-h-[30px] rounded-full border-0 px-2.5 text-[12px] font-semibold ${fine === v ? 'bg-sheet text-ink shadow-soft' : 'bg-transparent text-ink2'}`} onClick={() => setFine(v)}>{label}</button>
+                // 칠하기 도구 막대 (두 줄)
+                // 1줄: 칸 크기 · 시간대 바꾸기 · 저장 상태 · (PC) 다 했어요
+                // 2줄: 빠르게 채우기 · 되돌리기 · 모두 지우기
+                <div className="mb-3 flex flex-col gap-2.5 rounded-[16px] bg-rule2 p-2.5" role="toolbar" aria-label="칠하기 도구">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="inline-flex gap-0.5 rounded-full bg-sheet p-1 shadow-soft" role="group" aria-label="칸 크기">
+                      {[[false, '큰 칸'], [true, '30분 칸']].map(([v, label]) => (
+                        <button key={label} aria-pressed={fine === v} className={`min-h-[36px] rounded-full border-0 px-3.5 text-[13px] font-semibold ${fine === v ? 'bg-pen-strong text-pen-ink' : 'bg-transparent text-ink2 hover:text-ink'}`} onClick={() => setFine(v)}>{label}</button>
                       ))}
                     </span>
-                    <button className="btn-ghost btn-sm" disabled={!undoStack.length} onClick={undo}>되돌리기</button>
-                    <button className="btn-ghost btn-sm" onClick={() => applyDraft(allYes())}>전부 가능</button>
-                    {habitOk && <button className="btn-ghost btn-sm" onClick={fillHabit}>자주 되던 시간</button>}
-                    {Object.keys(draft).length > 0 && (
-                      <button className="btn-ghost btn-sm text-no hover:text-no" onClick={() => applyDraft({})}>모두 지우기</button>
+                    {!fine && (
+                      <button className={`btn btn-sm gap-1.5 ${boundsOpen ? 'bg-pen-soft text-accent' : 'bg-sheet text-ink'}`} aria-expanded={boundsOpen} onClick={() => setBoundsOpen((v) => !v)}>
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12" /><circle cx="16" cy="6" r="2" /><circle cx="10" cy="12" r="2" /><circle cx="18" cy="18" r="2" /></svg>
+                        시간대 바꾸기
+                      </button>
                     )}
-                  </span>
+                    <span className={`ml-auto text-[13px] font-semibold ${saveState === 'saved' ? 'text-yes' : 'text-ink2'}`} role="status">{saveText}</span>
+                    {!lockable && <button className="btn-primary btn-sm" onClick={finishEdit}>다 했어요</button>}
+                  </div>
+                  {boundsOpen && !fine && <BoundsEditor cfg={cfg} bounds={bounds} onBounds={setBounds} />}
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="mr-0.5 text-[12px] font-semibold text-ink2">빠르게 채우기</span>
+                    <button className="btn btn-sm bg-sheet" onClick={() => applyDraft(allYes())}>전부 가능</button>
+                    {habitOk && <button className="btn btn-sm bg-sheet" onClick={fillHabit}>자주 되던 시간</button>}
+                    {GOOGLE_CLIENT_ID && <button className="btn btn-sm bg-sheet" onClick={() => startCalendar()}>Google 캘린더</button>}
+                    <span className="ml-auto flex items-center gap-1">
+                      <button className="btn-ghost btn-sm" disabled={!undoStack.length} onClick={undo}>되돌리기</button>
+                      {Object.keys(draft).length > 0 && (
+                        <button className="btn-ghost btn-sm text-no hover:text-no" onClick={() => applyDraft({})}>모두 지우기</button>
+                      )}
+                    </span>
+                  </div>
                 </div>
               )}
 
               {paintOn && fine && !lockable && (
                 <div className="sticky z-[5] mb-1 flex items-center gap-2 bg-sheet py-2" style={{ top: 'env(safe-area-inset-top, 0px)' }}>
                   <Palette brush={brush} setBrush={setBrush} className="min-w-0 flex-1" />
-                  <button className="btn-primary min-h-[44px]" onClick={finishEdit}>다 했어요</button>
                 </div>
               )}
               {paintOn && calOpen && calToken && (
@@ -630,7 +645,7 @@ export default function Board({ mid, session }) {
               )}
 
               {paintOn && !fine ? (
-                <CoarseGrid cfg={cfg} cells={draft} people={people} myPid={myPid} onChange={applyDraft} bounds={bounds} onBounds={setBounds} />
+                <CoarseGrid cfg={cfg} cells={draft} people={people} myPid={myPid} onChange={applyDraft} bounds={bounds} />
               ) : (
               <TimeGrid
                 cfg={cfg}
@@ -673,7 +688,7 @@ export default function Board({ mid, session }) {
                       <span className="inline-flex items-center gap-1.5"><i className="sw n" />불가</span>
                       <span className="inline-flex items-center gap-1.5"><i className="sw e" />미입력</span>
                       {!paintOn && <span>{hasMine ? '내가 칠한 시간이에요' : '아직 칠하지 않았어요'}</span>}
-                      {paintOn && <span>같은 색으로 다시 칠하면 지워져요 · 자동으로 저장돼요</span>}
+                      {paintOn && <span>{!fine ? '칸을 누를 때마다 가능 → 안 돼요 → 조율 · 요일·시간대 이름을 누르면 줄 전체' : lockable ? '톡 치면 한 칸, 꾹 눌러 끌면 여러 칸 · 같은 색으로 다시 칠하면 지워져요' : '누르거나 드래그해서 칠해요 · 같은 색으로 다시 칠하면 지워져요'}</span>}
                     </>
                   ) : (
                     <>
