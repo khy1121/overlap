@@ -66,9 +66,15 @@ export default function Board({ mid, session }) {
   }
   // 모바일·터치는 하단 고정 바, 데스크톱은 시간표 위 도구 막대를 써요.
   const lockable = useMedia('(max-width: 767px), (pointer: coarse)')
-  // 내 일정 편집: '내 일정 등록/수정'을 눌러야 시작하고, 칠한 내용은 저장 전까지 화면에만 있어요(draft).
+  // 내 시간 칠하기: '내 일정' 보기에서 바로 칠하고, 손을 뗀 뒤 잠깐 모았다가 자동 저장해요.
+  // draft = 화면에 보이는 내 칸(저장 전 포함). null이면 칠하는 중이 아니에요.
   const [draft, setDraft] = useState(null)
   const paintOn = draft !== null
+  const [undoStack, setUndoStack] = useState([]) // 되돌리기용 이전 상태들 (최근 것이 끝)
+  const [saveState, setSaveState] = useState('idle') // idle | saving | saved
+  const flushRef = useRef(null)
+  const draftRef = useRef(null) // 드래그 결과를 반영할 때 지금 draft를 읽으려고
+  draftRef.current = draft
 
   const link = `${APP_ORIGIN}/?m=${mid}` // 초대·공지에 넣는 링크 (로컬에서도 배포 주소)
   const uid = session.user.id
@@ -85,7 +91,24 @@ export default function Board({ mid, session }) {
     [people, paintOn, draft, myPid],
   )
 
-  // 저장하지 않은 채 페이지를 떠나려 하면 확인
+  // 자동 저장: 마지막으로 칠하고 0.8초 뒤에 한 번 (칠하는 동안 서버에 여러 번 보내지 않게)
+  useEffect(() => {
+    if (!dirty) { flushRef.current = null; return }
+    setSaveState('saving')
+    const save = () => { updatePerson(myPid, { cells: draft }); setSaveState('saved') }
+    const t = setTimeout(save, 800)
+    flushRef.current = () => { clearTimeout(t); save() }
+    return () => clearTimeout(t)
+  }, [draft, dirty, myPid, updatePerson])
+
+  // 폰에서 다른 앱으로 가거나 화면이 꺼지면 기다리지 않고 바로 저장
+  useEffect(() => {
+    const now = () => { if (document.visibilityState === 'hidden') flushRef.current?.() }
+    document.addEventListener('visibilitychange', now)
+    return () => document.removeEventListener('visibilitychange', now)
+  }, [])
+
+  // 저장 대기 중(0.8초 안)에 페이지를 떠나려 하면 확인
   useEffect(() => {
     if (!dirty) return
     const warn = (e) => { e.preventDefault(); e.returnValue = '' }
@@ -134,7 +157,12 @@ export default function Board({ mid, session }) {
   }, [mode, paintOn])
 
   // 편집 중일 때만 반영 (편집이 끝난 뒤 늦게 도착한 드래그 결과는 버려요)
-  const commitCells = useCallback((next) => setDraft((prev) => (prev === null ? null : next)), [])
+  const commitCells = useCallback((next) => {
+    const prev = draftRef.current
+    if (prev === null) return
+    setUndoStack((st) => [...st.slice(-29), prev])
+    setDraft(next)
+  }, [])
 
   const onCalExpired = useCallback(() => setCalToken(null), [])
 
@@ -153,27 +181,42 @@ export default function Board({ mid, session }) {
   const list = result.all.length ? result.all : result.rec
   const n = result.n
 
+  // 칠하기 결과를 반영 (되돌리기 목록에 이전 상태를 쌓아요)
+  function applyDraft(next) {
+    setUndoStack((st) => [...st.slice(-29), draft])
+    setDraft(next)
+  }
   function fill(keys) {
     if (!paintOn) return
     const clear = brush && keys.every((k) => draft[k] === brush)
     const next = { ...draft }
     keys.forEach((k) => { if (clear || !brush) delete next[k]; else next[k] = brush })
-    setDraft(next)
+    applyDraft(next)
+  }
+  function undo() {
+    const prev = undoStack[undoStack.length - 1]
+    if (!prev) return
+    setUndoStack((st) => st.slice(0, -1))
+    setDraft(prev)
   }
 
-  const startEdit = () => { setMode('edit'); setSel(null); setPlaceOpen(false); setDraft({ ...myCells }) }
-  function cancelEdit() {
-    setDraft(null)
-    setCalOpen(false)
-    if (dirty) toast('바꾼 내용을 취소했어요')
+  // '내 일정'으로 들어가면 바로 칠할 수 있어요 (등록 버튼 없음)
+  function startEdit() {
+    setMode('edit')
+    setSel(null)
+    setPlaceOpen(false)
+    if (draft === null && canEdit(myPid)) { setDraft({ ...myCells }); setUndoStack([]); setSaveState('idle') }
   }
-  function saveEdit() {
-    if (dirty) updatePerson(myPid, { cells: draft })
+  // 다 칠했으면 남은 저장을 바로 보내고 겹쳐 보기로
+  function finishEdit() {
+    flushRef.current?.()
     setDraft(null)
+    setUndoStack([])
     setCalOpen(false)
-    toast(dirty ? '내 일정을 저장했어요' : '바뀐 내용이 없어요')
+    setMode('all')
   }
-  const editLabel = hasMine ? '내 일정 수정' : '내 일정 등록'
+  const editLabel = hasMine ? '내 시간 고치기' : '내 시간 칠하기'
+  const saveText = saveState === 'saving' ? '저장 중…' : saveState === 'saved' ? '저장됨 ✓' : '칠하면 바로 저장돼요'
 
   function selectPerson(pid) {
     if (!canEdit(pid)) {
@@ -182,7 +225,7 @@ export default function Board({ mid, session }) {
       return
     }
     if (mode === 'edit') return setEditing(pid)
-    setMode('edit')
+    startEdit()
   }
 
   function noticeText(w, dur, final) {
@@ -435,15 +478,7 @@ export default function Board({ mid, session }) {
 
           <div className="grid grid-cols-1 items-start gap-5 min-[920px]:grid-cols-[minmax(0,1fr)_340px]">
             <section className={narrow ? '' : 'sheet'} aria-label="시간 입력">
-              {paintOn ? (
-                <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1">
-                  <span className="text-[15px] font-bold">{hasMine ? '내 일정 수정 중' : '내 일정 등록 중'}</span>
-                  <span className="text-xs text-ink2">{lockable ? '톡 치면 한 칸, 꾹 눌러 끌면 여러 칸' : '누르거나 드래그해서 칠해요'}</span>
-                  {Object.keys(draft).length > 0 && (
-                    <button className="btn-ghost btn-sm ml-auto text-no hover:text-no" onClick={() => setDraft({})}>모두 지우기</button>
-                  )}
-                </div>
-              ) : (
+              {(
                 <div className="mb-2 flex items-center justify-between gap-2.5">
                   <div className="inline-flex flex-1 gap-1 rounded-full bg-rule2 p-1 min-[920px]:flex-none" role="group" aria-label="보기">
                     {[['all', '모두 겹쳐 보기'], ['edit', '내 일정']].map(([k, label]) => (
@@ -451,25 +486,37 @@ export default function Board({ mid, session }) {
                         key={k}
                         aria-pressed={mode === k}
                         className={`min-h-[34px] flex-1 rounded-full border-0 px-3.5 text-[13px] font-semibold ${mode === k ? 'bg-sheet text-ink shadow-soft' : 'bg-transparent text-ink2 hover:text-ink'}`}
-                        onClick={() => setMode(k)}
+                        onClick={() => (k === 'edit' ? startEdit() : paintOn ? finishEdit() : setMode(k))}
                       >
                         {label}
                       </button>
                     ))}
                   </div>
-                  {!lockable && canEdit(myPid) && (
+                  {!lockable && canEdit(myPid) && !paintOn && (
                     <button className="btn-primary" onClick={startEdit}>
                       <PenIcon /> {editLabel}
                     </button>
                   )}
                 </div>
               )}
+              {paintOn && (
+                // 칠하는 중: 저장 상태 · 되돌리기 · 모두 지우기 (저장 버튼 없음)
+                <div className="mb-2 flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span className={`text-[13px] font-semibold ${saveState === 'saved' ? 'text-yes' : 'text-ink2'}`} role="status">{saveText}</span>
+                  <span className="text-xs text-ink2">{lockable ? '톡 치면 한 칸, 꾹 눌러 끌면 여러 칸' : '누르거나 드래그해서 칠해요'}</span>
+                  <span className="ml-auto flex items-center gap-1">
+                    <button className="btn-ghost btn-sm" disabled={!undoStack.length} onClick={undo}>되돌리기</button>
+                    {Object.keys(draft).length > 0 && (
+                      <button className="btn-ghost btn-sm text-no hover:text-no" onClick={() => applyDraft({})}>모두 지우기</button>
+                    )}
+                  </span>
+                </div>
+              )}
 
               {paintOn && !lockable && (
                 <div className="sticky z-[5] mb-1 flex items-center gap-2 bg-sheet py-2" style={{ top: 'env(safe-area-inset-top, 0px)' }}>
                   <Palette brush={brush} setBrush={setBrush} className="min-w-0 flex-1" />
-                  <button className="btn min-h-[44px]" onClick={cancelEdit}>취소</button>
-                  <button className="btn-primary min-h-[44px]" onClick={saveEdit}>저장</button>
+                  <button className="btn-primary min-h-[44px]" onClick={finishEdit}>다 했어요</button>
                 </div>
               )}
               {paintOn && calOpen && calToken && (
@@ -480,9 +527,9 @@ export default function Board({ mid, session }) {
                   onExpired={onCalExpired}
                   onClose={() => setCalOpen(false)}
                   onApply={(next, changed) => {
-                    setDraft(next)
+                    applyDraft(next)
                     setCalOpen(false)
-                    toast(changed ? `캘린더 내용을 ${changed}칸에 반영했어요. 저장을 눌러야 적용돼요.` : '바뀐 칸이 없어요')
+                    toast(changed ? `캘린더 내용을 ${changed}칸에 반영했어요. 마음에 안 들면 되돌리기를 누르세요.` : '바뀐 칸이 없어요')
                   }}
                 />
               )}
@@ -493,7 +540,7 @@ export default function Board({ mid, session }) {
                 mode={mode}
                 cells={draft ?? myCells}
                 canPaint={paintOn}
-                onLockedTap={canEdit(myPid) ? () => toast(`‘${editLabel}’ 버튼을 누르면 칠할 수 있어요`) : undefined}
+                onLockedTap={canEdit(myPid) ? () => toast('‘내 일정’을 누르면 바로 칠할 수 있어요') : undefined}
                 brush={brush}
                 sel={sel}
                 onSelect={setSel}
@@ -527,7 +574,7 @@ export default function Board({ mid, session }) {
                       <span className="inline-flex items-center gap-1.5"><i className="sw n" />불가</span>
                       <span className="inline-flex items-center gap-1.5"><i className="sw e" />미입력</span>
                       {!paintOn && <span>{hasMine ? '내가 칠한 시간이에요' : '아직 칠하지 않았어요'}</span>}
-                      {paintOn && <span>같은 색으로 다시 칠하면 지워져요 · 다 칠했으면 저장</span>}
+                      {paintOn && <span>같은 색으로 다시 칠하면 지워져요 · 자동으로 저장돼요</span>}
                     </>
                   ) : (
                     <>
@@ -574,8 +621,9 @@ export default function Board({ mid, session }) {
           placeOpen={placeFull}
           onPlace={() => setPlaceOpen((o) => !o)}
           onStart={startEdit}
-          onCancel={cancelEdit}
-          onSave={saveEdit}
+          onUndo={undo}
+          canUndo={undoStack.length > 0}
+          onDone={finishEdit}
         />
       )}
       <div className="sr-only" aria-live="polite">{announce}</div>
@@ -601,8 +649,8 @@ function PenIcon() {
   )
 }
 
-/** 모바일 하단 고정 바: 평소엔 [장소] + [내 일정 등록/수정], 편집 중엔 칠하기 도구 + 취소·저장. */
-function MobileBar({ painting, canPaint, editLabel, brush, setBrush, placeLabel, placeOpen, onPlace, onStart, onCancel, onSave }) {
+/** 모바일 하단 고정 바: 평소엔 [장소] + [내 시간 칠하기], 칠하는 중엔 칠하기 도구 + 되돌리기 · 다 했어요 (자동 저장). */
+function MobileBar({ painting, canPaint, editLabel, brush, setBrush, placeLabel, placeOpen, onPlace, onStart, onUndo, canUndo, onDone }) {
   return (
     <div
       className="fixed inset-x-0 bottom-0 z-30 border-t border-rule bg-[color-mix(in_oklab,var(--sheet)_92%,transparent)] px-3 pt-2.5 shadow-[0_-8px_24px_-12px_rgba(42,40,56,.18)] backdrop-blur"
@@ -612,8 +660,8 @@ function MobileBar({ painting, canPaint, editLabel, brush, setBrush, placeLabel,
         <div className="mx-auto flex max-w-[560px] flex-col gap-2">
           <Palette brush={brush} setBrush={setBrush} compact />
           <div className="grid grid-cols-[1fr_2fr] gap-2">
-            <button type="button" className="btn min-h-[48px]" onClick={onCancel}>취소</button>
-            <button type="button" className="btn-primary min-h-[48px]" onClick={onSave}>저장</button>
+            <button type="button" className="btn min-h-[48px]" disabled={!canUndo} onClick={onUndo}>되돌리기</button>
+            <button type="button" className="btn-primary min-h-[48px]" onClick={onDone}>다 했어요 · 결과 보기</button>
           </div>
         </div>
       ) : (
