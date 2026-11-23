@@ -2,12 +2,15 @@ import { useEffect, useState } from 'react'
 import { ActivityIndicator, View } from 'react-native'
 import { StatusBar } from 'expo-status-bar'
 import * as Linking from 'expo-linking'
+import * as Notifications from 'expo-notifications'
+import { appPathOf } from '@overlap/core/api/notify'
 import { Ionicons } from '@expo/vector-icons'
 import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native'
 import { createBottomTabNavigator } from '@react-navigation/bottom-tabs'
 import { createNativeStackNavigator } from '@react-navigation/native-stack'
 import { supabase } from './src/lib/supabase'
 import { useTheme } from './src/lib/theme'
+import { refreshAppPush, urlOfResponse } from './src/lib/push'
 import LoginScreen from './src/screens/LoginScreen'
 import HomeScreen from './src/screens/HomeScreen'
 import ScheduleScreen from './src/screens/ScheduleScreen'
@@ -23,6 +26,21 @@ const Stack = createNativeStackNavigator()
 const linking = {
   prefixes: [Linking.createURL('/'), 'overlap://'],
   config: { screens: { Tabs: { screens: { Home: '', Schedule: 'schedule', Friends: 'friends' } }, Board: 'm/:mid', NewMeeting: 'new', Settings: 'settings' } },
+  // 알림을 눌러 앱이 열리거나(처음) 앱이 켜진 채 누르면 담긴 주소로 이동
+  async getInitialURL() {
+    const url = await Linking.getInitialURL()
+    if (url) return url
+    const pushed = urlOfResponse(await Notifications.getLastNotificationResponseAsync())
+    return pushed ? Linking.createURL(appPathOf(pushed)) : null
+  },
+  subscribe(listener) {
+    const a = Linking.addEventListener('url', ({ url }) => listener(url))
+    const b = Notifications.addNotificationResponseReceivedListener((r) => {
+      const pushed = urlOfResponse(r)
+      if (pushed) listener(Linking.createURL(appPathOf(pushed)))
+    })
+    return () => { a.remove(); b.remove() }
+  },
 }
 const ICONS = { Home: 'calendar-outline', Schedule: 'today-outline', Friends: 'people-outline' }
 
@@ -57,6 +75,9 @@ export default function App() {
     const { data } = supabase.auth.onAuthStateChange((_e, s) => setSession(s))
     return () => data.subscription.unsubscribe()
   }, [])
+
+  // 로그인돼 있고 알림을 켜 둔 기기면 토큰을 다시 등록
+  useEffect(() => { if (session) refreshAppPush() }, [session?.user?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // React Navigation 색도 같은 토큰으로
   const base = mode === 'dark' ? DarkTheme : DefaultTheme

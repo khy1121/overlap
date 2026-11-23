@@ -20,7 +20,8 @@
     "./api/profile": "./src/api/profile.js",
     "./site": "./src/site.js",
     "./hooks/useMeeting": "./src/hooks/useMeeting.js",
-    "./newMeeting": "./src/newMeeting.js"
+    "./newMeeting": "./src/newMeeting.js",
+    "./api/notify": "./src/api/notify.js"
   },
   "scripts": {
     "test": "vitest run"

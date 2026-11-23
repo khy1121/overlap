@@ -26,6 +26,8 @@ module.exports = {
     orientation: 'portrait',
     icon: './assets/icon.png',
     userInterfaceStyle: 'automatic',
+    // Expo Go와 같은 새 아키텍처로 빌드 (확인한 환경과 같게)
+    newArchEnabled: true,
     splash: { image: './assets/splash.png', resizeMode: 'contain', backgroundColor: '#F2F4F6' },
     ios: { bundleIdentifier: 'kr.overlap.app', supportsTablet: false },
     android: {
@@ -33,7 +35,11 @@ module.exports = {
       package: 'kr.overlap.app',
       adaptiveIcon: { foregroundImage: './assets/adaptive-icon.png', backgroundColor: '#FFFFFF' },
     },
+    // 앱 알림: 안드로이드 알림 아이콘 색. FCM 설정(google-services.json)은 EAS 빌드 때 넣어요
+    plugins: [['expo-notifications', { color: '#3182F6' }]],
     extra: {
+      // Expo 푸시 토큰을 받으려면 EAS 프로젝트 id가 필요해요 (`eas init` 후 .env.local에 EXPO_PROJECT_ID)
+      ...(env.EXPO_PROJECT_ID ? { eas: { projectId: env.EXPO_PROJECT_ID } } : {}),
       supabaseUrl: env.EXPO_PUBLIC_SUPABASE_URL || env.VITE_SUPABASE_URL,
       supabaseKey: env.EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY || env.VITE_SUPABASE_PUBLISHABLE_KEY,
     },

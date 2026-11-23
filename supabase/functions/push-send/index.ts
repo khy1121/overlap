@@ -2,6 +2,7 @@
 // - DB 트리거·예약 작업이 부를 때: x-push-secret 헤더가 Vault의 비밀값과 같아야 해요 (외부에서 임의 발송 불가)
 // - 로그인한 사용자가 부를 때: '테스트 알림'만, 자기 기기로만 보낼 수 있어요
 // 받는 사람의 알림 설정(종류별 켜기/끄기)을 확인하고, 만료된 기기 구독은 지워요.
+// 웹 푸시(push_subscriptions)와 앱 푸시(app_push_tokens → Expo 푸시 서비스) 둘 다로 보내요.
 import { createClient } from 'jsr:@supabase/supabase-js@2'
 import { sendPush } from './webpush.ts'
 
@@ -54,16 +55,15 @@ Deno.serve(async (req) => {
     privateJwk: readJwk(Deno.env.get('VAPID_PRIVATE_JWK') || ''),
     subject: 'https://overlap-liard.vercel.app',
   }
-  if (!vapid.publicKey || !vapid.privateJwk) {
-    // 값은 절대 내보내지 않고, 무엇이 빠졌는지만 알려요
+  const webReady = Boolean(vapid.publicKey && vapid.privateJwk)
+  let webCheck: Record<string, string> | null = null
+  if (!webReady) {
+    // 값은 절대 내보내지 않고, 무엇이 빠졌는지만 알려요 (앱 푸시는 VAPID 없이도 보내요)
     const raw = (Deno.env.get('VAPID_PRIVATE_JWK') || '').trim()
-    return json(500, {
-      error: 'not_configured',
-      check: {
-        public_key: vapid.publicKey ? `ok(${vapid.publicKey.length}자)` : 'missing',
-        private_jwk: vapid.privateJwk ? 'ok' : raw ? `invalid(${raw.length}자, 필요 항목 kty·crv·x·y·d: ${['kty', 'crv', 'x', 'y', 'd'].map((k) => (raw.includes(`"${k}"`) ? k : `${k}없음`)).join(',')})` : 'missing',
-      },
-    })
+    webCheck = {
+      public_key: vapid.publicKey ? `ok(${vapid.publicKey.length}자)` : 'missing',
+      private_jwk: vapid.privateJwk ? 'ok' : raw ? `invalid(${raw.length}자, 필요 항목 kty·crv·x·y·d: ${['kty', 'crv', 'x', 'y', 'd'].map((k) => (raw.includes(`"${k}"`) ? k : `${k}없음`)).join(',')})` : 'missing',
+    }
   }
 
   let input: Record<string, unknown> = {}
@@ -112,14 +112,42 @@ Deno.serve(async (req) => {
   }
   if (!targets.length) return json(200, { sent: 0 })
 
-  const { data: subs } = await admin.from('push_subscriptions').select('id,endpoint,p256dh,auth').in('user_id', targets)
+  const [{ data: webSubs }, { data: appRows }] = await Promise.all([
+    admin.from('push_subscriptions').select('id,endpoint,p256dh,auth').in('user_id', targets),
+    admin.from('app_push_tokens').select('id,token').in('user_id', targets), // 0021 전이면 오류 → 빈 목록
+  ])
+  const subs = webReady ? webSubs || [] : []
+  const apps: { id: string; token: string }[] = appRows || []
+  if (!webReady && !apps.length) return json(500, { error: 'not_configured', check: webCheck })
   const payload = JSON.stringify(message)
   let sent = 0
   const expired: string[] = []
+  const expiredApps: string[] = []
+  // 앱: Expo 푸시 서비스로 100개씩. 받지 못하는 기기(DeviceNotRegistered)는 지워요
+  for (let i = 0; i < apps.length; i += 100) {
+    const batch = apps.slice(i, i + 100)
+    try {
+      const res = await fetch('https://exp.host/--/api/v2/push/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify(batch.map((a) => ({
+          to: a.token, title: message.title, body: message.body, sound: 'default', priority: 'high',
+          channelId: 'default', data: { url: message.url, kind },
+        }))),
+      })
+      const out = await res.json().catch(() => ({}))
+      ;(out?.data || []).forEach((t: { status?: string; details?: { error?: string } }, j: number) => {
+        if (t?.status === 'ok') sent++
+        else if (t?.details?.error === 'DeviceNotRegistered') expiredApps.push(batch[j].id)
+      })
+    } catch {
+      /* 앱 발송 실패가 웹 발송을 막지 않게 */
+    }
+  }
   await Promise.all(
-    (subs || []).map(async (s: { id: string; endpoint: string; p256dh: string; auth: string }) => {
+    subs.map(async (s: { id: string; endpoint: string; p256dh: string; auth: string }) => {
       try {
-        const status = await sendPush(s, payload, vapid)
+        const status = await sendPush(s, payload, { ...vapid, privateJwk: vapid.privateJwk! }) // webReady일 때만 여기 와요
         if (status === 404 || status === 410) expired.push(s.id)
         else if (status >= 200 && status < 300) sent++
       } catch {
@@ -128,5 +156,6 @@ Deno.serve(async (req) => {
     }),
   )
   if (expired.length) await admin.from('push_subscriptions').delete().in('id', expired)
-  return json(200, { sent, devices: subs?.length || 0, removed: expired.length })
+  if (expiredApps.length) await admin.from('app_push_tokens').delete().in('id', expiredApps)
+  return json(200, { sent, devices: subs.length + apps.length, removed: expired.length + expiredApps.length, ...(webCheck ? { web: 'not_configured' } : {}) })
 })
