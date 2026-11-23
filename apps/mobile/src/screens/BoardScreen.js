@@ -38,6 +38,20 @@ export default function BoardScreen({ route, navigation }) {
   const [open, setOpen] = useState(0)
 
   useEffect(() => { if (cfg?.title) navigation.setOptions({ title: cfg.title }) }, [cfg?.title, navigation])
+  // 방금 만든 약속: 친구 초대 결과와 링크 보내기 (한 번만)
+  const created = route.params?.created
+  useEffect(() => {
+    if (!created || !cfg) return
+    navigation.setParams({ created: undefined })
+    const head = created.invited ? `친구 ${created.invited}명을 초대했어요.` : '약속을 만들었어요.'
+    const tail = created.failed ? ` (${created.failed}명은 초대하지 못했어요)` : ''
+    Alert.alert(head + tail, '다른 사람에게는 링크를 보내 주세요. 내 시간도 먼저 칠해 두면 좋아요.', [
+      { text: '나중에', style: 'cancel' },
+      { text: '링크 보내기', onPress: () => Share.share({ message: `${cfg.title}
+되는 시간을 칠해 주세요!
+${meetingLink(mid)}` }) },
+    ])
+  }, [created, cfg, mid, navigation])
   // 처음 열 때: 이미 칠했으면 겹쳐 보기, 아직이면 바로 칠하기
   useEffect(() => {
     if (m.status !== 'ready' || !myPid || mode) return

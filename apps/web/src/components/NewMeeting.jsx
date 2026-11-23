@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { MAX_DAYS, durText, nSlots, rangeError, rangeText } from '@overlap/core/schedule'
+import { MAX_DAYS, durText, nSlots, rangeText } from '@overlap/core/schedule'
+import { createMeeting, newMeetingPlan } from '@overlap/core/newMeeting'
 import { TIME_PRESETS, addDays, chip, datePresets, daysBetween, tile } from '../lib/presets'
 import { useToast } from '../hooks/useToast'
 import Avatar from './Avatar'
@@ -35,22 +36,9 @@ export default function NewMeeting() {
     supabase.rpc('my_friends').then(({ data, error }) => setFriends(error ? [] : data))
   }, [])
 
-  const days = form.start && form.end ? daysBetween(form.start, form.end) : 0
-  const one = days === 1
-  const split = form.split && !one
-  const from = Number(form.from)
-  const to = Number(form.to)
-  // schedule.js 계산 함수에 넣는 모양. 하루짜리거나 따로 정하지 않으면 시간대가 곧 첫날·마지막 날 시각이에요
-  const cfg = {
-    start: form.start,
-    days,
-    from,
-    to,
-    startHour: split ? Number(form.startHour) : from,
-    endHour: split ? Number(form.endHour) : to,
-    dur: form.dur,
-  }
-  const err = days >= 1 ? rangeError(cfg) : '날짜를 확인해 주세요'
+  // 계산용 cfg·오류는 @overlap/core (앱과 같아요). 하루짜리거나 따로 정하지 않으면 시간대가 곧 첫날·마지막 날 시각이에요
+  const { days, one, split, cfg, err } = newMeetingPlan(form)
+  const { from, to } = cfg
   const maxDur = Math.max(1, Math.min(24, nSlots(cfg) || 1))
   const datePreset = customDate ? null : presets.find((p) => p.start === form.start && p.end === form.end)
   const timePreset = customTime || split ? null : TIME_PRESETS.find((p) => p.from === from && p.to === to)
@@ -83,31 +71,17 @@ export default function NewMeeting() {
     }
     if (err) return toast(err)
     setBusy(true)
-    const args = {
-      p_title: form.title.trim(),
-      p_start: form.start,
-      p_from: one ? cfg.startHour : cfg.from,
-      p_to: one ? cfg.endHour : cfg.to,
-      p_dur: form.dur,
-      p_expected: Math.max(1, Math.min(50, Number(form.count) || 4)),
-      p_days: days,
-      p_start_hour: cfg.startHour,
-      p_end_hour: cfg.endHour,
-    }
-    const { data: mid, error } = await supabase.rpc('create_meeting', args)
-    if (error) {
+    let res
+    try {
+      res = await createMeeting(supabase, form, [...picked]) // 고른 친구도 바로 초대
+    } catch (e) {
       setBusy(false)
-      const outdated = /function|p_days|dur_check|null value/i.test(error.message)
-      const msg = outdated ? '서버 업데이트가 아직이라 이 설정(기간·만나는 시간)으로는 만들 수 없어요.' : `약속을 만들지 못했어요: ${error.message}`
-      setSubmitErr(msg)
-      return toast(msg)
+      setSubmitErr(e.message)
+      return toast(e.message)
     }
-    // 고른 친구를 바로 초대
-    const ids = [...picked]
-    const results = await Promise.all(ids.map((target) => supabase.rpc('invite_friend', { mid, target })))
-    const failed = results.filter((r) => r.error).length
+    const { mid, invited, failed } = res
     // 초대 실패 수는 약속 화면 안내에 함께 보여요 (바로 이동해서 여기 토스트는 안 보여요)
-    window.location.href = `/?m=${mid}&new=1${ids.length - failed ? `&invited=${ids.length - failed}` : ''}${failed ? `&failed=${failed}` : ''}`
+    window.location.href = `/?m=${mid}&new=1${invited ? `&invited=${invited}` : ''}${failed ? `&failed=${failed}` : ''}`
   }
 
   const hourSelect = (label, value, first, onPick) => (
