@@ -12,6 +12,7 @@ import HomeScreen from './src/screens/HomeScreen'
 import ScheduleScreen from './src/screens/ScheduleScreen'
 import FriendsScreen from './src/screens/FriendsScreen'
 import SettingsScreen from './src/screens/SettingsScreen'
+import BoardScreen from './src/screens/BoardScreen'
 
 const Tab = createBottomTabNavigator()
 const Stack = createNativeStackNavigator()
@@ -66,6 +67,7 @@ export default function App() {
       {session ? (
         <Stack.Navigator>
           <Stack.Screen name="Tabs" options={{ headerShown: false }}>{() => <Tabs session={session} />}</Stack.Screen>
+          <Stack.Screen name="Board" component={BoardScreen} options={{ title: '약속', headerBackTitle: '뒤로' }} />
           <Stack.Screen name="Settings" component={SettingsScreen} options={{ title: '설정', headerBackTitle: '뒤로' }} />
         </Stack.Navigator>
       ) : (

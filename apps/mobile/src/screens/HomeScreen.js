@@ -6,14 +6,14 @@ import { confirmedTime, fetchMyEntries, fetchMyMeetings, hm, meetingSpan } from 
 import { supabase } from '../lib/supabase'
 import { displayName } from '../lib/auth'
 import { type, useTheme } from '../lib/theme'
-import { openMeetingOnWeb, openNewMeetingOnWeb } from '../lib/web'
+import { openNewMeetingOnWeb } from '../lib/web'
 import { Avatar, Button, MeetingRow, Section } from '../ui'
 
 const md = (d) => `${d.getMonth() + 1}/${d.getDate()}`
 
 /**
  * 홈 (웹 홈과 같은 구성): [내가 칠할 약속 카드] → 다가오는 약속 → 조율 중, 아래 고정 '새 약속 만들기'.
- * 약속 화면·새 약속은 다음 단계에서 앱 화면으로 만들기 전까지 웹으로 열어요.
+ * 새 약속 만들기는 다음 단계에서 앱 화면으로 만들기 전까지 웹으로 열어요.
  */
 export default function HomeScreen({ session, navigation }) {
   const { c, radius } = useTheme()
@@ -58,7 +58,7 @@ export default function HomeScreen({ session, navigation }) {
             <Text style={[type.caption, { color: c.accent, fontWeight: '600' }]}>내 시간 입력 필요 · {first.participants?.[0]?.count ?? 0}명 참여{first.owner === uid ? ' · 내가 만듦' : ''}</Text>
             <Text numberOfLines={1} style={{ fontSize: 19, lineHeight: 26, fontWeight: '800', color: c.ink }}>{first.title}</Text>
             <Text style={[type.caption, { color: c['ink-2'] }]}>{md(meetingSpan(first).start)}–{md(meetingSpan(first).end)}</Text>
-            <Button label="시간 칠하기" onPress={() => openMeetingOnWeb(first.id)} style={{ marginTop: 8 }} />
+            <Button label="시간 칠하기" onPress={() => navigation.navigate('Board', { mid: first.id })} style={{ marginTop: 8 }} />
           </View>
         )}
 
@@ -71,7 +71,7 @@ export default function HomeScreen({ session, navigation }) {
               main={t.start.getDate()}
               title={m.title}
               meta={`(${DAYS[t.start.getDay()]}) ${t.open ? `${hm(t.start)}부터` : `${hm(t.start)}–${hm(t.end)}`}${m.place?.name ? ` · ${m.place.name}` : ''}`}
-              onPress={() => openMeetingOnWeb(m.id)}
+              onPress={() => navigation.navigate('Board', { mid: m.id })}
             />
           ))}
         </Section>
@@ -88,7 +88,7 @@ export default function HomeScreen({ session, navigation }) {
                 title={m.title}
                 meta={`${md(s.start)}–${md(s.end)}${m.owner === uid ? ' · 내가 만듦' : ''}`}
                 tag={entered && !entered.has(m.id) ? '입력 전' : null}
-                onPress={() => openMeetingOnWeb(m.id)}
+                onPress={() => navigation.navigate('Board', { mid: m.id })}
               />
             )
           })}
