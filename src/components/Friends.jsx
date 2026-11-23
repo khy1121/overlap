@@ -137,6 +137,46 @@ function AddFriendDialog({ open, onClose, onAdded }) {
   )
 }
 
+/** 내 친구 코드 한 줄: 코드 + [복사] [카톡 보내기]. 코드 입력·새 코드는 '코드로 추가' 창에서 */
+function MyCode({ onOpen }) {
+  const toast = useToast()
+  const [me, setMe] = useState(null)
+  useEffect(() => {
+    supabase.rpc('my_profile').then(({ data }) => setMe(data?.[0] || null))
+  }, [])
+  const code = formatCode(me?.invite_code)
+  return (
+    <section className="sheet flex items-center gap-2 !py-3" aria-label="내 친구 코드">
+      <button type="button" className="min-w-0 flex-1 border-0 bg-transparent p-0 text-left" onClick={onOpen}>
+        <span className="block text-[12px] font-medium text-ink2">내 친구 코드</span>
+        <b className="tabular block font-mono text-[19px] tracking-[.1em]">{code || '····-····'}</b>
+      </button>
+      <button
+        className="btn-soft btn-sm"
+        disabled={!code}
+        onClick={async () => toast((await copyText(`Overlap에서 친구 추가해 줘! 내 초대 코드: ${code}\n${APP_ORIGIN}`)) ? '코드를 복사했어요' : '복사하지 못했어요')}
+      >
+        복사
+      </button>
+      {canKakaoShare() && code && (
+        <button
+          className={`btn btn-sm ${KAKAO_BTN}`}
+          onClick={() =>
+            shareKakao({
+              title: 'Overlap에서 친구 해요!',
+              description: `내 친구 코드: ${code}\n앱에서 코드를 입력하면 친구 신청이 와요.`,
+              url: APP_ORIGIN,
+              button: 'Overlap 열기',
+            }).catch((e) => toast(e.message))
+          }
+        >
+          카톡 보내기
+        </button>
+      )}
+    </section>
+  )
+}
+
 /** 친구 목록 읽기: 최근에 같은 회의가 잡힌 순서로 10명씩. 서버 함수가 없으면 이름순으로 대신 보여 줘요. */
 async function fetchFriends(offset) {
   const r = await supabase.rpc('my_friends_recent', { lim: PAGE, off: offset })
@@ -204,38 +244,26 @@ export default function Friends({ session }) {
 
   const fmt = (d) => { const [, m, day] = d.split('-').map(Number); return `${m}/${day}` }
   return (
-    <div className="mx-auto flex w-full max-w-[640px] flex-col gap-4">
-      <PageHeader title="친구" sub={recent ? '최근에 함께 약속을 잡은 친구부터 보여요.' : '친구 목록이에요.'}>
-        <button className="btn-primary" onClick={() => setDialog(true)}>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true"><path d="M12 5v14M5 12h14" /></svg>
-          코드로 친구 신청
-        </button>
+    <div className="mx-auto flex w-full max-w-[640px] flex-col gap-3">
+      <PageHeader title="친구" back={false}>
+        <button className="btn-primary btn-sm" onClick={() => setDialog(true)}>+ 코드로 추가</button>
       </PageHeader>
 
-      {KAKAO_FRIENDS_ON ? (
-        <KakaoFriends user={session?.user} onChanged={reload} />
-      ) : (
-        // 카톡 친구 찾기는 카카오 권한 승인 전까지 숨기고, 지금 되는 방법을 안내해요
-        <section className="sheet flex flex-col gap-2.5" aria-label="친구 추가 방법">
-          <div className="text-[15px] font-bold">친구는 이렇게 추가해요</div>
-          <ul className="m-0 flex list-none flex-col gap-1.5 p-0 text-[13px] text-ink2">
-            <li><b className="text-ink">친구 코드</b> · 내 코드를 카톡으로 보내거나, 받은 코드를 입력해요.</li>
-            <li><b className="text-ink">같은 약속</b> · 함께 약속에 들어온 사람은 약속 화면 참여자 목록에서 바로 친구 신청할 수 있어요.</li>
-          </ul>
-          <button className="btn-soft self-start" onClick={() => setDialog(true)}>내 코드 보내기 · 코드 입력</button>
-        </section>
-      )}
+      {/* 내 친구 코드 한 줄: 복사 · 카톡 보내기 (긴 안내 카드 대신) */}
+      <MyCode onOpen={() => setDialog(true)} />
+      <p className="-mt-1 m-0 px-1 text-[12px] text-ink2">같은 약속에 들어온 사람은 약속 화면 참여자 줄에서 바로 친구 신청할 수 있어요.</p>
+      {KAKAO_FRIENDS_ON && <KakaoFriends user={session?.user} onChanged={reload} />}
 
       {incoming.length > 0 && (
-        <section className="sheet !py-2" aria-label="받은 친구 신청">
-          <div className="flex items-center gap-2 px-1 pb-1 pt-2">
-            <b className="text-[15px]">받은 신청</b>
+        <section className="rounded-md bg-pen-soft px-3 py-1" aria-label="받은 친구 신청">
+          <div className="flex items-center gap-2 pb-0.5 pt-2">
+            <b className="text-[14px]">받은 신청</b>
             <span className="rounded-full bg-no px-2 text-[12px] font-bold text-white">{incoming.length}</span>
           </div>
           <ul className="m-0 list-none p-0">
             {incoming.map((req) => (
-              <li key={req.id} className="flex items-center gap-3 border-b border-rule2 px-1 py-3 last:border-0">
-                <Avatar name={req.name} size={40} />
+              <li key={req.id} className="flex items-center gap-3 border-b border-rule2 py-2.5 last:border-0">
+                <Avatar name={req.name} size={36} />
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-[15px] font-semibold">{req.name || '이름 없음'}</div>
                   <div className="text-[13px] text-ink2">친구 신청을 보냈어요</div>
@@ -248,10 +276,8 @@ export default function Friends({ session }) {
         </section>
       )}
 
-      <section className="sheet !py-2">
-        <div className="px-1 pb-1 pt-2">
-          <b className="text-[15px]">친구 {total}명</b>
-        </div>
+      <h2 className="m-0 mt-1 text-[15px] font-bold text-ink2">친구 {total}명{recent && total > 0 ? <span className="ml-1.5 text-[12px] font-medium">· 최근 함께한 순</span> : null}</h2>
+      <section className="sheet !py-1">
         <ul className="m-0 list-none p-0">
           {rows === null && <li className="px-1 py-4 text-[13px] text-ink2">불러오는 중…</li>}
           {rows?.length === 0 && (
@@ -261,12 +287,12 @@ export default function Friends({ session }) {
             </li>
           )}
           {rows?.map((f) => (
-            <li key={f.user_id} className="flex items-center gap-3 border-b border-rule2 px-1 py-3 last:border-0">
-              <Avatar name={f.name} size={40} />
+            <li key={f.user_id} className="flex items-center gap-3 border-b border-rule2 px-1 py-2.5 last:border-0">
+              <Avatar name={f.name} size={36} />
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[15px] font-semibold">{f.name || '이름 없음'}</div>
                 <div className="truncate text-[13px] text-ink2">
-                  {f.last_date ? `최근 함께: ${fmt(f.last_date)} · ${f.last_title}` : recent ? '아직 함께한 약속이 없어요' : ''}
+                  {f.last_date ? `최근 함께 ${fmt(f.last_date)} · ${f.last_title}` : recent ? '아직 함께한 약속이 없어요' : ''}
                 </div>
               </div>
               {confirming === f.user_id ? (
@@ -275,7 +301,7 @@ export default function Friends({ session }) {
                   <button className="btn-ghost btn-sm" onClick={() => setConfirming(null)}>취소</button>
                 </span>
               ) : (
-                <button className="btn-ghost btn-sm" onClick={() => setConfirming(f.user_id)}>친구 끊기</button>
+                <button className="btn-ghost btn-sm text-ink2" aria-label={`${f.name || '이름 없음'} 친구 끊기`} onClick={() => setConfirming(f.user_id)}>끊기</button>
               )}
             </li>
           ))}
