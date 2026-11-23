@@ -1,4 +1,3 @@
-import { useState } from 'react'
 import { blocked, dayLabel, nDays, rowFrom, rowTo } from '../lib/schedule'
 
 /** 기본 나누는 시각: 오전(~12시) · 오후(12~18시) · 저녁(18시~) */
@@ -62,9 +61,8 @@ const LOOK = {
  * 큰 칸 입력: 요일 × 시간대. 누르면 그 시간대의 30분 칸들을 한꺼번에 칠해요(저장은 30분 칸 그대로라 추천 계산은 같아요).
  * 칸 아래 'n명 돼요'는 다른 사람 중 그 시간대의 절반 이상이 가능·조율인 사람 수예요.
  */
-export default function CoarseGrid({ cfg, cells, people, myPid, onChange, bounds = DEFAULT_BOUNDS, onBounds }) {
+export default function CoarseGrid({ cfg, cells, people, myPid, onChange, bounds = DEFAULT_BOUNDS }) {
   const parts = partsOf(cfg, bounds)
-  const [editing, setEditing] = useState(false)
   const days = nDays(cfg)
   const others = people.filter((p) => p.id !== myPid)
 
@@ -82,15 +80,6 @@ export default function CoarseGrid({ cfg, cells, people, myPid, onChange, bounds
   const okCount = (keys) => others.filter((p) => keys.filter((k) => ['y', 'm'].includes(p.cells?.[k])).length * 2 >= keys.length).length
 
   return (
-    <div className="flex flex-col gap-1.5">
-      {onBounds && (
-        <div className="flex justify-end">
-          <button type="button" className="border-0 bg-transparent p-1 text-[12px] font-semibold text-accent" aria-expanded={editing} onClick={() => setEditing((v) => !v)}>
-            {editing ? '시간대 바꾸기 닫기' : '시간대 바꾸기'}
-          </button>
-        </div>
-      )}
-      {editing && <BoundsEditor cfg={cfg} bounds={bounds} onBounds={onBounds} />}
     <div className="flex flex-col gap-1.5" role="grid" aria-label="큰 칸으로 내 시간 입력">
       <div className="grid gap-1.5" style={{ gridTemplateColumns: `52px repeat(${parts.length}, minmax(0, 1fr))` }} role="row">
         <span />
@@ -146,7 +135,6 @@ export default function CoarseGrid({ cfg, cells, people, myPid, onChange, bounds
         )
       })}
     </div>
-    </div>
   )
 }
 
@@ -154,7 +142,7 @@ export default function CoarseGrid({ cfg, cells, people, myPid, onChange, bounds
  * 시간대 나누기 맞춤: 몇 칸(2~4)과 나누는 시각. 바꾸면 바로 큰 칸이 다시 그려져요.
  * 나누는 시각은 약속 시간 범위 안에서만 고를 수 있어요.
  */
-function BoundsEditor({ cfg, bounds, onBounds }) {
+export function BoundsEditor({ cfg, bounds, onBounds }) {
   const a = rowFrom(cfg)
   const b = rowTo(cfg)
   const inRange = bounds.filter((h) => h > a && h < b).sort((x, y) => x - y)
@@ -169,7 +157,7 @@ function BoundsEditor({ cfg, bounds, onBounds }) {
   }
   if (hours.length < 1) return <p className="m-0 text-[12px] text-ink2">약속 시간이 짧아서 나눌 수 없어요.</p>
   return (
-    <div className="flex flex-col gap-2 rounded-[14px] bg-rule2 p-3">
+    <div className="flex flex-col gap-2 rounded-[12px] bg-sheet p-3">
       <div className="flex flex-wrap items-center gap-1.5">
         <span className="mr-1 text-[13px] font-semibold">몇 칸으로</span>
         {[2, 3, 4].filter((n) => n - 1 <= hours.length).map((n) => (
