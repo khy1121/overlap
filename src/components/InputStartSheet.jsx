@@ -5,7 +5,7 @@ import { useEffect, useRef } from 'react'
  * '다 돼요, 안 되는 시간만 빼기'가 가장 빨라서 맨 위·추천이에요
  * (사람들은 되는 시간을 물으면 최소한만 고르는 경향이 있어요).
  */
-export default function InputStartSheet({ waiting, canCalendar, onSubtract, onSelect, onCalendar, onClose }) {
+export default function InputStartSheet({ waiting, canCalendar, habit, onHabit, onSubtract, onSelect, onCalendar, onClose }) {
   const ref = useRef(null)
   useEffect(() => { ref.current?.showModal() }, [])
   const pick = (fn) => { ref.current?.close(); fn() }
@@ -29,6 +29,12 @@ export default function InputStartSheet({ waiting, canCalendar, onSubtract, onSe
           </span>
           <span className="text-[13px] text-ink2">처음엔 전부 가능 · 안 되는 칸만 누르면 끝</span>
         </button>
+        {habit && (
+          <button type="button" className={`${opt} bg-rule2`} onClick={() => pick(onHabit)}>
+            <span className="text-[15px] font-bold">자주 되던 시간으로 채우기</span>
+            <span className="text-[13px] text-ink2">지난 약속 {habit.meetings}개에서 자주 가능했던 시간 · 채운 뒤 고칠 수 있어요</span>
+          </button>
+        )}
         <button type="button" className={`${opt} bg-rule2`} onClick={() => pick(onSelect)}>
           <span className="text-[15px] font-bold">되는 시간만 고를게요</span>
           <span className="text-[13px] text-ink2">바쁜 주라면 · 되는 칸만 눌러요</span>
