@@ -17,10 +17,14 @@ function rootEnv() {
 }
 const env = { ...rootEnv(), ...process.env }
 
+// EAS 프로젝트 (@rlagjsdud/overlap). 공개 값이에요. 빌드 서버에는 .env.local이 없어서 여기 직접 둬요
+const EAS_PROJECT_ID = env.EXPO_PROJECT_ID || '77c8b76b-598c-4f11-853f-62290711d0dc'
+
 module.exports = {
   expo: {
     name: 'Overlap',
     slug: 'overlap',
+    owner: 'rlagjsdud',
     scheme: 'overlap',
     version: '1.0.0',
     orientation: 'portrait',
@@ -38,8 +42,8 @@ module.exports = {
     // 앱 알림: 안드로이드 알림 아이콘 색. FCM 설정(google-services.json)은 EAS 빌드 때 넣어요
     plugins: [['expo-notifications', { color: '#3182F6' }]],
     extra: {
-      // Expo 푸시 토큰을 받으려면 EAS 프로젝트 id가 필요해요 (`eas init` 후 .env.local에 EXPO_PROJECT_ID)
-      ...(env.EXPO_PROJECT_ID ? { eas: { projectId: env.EXPO_PROJECT_ID } } : {}),
+      // Expo 푸시 토큰·EAS 빌드에 쓰는 프로젝트 id
+      eas: { projectId: EAS_PROJECT_ID },
       supabaseUrl: env.EXPO_PUBLIC_SUPABASE_URL || env.VITE_SUPABASE_URL,
       // Google 캘린더 연결: 웹과 같은 공개 클라이언트 id (비밀값 아님)
       googleClientId: env.EXPO_PUBLIC_GOOGLE_CLIENT_ID || env.VITE_GOOGLE_CLIENT_ID,
