@@ -1,4 +1,4 @@
-import { dayLabel, effDur, timeText } from '../lib/schedule'
+import { dayLabel, effDur, timeText } from '@overlap/core/schedule'
 import Avatar from './Avatar'
 
 /** 후보 시간의 30분 칸 키들 */

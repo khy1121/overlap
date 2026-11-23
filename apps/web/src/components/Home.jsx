@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { displayName } from '../lib/auth'
-import { DAYS } from '../lib/schedule'
+import { DAYS } from '@overlap/core/schedule'
 import { confirmedTime, deleteMeeting, fetchMyMeetings, fetchMyEntries, hm, meetingSpan } from '../lib/meetings'
 import { useToast } from '../hooks/useToast'
 import InstallApp from './InstallApp'

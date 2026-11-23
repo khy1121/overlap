@@ -1,0 +1,20 @@
+{
+  "name": "@overlap/core",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "웹·앱 공통 로직 (화면·브라우저와 무관): 시간 계산, 추천, 빠른 선택, 큰 칸, 자주 되던 시간",
+  "exports": {
+    ".": "./src/index.js",
+    "./schedule": "./src/schedule.js",
+    "./presets": "./src/presets.js",
+    "./parts": "./src/parts.js",
+    "./habits": "./src/habits.js"
+  },
+  "scripts": {
+    "test": "vitest run"
+  },
+  "devDependencies": {
+    "vitest": "2.1.9"
+  }
+}

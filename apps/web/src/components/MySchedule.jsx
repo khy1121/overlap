@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
-import { DAYS, iso } from '../lib/schedule'
+import { DAYS, iso } from '@overlap/core/schedule'
 import { confirmedTime, fetchMyMeetings, googleAddLink, hm, meetingSpan } from '../lib/meetings'
 import { requestCalendarToken } from '../lib/googleCalendar'
 import { useToast } from '../hooks/useToast'

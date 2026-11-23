@@ -1,4 +1,4 @@
-import { spanText, summary, whenText } from '../lib/schedule'
+import { spanText, summary, whenText } from '@overlap/core/schedule'
 import Avatar from './Avatar'
 
 const RING = { y: 'bg-yes', m: 'bg-maybe', n: 'bg-no' }

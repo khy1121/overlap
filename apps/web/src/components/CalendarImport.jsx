@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { blocked, nDays, nSlots, slotRange } from '../lib/schedule'
+import { blocked, nDays, nSlots, slotRange } from '@overlap/core/schedule'
 
 /** Google 캘린더 free/busy만 읽어서 바쁜 칸을 찾는다. 일정 제목·내용은 받지 않는다. */
 export default function CalendarImport({ cfg, token, cells, onApply, onClose, onExpired }) {

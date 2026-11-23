@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { DAYS, blocked, dayLabel, dayOf, md, nDays, nSlots, tm } from '../lib/schedule'
+import { DAYS, blocked, dayLabel, dayOf, md, nDays, nSlots, tm } from '@overlap/core/schedule'
 
 /**
  * 주간 시간표.

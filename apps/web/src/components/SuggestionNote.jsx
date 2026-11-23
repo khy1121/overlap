@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { dayLabel, spanText, startChoices, summary, timeText, tm } from '../lib/schedule'
+import { dayLabel, spanText, startChoices, summary, timeText, tm } from '@overlap/core/schedule'
 import Avatar from './Avatar'
 import { useDragScroll } from '../hooks/useDragScroll'
 

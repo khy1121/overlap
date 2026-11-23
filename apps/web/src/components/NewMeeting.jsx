@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { MAX_DAYS, durText, nSlots, rangeError, rangeText } from '../lib/schedule'
+import { MAX_DAYS, durText, nSlots, rangeError, rangeText } from '@overlap/core/schedule'
 import { TIME_PRESETS, addDays, chip, datePresets, daysBetween, tile } from '../lib/presets'
 import { useToast } from '../hooks/useToast'
 import Avatar from './Avatar'

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '../lib/supabase'
-import { md, nDays } from '../lib/schedule'
+import { md, nDays } from '@overlap/core/schedule'
 import { copyText } from '../lib/copy'
 import { KAKAO_BTN, canKakaoShare, shareKakao } from '../lib/kakao'
 import { useToast } from '../hooks/useToast'

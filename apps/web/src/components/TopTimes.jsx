@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { dayLabel, spanText, startChoices, timeText, tm } from '../lib/schedule'
+import { dayLabel, spanText, startChoices, timeText, tm } from '@overlap/core/schedule'
 import Avatar from './Avatar'
 
 // 아바타 테두리 색 = 이 시간에 가능 / 조율 / 불가 / 미입력
