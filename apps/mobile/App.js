@@ -25,6 +25,8 @@ const Stack = createNativeStackNavigator()
 // 웹 초대 링크(https://…/?m=)를 앱으로 바로 여는 건 스토어 서명 키로 assetlinks를 맞춘 뒤에
 const linking = {
   prefixes: [Linking.createURL('/'), 'overlap://'],
+  // 로그인·캘린더 연결에서 돌아오는 주소는 화면 이동이 아니에요 (앱 안 브라우저가 받아요)
+  filter: (url) => !/\/(auth-callback|gcal)(\?|#|$)/.test(url),
   config: { screens: { Tabs: { screens: { Home: '', Schedule: 'schedule', Friends: 'friends' } }, Board: 'm/:mid', NewMeeting: 'new', Settings: 'settings' } },
   // 알림을 눌러 앱이 열리거나(처음) 앱이 켜진 채 누르면 담긴 주소로 이동
   async getInitialURL() {

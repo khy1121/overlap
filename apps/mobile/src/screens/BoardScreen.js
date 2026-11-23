@@ -8,6 +8,8 @@ import { supabase } from '../lib/supabase'
 import { type, useTheme } from '../lib/theme'
 import { Avatar, Button, Card } from '../ui'
 import PlaceCard from '../components/PlaceCard'
+import { applyBusy, fetchBusy } from '@overlap/core/api/calendar'
+import { canGoogle, requestCalendarToken } from '../lib/gcal'
 
 // 큰 칸 한 칸의 상태: 모두 같으면 그 값(y/m/n), 하나도 없으면 u, 섞였으면 mix
 function stateOf(cells, keys) {
@@ -85,6 +87,34 @@ ${meetingLink(mid)}` }) },
     return evaluate({ ...cfg, count: Math.max(1, cfg.count - (shown.length - inPs.length)) }, inPs)
   }, [cfg, shown])
   const apply = useCallback((next) => { setUndo((u) => [...u.slice(-29), draft]); setDraft(next) }, [draft])
+  // Google 캘린더 free/busy로 채우기 (일정 제목·내용은 받지 않아요). 반영 방법은 고르게, 되돌리기 가능
+  const [gBusy, setGBusy] = useState(false)
+  async function fromGoogle() {
+    setGBusy(true)
+    try {
+      const token = await requestCalendarToken()
+      if (!token) return
+      const found = await fetchBusy(token, cfg)
+      const pick = (fillFree) => {
+        const { next, changed } = applyBusy(draft || {}, found, { markBusy: true, fillFree })
+        apply(next)
+        Alert.alert('', changed ? `${changed / 2}시간을 채웠어요. 마음에 안 들면 되돌리기를 눌러 주세요.` : '바뀐 칸이 없어요.')
+      }
+      Alert.alert(
+        `바쁜 시간 ${found.busyKeys.length / 2}시간을 찾았어요`,
+        '일정 제목이나 내용은 가져오지 않아요. 어떻게 채울까요?',
+        [
+          { text: '취소', style: 'cancel' },
+          { text: '바쁜 시간만 안 돼요로', onPress: () => pick(false) },
+          { text: '빈 시간은 가능으로도', onPress: () => pick(true) },
+        ],
+      )
+    } catch (e) {
+      Alert.alert('', e.message)
+    } finally {
+      setGBusy(false)
+    }
+  }
 
   if (m.status === 'error') {
     return <View style={[styles.center, { backgroundColor: c.paper }]}><Text style={[type.body, { color: c.ink }]}>약속을 열 수 없어요 ({m.error === 'not_found' ? '링크를 확인해 주세요' : m.error === 'deleted' ? '삭제된 약속이에요' : m.error})</Text></View>
@@ -204,6 +234,7 @@ ${meetingLink(mid)}` }) },
             <Button small kind="plain" label="되돌리기" disabled={!undo.length} onPress={() => { const prev = undo[undo.length - 1]; setUndo((u) => u.slice(0, -1)); setDraft(prev) }} />
           </View>
         )}
+        {mode === 'edit' && canGoogle && <Button small kind="soft" label="Google 캘린더에서 채우기" busy={gBusy} onPress={fromGoogle} />}
 
         <Card style={{ paddingVertical: 12, gap: 6 }}>
           <View style={styles.gridRow}>

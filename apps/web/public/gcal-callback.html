@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<meta name="referrer" content="no-referrer">
+<title>Overlap 캘린더 연결</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { margin: 0; min-height: 100vh; display: grid; place-items: center; font: 15px/1.5 system-ui, -apple-system, 'Apple SD Gothic Neo', sans-serif; background: #f2f4f6; color: #191f28; }
+  @media (prefers-color-scheme: dark) { body { background: #17171c; color: #f2f4f6; } }
+  main { padding: 24px; text-align: center; }
+  a { color: #3182f6; font-weight: 700; }
+</style>
+</head>
+<body>
+<main>
+  <p id="msg">앱으로 돌아가는 중…</p>
+  <p><a id="back" href="#" hidden>앱으로 돌아가기</a></p>
+</main>
+<script>
+  // Overlap 앱의 Google 캘린더 연결 중계 페이지.
+  // Google이 돌려준 토큰(#access_token=…, free/busy 전용)을 앱 주소로 그대로 넘겨요. 서버로는 보내지 않아요.
+  // 돌아갈 주소(state)는 우리 앱 스킴(overlap://gcal)과 Expo Go 개발 주소만 허용해요 (다른 곳으로 넘기지 않게).
+  ;(function () {
+    // 성공은 #access_token=…, 거절·오류는 ?error=… 로 올 수 있어서 둘 다 읽어요
+    var params = new URLSearchParams(location.hash.slice(1) || location.search.slice(1))
+    var target = params.get('state') || ''
+    var ok = /^(overlap:\/\/|exp:\/\/[\w.:-]+\/--\/)gcal$/.test(target)
+    history.replaceState(null, '', location.pathname) // 주소창·기록에서 토큰 지우기
+    if (!ok) {
+      document.getElementById('msg').textContent = '잘못된 접근이에요. 앱에서 다시 시도해 주세요.'
+      return
+    }
+    params.delete('state')
+    var url = target + '#' + params.toString()
+    location.replace(url)
+    var a = document.getElementById('back')
+    a.href = url
+    a.hidden = false
+  })()
+</script>
+</body>
+</html>

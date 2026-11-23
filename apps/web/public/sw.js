@@ -23,6 +23,8 @@ self.addEventListener('fetch', (e) => {
   if (req.method !== 'GET') return
   const url = new URL(req.url)
   if (url.origin !== self.location.origin) return
+  // 앱 캘린더 연결 중계 페이지는 그대로 네트워크로 (오프라인용 첫 화면으로 저장하지 않게)
+  if (url.pathname === '/gcal-callback.html') return
 
   if (req.mode === 'navigate') {
     e.respondWith(
