@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Android 6.0(API 23)+: 스플래시 배경(#F2F4F6)이 밝아서 상태바 아이콘(시계·배터리)을 어두운 색으로.
+  웹 화면이 뜬 뒤에는 Chrome이 웹 앱 theme-color에 맞춰 다시 정해요.
+-->
+<resources>
+    <style name="LauncherTheme" parent="@android:style/Theme.Translucent.NoTitleBar">
+        <item name="android:windowLightStatusBar">true</item>
+        <item name="android:statusBarColor">#F2F4F6</item>
+    </style>
+</resources>

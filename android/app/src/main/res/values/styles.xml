@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 앱 테마: 기본 투명 테마 그대로, 아래 values-v23에서 밝은 상태바용 어두운 아이콘을 켜요 -->
+<resources>
+    <style name="LauncherTheme" parent="@android:style/Theme.Translucent.NoTitleBar" />
+</resources>
