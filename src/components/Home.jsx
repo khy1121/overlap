@@ -106,7 +106,10 @@ export default function Home({ session }) {
 
       {first && (
         <section className="flex flex-col gap-1 rounded-md bg-pen-soft p-4" aria-label="내가 칠할 약속">
-          <span className="text-[13px] font-semibold text-accent">내 시간 입력 필요 · {first.participants?.[0]?.count ?? 0}명 참여</span>
+          <span className="flex items-center gap-1">
+            <span className="min-w-0 flex-1 text-[13px] font-semibold text-accent">내 시간 입력 필요 · {first.participants?.[0]?.count ?? 0}명 참여{first.owner === uid ? ' · 내가 만듦' : ''}</span>
+            {trash(first)}
+          </span>
           <a href={`/?m=${first.id}`} className="truncate text-[19px] font-extrabold text-ink no-underline">{first.title}</a>
           <span className="text-[13px] text-ink2">{md(meetingSpan(first).start)}–{md(meetingSpan(first).end)}</span>
           <a href={`/?m=${first.id}`} className="btn-primary mt-2 no-underline">시간 칠하기</a>
