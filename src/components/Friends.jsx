@@ -251,6 +251,7 @@ export default function Friends({ session }) {
 
       {/* 내 친구 코드 한 줄: 복사 · 카톡 보내기 (긴 안내 카드 대신) */}
       <MyCode onOpen={() => setDialog(true)} />
+      <p className="-mt-1 m-0 px-1 text-[12px] text-ink2">같은 약속에 들어온 사람은 약속 화면 참여자 줄에서 바로 친구 신청할 수 있어요.</p>
       {KAKAO_FRIENDS_ON && <KakaoFriends user={session?.user} onChanged={reload} />}
 
       {incoming.length > 0 && (

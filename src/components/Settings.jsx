@@ -36,6 +36,15 @@ const Row = ({ title, desc, children, compact = false }) => (
   </div>
 )
 
+/** 한 줄 링크 행 (오른쪽 화살표) */
+const LinkRow = ({ href, title, badge }) => (
+  <a href={href} className="flex min-h-[48px] items-center gap-3 border-b border-rule2 py-2.5 text-ink no-underline last:border-0">
+    <span className="min-w-0 flex-1 text-[15px] font-semibold">{title}</span>
+    {badge}
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-ink2" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
+  </a>
+)
+
 const PUSH_NOTE = {
   unsupported: '이 브라우저는 알림을 지원하지 않아요. Chrome·삼성 인터넷·Safari(홈 화면 앱)에서 열어 주세요.',
   'ios-install': '아이폰은 Safari에서 홈 화면에 앱을 설치한 뒤, 설치한 앱에서 알림을 켤 수 있어요.',
@@ -124,14 +133,6 @@ export default function Settings({ session }) {
 
   const pushOn = push === 'on'
   const h2 = 'm-0 mb-1 text-[13px] font-semibold text-ink2'
-  // 한 줄 링크 행 (오른쪽 화살표)
-  const LinkRow = ({ href, title, badge }) => (
-    <a href={href} className="flex min-h-[48px] items-center gap-3 border-b border-rule2 py-2.5 text-ink no-underline last:border-0">
-      <span className="min-w-0 flex-1 text-[15px] font-semibold">{title}</span>
-      {badge}
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" className="shrink-0 text-ink2" aria-hidden="true"><path d="m9 18 6-6-6-6" /></svg>
-    </a>
-  )
   return (
     <div className="mx-auto flex w-full max-w-[640px] flex-col gap-4">
       <PageHeader title="설정" />
@@ -149,14 +150,13 @@ export default function Settings({ session }) {
       <section>
         <h2 className={h2}>알림</h2>
         <div className="sheet !py-1">
-          <Row title="이 기기에서 알림 받기" desc={push === 'on' ? null : push === 'off' ? '꺼져 있어요' : push ? '사용할 수 없어요' : '확인하는 중…'}>
+          <Row title="이 기기에서 알림 받기" desc={push === 'on' ? '켜져 있어요' : push === 'off' ? '꺼져 있어요' : push ? '사용할 수 없어요' : '확인하는 중…'}>
             <Switch label="이 기기에서 알림 받기" on={pushOn} disabled={busy || !['on', 'off'].includes(push)} onChange={togglePush} />
           </Row>
           {PUSH_NOTE[push] && <p className="m-0 mb-2 rounded-[12px] bg-rule2 px-3.5 py-2.5 text-[13px] text-ink2">{PUSH_NOTE[push]}</p>}
-          {/* 종류별 알림은 이름만 한 줄씩 (설명은 스위치 이름표에) */}
           {KINDS.map((k) => (
-            <Row key={k.key} title={k.label} compact>
-              <Switch label={`${k.label}: ${k.desc}`} on={prefs ? prefs[k.key] : true} disabled={!prefs} onChange={(on) => toggleKind(k.key, on)} />
+            <Row key={k.key} title={k.label} desc={k.desc} compact>
+              <Switch label={k.label} on={prefs ? prefs[k.key] : true} disabled={!prefs} onChange={(on) => toggleKind(k.key, on)} />
             </Row>
           ))}
           {pushOn && (
