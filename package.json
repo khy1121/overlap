@@ -10,6 +10,7 @@
     "dev": "npm run dev -w @overlap/web",
     "build": "npm run build -w @overlap/web",
     "preview": "npm run preview -w @overlap/web",
-    "test": "npm test -w @overlap/core"
+    "test": "npm test -w @overlap/core",
+    "mobile": "npm run start -w @overlap/mobile"
   }
 }
