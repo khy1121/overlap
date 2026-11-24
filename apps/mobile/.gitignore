@@ -2,3 +2,8 @@
 .expo-export/
 android/
 ios/
+
+# Firebase 앱 설정 (안드로이드 API 키 포함). 빌드 서버에는 EAS 파일 변수 GOOGLE_SERVICES_JSON으로
+google-services.json
+# Firebase 서비스 계정 키 등 비밀 파일은 절대 커밋 금지
+*-firebase-adminsdk-*.json
