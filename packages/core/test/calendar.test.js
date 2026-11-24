@@ -11,9 +11,11 @@ describe('Google 캘린더 free/busy', () => {
     const [, b] = slotRange(cfg, 0, 1) // ~10:00
     expect(splitByBusy(cfg, [[a + 60000, b - 60000]])).toEqual({ busyKeys: ['0-1'], freeKeys: ['0-0', '0-2', '0-3'] })
   })
-  it('반영: 바쁜 칸 → 안 돼요, 빈 칸 채우기는 미입력만', () => {
-    const r = applyBusy({ '0-0': 'm' }, { busyKeys: ['0-1'], freeKeys: ['0-0', '0-2'] }, { markBusy: true, fillFree: true })
-    expect(r).toEqual({ next: { '0-0': 'm', '0-1': 'n', '0-2': 'y' }, changed: 2 })
+  it('반영: 바쁜 칸은 지우고(빈칸 = 안 돼요), 빈 시간 채우기는 비어 있는 칸만', () => {
+    const r = applyBusy({ '0-0': 'm', '0-1': 'y' }, { busyKeys: ['0-1'], freeKeys: ['0-0', '0-2'] }, { markBusy: true, fillFree: true })
+    expect(r).toEqual({ next: { '0-0': 'm', '0-2': 'y' }, changed: 2 })
+    // 아무것도 안 칠한 사람이 바쁜 시간만 빼면 그대로 미입력 (전부 안 돼요가 되지 않게)
+    expect(applyBusy({}, { busyKeys: ['0-1'], freeKeys: [] }).next).toEqual({})
   })
   it('권한 만료는 code expired', async () => {
     await expect(fetchBusy('t', cfg, async () => ({ status: 401 }))).rejects.toMatchObject({ code: 'expired' })

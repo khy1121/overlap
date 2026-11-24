@@ -1,52 +1,113 @@
+import { useRef, useState } from 'react'
 import { dayLabel, nDays, rowFrom, rowTo } from '@overlap/core/schedule'
 import { DEFAULT_BOUNDS, keysOf, partsOf } from '@overlap/core/parts'
+import { fill, longValue, paintState, tapValue } from '@overlap/core/paint'
 
 // 약속 화면이 쓰던 이름 그대로 (원래 여기 있던 계산은 core로 옮겼어요)
 export { DEFAULT_BOUNDS, keysOf, partsOf }
 
-/** 칸 묶음의 상태: 모두 같으면 그 값(y/m/n), 하나도 없으면 u, 섞였으면 mix */
-function stateOf(cells, keys) {
-  if (!keys.length) return 'x'
-  const vals = new Set(keys.map((k) => cells[k] || 'u'))
-  return vals.size === 1 ? [...vals][0] : 'mix'
-}
-
-// 누를 때마다: (빈칸·일부) → 가능 → 안 돼요 → 조율 → 빈칸
-// '빼기'로 시작하면 전부 가능이라 첫 터치가 바로 '안 돼요'예요.
-const NEXT = { u: 'y', mix: 'y', y: 'n', n: 'm', m: 'u' }
+const LONG_MS = 450
 const LOOK = {
-  y: { cls: 'bg-yes-soft text-ink ring-2 ring-inset ring-yes', text: '가능' },
-  m: { cls: 'bg-maybe-soft text-ink ring-2 ring-inset ring-maybe', text: '조율' },
-  n: { cls: 'bg-rule2 text-ink2', text: '안 돼요' },
-  u: { cls: 'bg-sheet text-ink2 ring-1 ring-inset ring-rule', text: '미입력' },
-  mix: { cls: 'bg-sheet text-ink ring-1 ring-inset ring-yes', text: '일부' },
+  y: { cls: 'bg-yes text-white ring-1 ring-inset ring-yes', mark: '✓', text: '돼요' },
+  m: { cls: 'paint-maybe text-ink ring-2 ring-inset ring-maybe', mark: '~', text: '애매해요' },
+  mix: { cls: 'bg-yes-soft text-ink ring-1 ring-inset ring-yes', mark: '·', text: '일부 돼요' },
+  '': { cls: 'bg-sheet text-ink2 ring-1 ring-inset ring-rule', mark: '', text: '안 돼요' },
 }
 
 /**
- * 큰 칸 입력: 요일 × 시간대. 누르면 그 시간대의 30분 칸들을 한꺼번에 칠해요(저장은 30분 칸 그대로라 추천 계산은 같아요).
- * 칸 아래 'n명 돼요'는 다른 사람 중 그 시간대의 절반 이상이 가능·조율인 사람 수예요.
+ * 큰 칸 칠하기 (앱과 같은 방식): 되는 시간만, 한 번에 여러 칸.
+ * - 누르기: 돼요(✓) ↔ 빈칸 / 길게 누르기(또는 Shift+Enter): 애매해요(~) ↔ 빈칸
+ * - 끌기: 시작 칸이 빈칸이면 칠하고, 칠한 칸이면 지우면서 지나간 칸 모두 (휴대폰에서는 가로로 긋기, 세로로 밀면 화면이 움직여요)
+ * - 요일·시간대 이름: 그 줄 전체 (전부 돼요면 지우기)
+ * 저장은 30분 칸 그대로라 추천 계산은 같아요. 한 칸이라도 칠하면 빈칸은 '안 돼요'로 계산해요.
+ * onBegin(): 한 번의 동작 시작(되돌리기 기록), onSet(next): 칸 바꾸기, onLongHint(): 처음 누를 때 '길게 누르기' 안내
  */
-export default function CoarseGrid({ cfg, cells, people, myPid, onChange, bounds = DEFAULT_BOUNDS }) {
+export default function CoarseGrid({ cfg, cells, onBegin, onSet, onLongHint, bounds = DEFAULT_BOUNDS }) {
   const parts = partsOf(cfg, bounds)
   const days = nDays(cfg)
-  const others = people.filter((p) => p.id !== myPid)
+  const cols = `52px repeat(${parts.length}, minmax(0, 1fr))`
+  const [pressing, setPressing] = useState(null)
+  const g = useRef(null)
+  const cellsRef = useRef(cells)
+  cellsRef.current = cells
 
-  function setKeys(keys, value) {
-    const next = { ...cells }
-    keys.forEach((k) => { if (value === 'u') delete next[k]; else next[k] = value })
-    onChange(next)
+  const keysAt = (id) => {
+    const [d, col] = id.split('-').map(Number)
+    return keysOf(cfg, d, parts[col])
   }
-  const tapCell = (d, part) => {
-    const keys = keysOf(cfg, d, part)
-    if (keys.length) setKeys(keys, NEXT[stateOf(cells, keys)])
+  const setLine = (keys) => {
+    if (!keys.length) return
+    onBegin()
+    onSet(fill(cellsRef.current, keys, tapValue(cellsRef.current, keys)))
   }
-  // 요일·시간대 이름을 누르면 그 줄 전체를 같은 값으로
-  const tapLine = (keys) => { if (keys.length) setKeys(keys, NEXT[stateOf(cells, keys)]) }
-  const okCount = (keys) => others.filter((p) => keys.filter((k) => ['y', 'm'].includes(p.cells?.[k])).length * 2 >= keys.length).length
+  const cellFromPoint = (x, y) => {
+    const el = document.elementFromPoint(x, y)?.closest?.('[data-cell]')
+    return el && el.closest('[data-paint-grid]') ? el.dataset.cell : null
+  }
+
+  function onPointerDown(e) {
+    const id = e.target.closest?.('[data-cell]')?.dataset.cell
+    if (!id || e.button > 0) return
+    const keys = keysAt(id)
+    g.current = { id, last: id, keys, moved: false, long: false, value: tapValue(cellsRef.current, keys), pid: e.pointerId }
+    setPressing(id)
+    g.current.timer = setTimeout(() => {
+      const cur = g.current
+      if (!cur || cur.moved) return
+      cur.long = true
+      setPressing(null)
+      navigator.vibrate?.(15)
+      onBegin()
+      onSet(fill(cellsRef.current, keys, longValue(cellsRef.current, keys)))
+    }, LONG_MS)
+  }
+  function onPointerMove(e) {
+    const cur = g.current
+    if (!cur || cur.long || e.pointerId !== cur.pid) return
+    const id = cellFromPoint(e.clientX, e.clientY)
+    if (!id || id === cur.last) return
+    let next = cellsRef.current
+    if (!cur.moved) {
+      cur.moved = true
+      clearTimeout(cur.timer)
+      setPressing(null)
+      onBegin()
+      next = fill(next, cur.keys, cur.value)
+    }
+    cur.last = id
+    next = fill(next, keysAt(id), cur.value)
+    cellsRef.current = next
+    onSet(next)
+  }
+  function onPointerUp(e) {
+    const cur = g.current
+    if (!cur || e.pointerId !== cur.pid) return
+    g.current = null
+    setPressing(null)
+    clearTimeout(cur.timer)
+    if (!cur.moved && !cur.long) {
+      onBegin()
+      onSet(fill(cellsRef.current, cur.keys, cur.value))
+      onLongHint?.()
+    }
+  }
+  // 휴대폰에서 세로로 밀어 화면이 움직이면 칠하기를 멈춰요
+  function onPointerCancel() {
+    if (g.current) clearTimeout(g.current.timer)
+    g.current = null
+    setPressing(null)
+  }
+  function onKeyDown(e, id) {
+    if (e.key !== 'Enter' && e.key !== ' ') return
+    e.preventDefault()
+    const keys = keysAt(id)
+    onBegin()
+    onSet(fill(cellsRef.current, keys, e.shiftKey ? longValue(cellsRef.current, keys) : tapValue(cellsRef.current, keys)))
+  }
 
   return (
-    <div className="flex flex-col gap-1.5" role="grid" aria-label="큰 칸으로 내 시간 입력">
-      <div className="grid gap-1.5" style={{ gridTemplateColumns: `52px repeat(${parts.length}, minmax(0, 1fr))` }} role="row">
+    <div className="flex flex-col gap-1.5" role="grid" aria-label="되는 시간 칠하기">
+      <div className="grid gap-1.5" style={{ gridTemplateColumns: cols }} role="row">
         <span />
         {parts.map((p) => (
           <button
@@ -54,51 +115,61 @@ export default function CoarseGrid({ cfg, cells, people, myPid, onChange, bounds
             type="button"
             role="columnheader"
             className="flex flex-col items-center rounded-[10px] border-0 bg-transparent py-1 text-center hover:bg-rule2"
-            aria-label={`${p.label} 전체 바꾸기`}
-            onClick={() => tapLine(Array.from({ length: days }, (_, d) => keysOf(cfg, d, p)).flat())}
+            aria-label={`${p.label} 전체`}
+            onClick={() => setLine(Array.from({ length: days }, (_, d) => keysOf(cfg, d, p)).flat())}
           >
             <span className="text-[13px] font-bold">{p.label}</span>
             {p.sub && <span className="text-[11px] text-ink2">{p.sub}</span>}
           </button>
         ))}
       </div>
-      {Array.from({ length: days }, (_, d) => {
-        const [md, dow] = dayLabel(cfg, d).split(' ')
-        return (
-          <div key={d} className="grid gap-1.5" style={{ gridTemplateColumns: `52px repeat(${parts.length}, minmax(0, 1fr))` }} role="row">
-            <button
-              type="button"
-              role="rowheader"
-              className="flex flex-col items-start justify-center rounded-[10px] border-0 bg-transparent px-1 text-left hover:bg-rule2"
-              aria-label={`${dayLabel(cfg, d)} 하루 전체 바꾸기`}
-              onClick={() => tapLine(parts.flatMap((p) => keysOf(cfg, d, p)))}
-            >
-              <span className="text-[14px] font-bold">{dow.replace(/[()]/g, '')}</span>
-              <span className="text-[11px] text-ink2">{md}</span>
-            </button>
-            {parts.map((p) => {
-              const keys = keysOf(cfg, d, p)
-              const st = stateOf(cells, keys)
-              if (st === 'x') return <span key={p.from} className="rounded-[12px] bg-[repeating-linear-gradient(135deg,var(--rule2)_0_6px,transparent_6px_12px)]" aria-hidden="true" />
-              const look = LOOK[st]
-              const ok = okCount(keys)
-              return (
-                <button
-                  key={p.from}
-                  type="button"
-                  role="gridcell"
-                  className={`flex min-h-[56px] flex-col items-center justify-center gap-0.5 rounded-[12px] border-0 transition-colors ${look.cls}`}
-                  aria-label={`${dayLabel(cfg, d)} ${p.label}: ${look.text}. 누르면 바뀌어요`}
-                  onClick={() => tapCell(d, p)}
-                >
-                  <span className="text-[14px] font-bold">{look.text}</span>
-                  {others.length > 0 && <span className="text-[11px] text-ink2">{ok}명 돼요</span>}
-                </button>
-              )
-            })}
-          </div>
-        )
-      })}
+      <div
+        data-paint-grid
+        className="flex select-none flex-col gap-1.5"
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={onPointerUp}
+        onPointerCancel={onPointerCancel}
+        onContextMenu={(e) => e.preventDefault()}
+      >
+        {Array.from({ length: days }, (_, d) => {
+          const [md, dow] = dayLabel(cfg, d).split(' ')
+          return (
+            <div key={d} className="grid gap-1.5" style={{ gridTemplateColumns: cols }} role="row">
+              <button
+                type="button"
+                role="rowheader"
+                className="flex flex-col items-start justify-center rounded-[10px] border-0 bg-transparent px-1 text-left hover:bg-rule2"
+                aria-label={`${dayLabel(cfg, d)} 하루 전체`}
+                onClick={() => setLine(parts.flatMap((p) => keysOf(cfg, d, p)))}
+              >
+                <span className="text-[14px] font-bold">{dow.replace(/[()]/g, '')}</span>
+                <span className="text-[11px] text-ink2">{md}</span>
+              </button>
+              {parts.map((p, col) => {
+                const keys = keysOf(cfg, d, p)
+                const st = paintState(cells, keys)
+                if (st === 'x') return <span key={p.from} className="rounded-[12px] bg-[repeating-linear-gradient(135deg,var(--rule2)_0_6px,transparent_6px_12px)]" aria-hidden="true" />
+                const look = LOOK[st]
+                const id = `${d}-${col}`
+                return (
+                  <div
+                    key={p.from}
+                    role="gridcell"
+                    tabIndex={0}
+                    data-cell={id}
+                    aria-label={`${dayLabel(cfg, d)} ${p.label}: ${look.text}. Enter 돼요, Shift+Enter 애매해요`}
+                    onKeyDown={(e) => onKeyDown(e, id)}
+                    className={`flex min-h-[52px] cursor-pointer touch-pan-y items-center justify-center rounded-[12px] text-[18px] font-extrabold transition-[background-color,transform] duration-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-pen ${look.cls} ${pressing === id ? 'scale-95' : ''}`}
+                  >
+                    {look.mark}
+                  </div>
+                )
+              })}
+            </div>
+          )
+        })}
+      </div>
     </div>
   )
 }

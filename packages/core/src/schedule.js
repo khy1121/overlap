@@ -117,11 +117,14 @@ export function slotRange(cfg, d, s) {
   return [st.getTime(), st.getTime() + 30 * 60000]
 }
 
-/** 회의 길이만큼의 구간에서 한 사람의 상태: y 가능, m 조율, n 불가, u 미입력 */
-export function windowStatus(cells, d, s, dur) {
+/**
+ * 회의 길이만큼의 구간에서 한 사람의 상태: y 가능, m 조율, n 불가, u 미입력
+ * blankAs: 칠하지 않은 칸을 무엇으로 볼지. 한 칸이라도 칠한 사람은 'n'(되는 시간만 칠하기), 아무것도 안 칠한 사람은 'u'
+ */
+export function windowStatus(cells, d, s, dur, blankAs = 'u') {
   let worst = 'y'
   for (let k = 0; k < dur; k++) {
-    const v = cells[`${d}-${s + k}`]
+    const v = cells[`${d}-${s + k}`] || (blankAs === 'n' ? 'n' : undefined)
     if (v === 'n') return 'n'
     if (!v) worst = 'u'
     else if (v === 'm' && worst === 'y') worst = 'm'
@@ -129,7 +132,11 @@ export function windowStatus(cells, d, s, dur) {
   return worst
 }
 
-const hasInput = (p) => Object.keys(p.cells || {}).length > 0
+/** 한 칸이라도 칠했는지 */
+export const hasInput = (p) => Object.keys(p.cells || {}).length > 0
+
+/** 한 사람의 한 칸 상태: 칠한 값, 아니면 (칠한 사람이면) 안 돼요 / (아무것도 안 칠했으면) 미입력 */
+export const cellStatus = (p, key) => p.cells?.[key] || (hasInput(p) ? 'n' : 'u')
 
 /**
  * 모두 가능한 시간과 추천 시간 계산.
@@ -157,7 +164,7 @@ export function evaluate(cfg, people) {
   }
   const groupsAt = (d, s) => {
     const g = { y: [], m: [], n: [], u: [] }
-    people.forEach((p) => g[windowStatus(p.cells || {}, d, s, dur)].push(p.id))
+    people.forEach((p) => g[windowStatus(p.cells || {}, d, s, dur, hasInput(p) ? 'n' : 'u')].push(p.id))
     return g
   }
   // 구간을 앞뒤로 넓히고, 추천 시작은 구간의 시작점으로 맞춰요
