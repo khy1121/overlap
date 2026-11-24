@@ -10,21 +10,14 @@ import { Avatar, Button, Card } from '../ui'
 import PlaceCard from '../components/PlaceCard'
 import { applyBusy, fetchBusy } from '@overlap/core/api/calendar'
 import { canGoogle, requestCalendarToken } from '../lib/gcal'
+import { applyPreset, paintSummary, presets } from '@overlap/core/paint'
+import PaintGrid from '../components/PaintGrid'
 
-// 큰 칸 한 칸의 상태: 모두 같으면 그 값(y/m/n), 하나도 없으면 u, 섞였으면 mix
-function stateOf(cells, keys) {
-  if (!keys.length) return 'x'
-  const vals = new Set(keys.map((k) => cells[k] || 'u'))
-  return vals.size === 1 ? [...vals][0] : 'mix'
-}
-// 누를 때마다: (빈칸·일부) → 가능 → 안 돼요 → 조율 → 빈칸 (웹 큰 칸과 같아요)
-const NEXT = { u: 'y', mix: 'y', y: 'n', n: 'm', m: 'u' }
-const LABEL = { y: '가능', m: '조율', n: '안 돼요', u: '미입력', mix: '일부' }
 
 /**
  * 약속 화면 (앱 1차): 웹과 같은 useMeeting 훅으로 불러오고 실시간으로 맞춰요.
  * - 모두 겹쳐 보기: 좋은 시간 카드 3개(확정) + 큰 칸 겹쳐 보기(몇 명 되는지)
- * - 내 시간 칠하기: 큰 칸(요일 × 시간대)을 누르면 바로 칠해지고 0.8초 뒤 자동 저장, 되돌리기
+ * - 내 시간 칠하기: 되는 시간만 칠해요(빈칸 = 안 돼요). 누르기·쭉 긋기·요일/시간대 줄·빠른 선택, 길게 누르면 애매해요. 0.8초 뒤 자동 저장, 되돌리기
  * 만날 장소: 키워드로 찾아 정하기·길찾기 (중간 지점 찾기는 웹에서)
  * 30분 단위 다듬기·후보 투표·참석자 꼭/선택은 다음 단계에서.
  */
@@ -87,6 +80,13 @@ ${meetingLink(mid)}` }) },
     return evaluate({ ...cfg, count: Math.max(1, cfg.count - (shown.length - inPs.length)) }, inPs)
   }, [cfg, shown])
   const apply = useCallback((next) => { setUndo((u) => [...u.slice(-29), draft]); setDraft(next) }, [draft])
+  // 칸 동작(누르기·긋기)은 시작할 때 한 번만 되돌리기에 기록하고, 긋는 동안은 칸만 바꿔요
+  const draftRef = useRef(draft)
+  draftRef.current = draft
+  const beginStroke = useCallback(() => setUndo((u) => [...u.slice(-29), draftRef.current]), [])
+  const [hint, setHint] = useState(null) // 잠깐 떴다 사라지는 안내 (팝업은 칠하기를 막아서)
+  const hinted = useRef(false)
+  const [scrollOn, setScrollOn] = useState(true) // 칸 위에서 칠하는 동안은 화면이 움직이지 않게
   // Google 캘린더 free/busy로 채우기 (일정 제목·내용은 받지 않아요). 반영 방법은 고르게, 되돌리기 가능
   const [gBusy, setGBusy] = useState(false)
   async function fromGoogle() {
@@ -105,8 +105,8 @@ ${meetingLink(mid)}` }) },
         '일정 제목이나 내용은 가져오지 않아요. 어떻게 채울까요?',
         [
           { text: '취소', style: 'cancel' },
-          { text: '바쁜 시간만 안 돼요로', onPress: () => pick(false) },
-          { text: '빈 시간은 가능으로도', onPress: () => pick(true) },
+          { text: '칠한 칸에서 바쁜 시간 빼기', onPress: () => pick(false) },
+          { text: '빈 시간을 돼요로 채우기', onPress: () => pick(true) },
         ],
       )
     } catch (e) {
@@ -134,25 +134,10 @@ ${meetingLink(mid)}` }) },
   const share = () => Share.share({ message: `${cfg.title}\n되는 시간을 칠해 주세요!\n${meetingLink(mid)}` })
   const entered = people.filter((p) => Object.keys(p.cells || {}).length).length
 
-  // 큰 칸 한 칸: 칠하기 모드면 내 상태, 겹쳐 보기면 되는 사람 수(절반 이상 가능·조율)
+  // 겹쳐 보기 한 칸: 되는 사람 수(그 시간대 절반 이상 가능·조율)
   const cell = (d, part) => {
     const keys = keysOf(cfg, d, part)
     if (!keys.length) return <View key={part.from} style={[styles.cell, { backgroundColor: c['rule-2'], opacity: 0.4, borderRadius: 12 }]} />
-    if (mode === 'edit') {
-      const st = stateOf(draft || {}, keys)
-      const look = { y: [c['yes-soft'], c.yes], m: [c['maybe-soft'], c.maybe], n: [c['rule-2'], 'transparent'], u: [c.sheet, c.rule], mix: [c.sheet, c.yes] }[st]
-      return (
-        <Pressable
-          key={part.from}
-          accessibilityRole="button"
-          accessibilityLabel={`${dayLabel(cfg, d)} ${part.label}: ${LABEL[st]}`}
-          onPress={() => { const next = { ...draft }; const v = NEXT[st]; keys.forEach((k) => { if (v === 'u') delete next[k]; else next[k] = v }); apply(next) }}
-          style={[styles.cell, { backgroundColor: look[0], borderColor: look[1], borderWidth: st === 'y' || st === 'm' ? 2 : 1, borderRadius: 12 }]}
-        >
-          <Text style={[type.body, { fontWeight: '700', color: st === 'n' || st === 'u' ? c['ink-2'] : c.ink }]}>{LABEL[st]}</Text>
-        </Pressable>
-      )
-    }
     const ok = shown.filter((p) => keys.filter((k) => ['y', 'm'].includes(p.cells?.[k])).length * 2 >= keys.length).length
     const ratio = n ? ok / n : 0
     return (
@@ -165,7 +150,7 @@ ${meetingLink(mid)}` }) },
 
   return (
     <View style={{ flex: 1, backgroundColor: c.paper }}>
-      <ScrollView contentContainerStyle={styles.wrap}>
+      <ScrollView contentContainerStyle={styles.wrap} scrollEnabled={scrollOn}>
         <Pressable onPress={share} accessibilityRole="button" accessibilityLabel="초대 링크 보내기">
           <Text style={[type.caption, { color: c['ink-2'] }]}>{briefRange(cfg)} · {durText(cfg.dur)} · {cfg.count}명 예상</Text>
         </Pressable>
@@ -227,16 +212,55 @@ ${meetingLink(mid)}` }) },
           </View>
         )}
 
-        {mode === 'edit' && (
-          <View style={[styles.toolbar, { backgroundColor: c['rule-2'], borderRadius: radius.md }]}>
-            <Text style={[type.caption, { flex: 1, fontWeight: '700', color: saveState === 'saved' ? c.yes : c['ink-2'] }]}>{saveState === 'saving' ? '저장 중…' : saveState === 'saved' ? '저장됨 ✓' : '칸을 누르면 바로 저장돼요'}</Text>
-            <Button small kind="plain" label="전부 가능" onPress={() => { const next = {}; for (let d = 0; d < days; d++) for (const p of parts) for (const k of keysOf(cfg, d, p)) next[k] = 'y'; apply(next) }} />
-            <Button small kind="plain" label="되돌리기" disabled={!undo.length} onPress={() => { const prev = undo[undo.length - 1]; setUndo((u) => u.slice(0, -1)); setDraft(prev) }} />
-          </View>
+        {mode === 'edit' && draft && (
+          <>
+            {/* 빠른 선택: 흔한 경우를 한 번에 (더하기), 비우기 · Google 캘린더 */}
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: 6 }}>
+              {presets(cfg, parts).map((pr) => (
+                <Pressable key={pr.key} accessibilityRole="button" onPress={() => apply(applyPreset(cfg, draft, pr))} style={({ pressed }) => [styles.chip, { backgroundColor: c.sheet, borderColor: pressed ? c.pen : c.rule }]}>
+                  <Text style={[type.caption, { fontWeight: '700', color: pr.key === 'clear' ? c['ink-2'] : c.ink }]}>{pr.label}</Text>
+                </Pressable>
+              ))}
+              {canGoogle && (
+                <Pressable accessibilityRole="button" disabled={gBusy} onPress={fromGoogle} style={({ pressed }) => [styles.chip, { backgroundColor: c['pen-soft'], borderColor: pressed ? c.pen : 'transparent', opacity: gBusy ? 0.6 : 1 }]}>
+                  <Text style={[type.caption, { fontWeight: '700', color: c.accent }]}>{gBusy ? '불러오는 중…' : 'Google 캘린더로 채우기'}</Text>
+                </Pressable>
+              )}
+            </ScrollView>
+            <Card style={{ paddingVertical: 12, gap: 8 }}>
+              <PaintGrid
+                cfg={cfg}
+                parts={parts}
+                cells={draft}
+                onBegin={beginStroke}
+                onSet={setDraft}
+                onStroke={(on) => setScrollOn(!on)}
+                onLongHint={() => { if (!hinted.current) { hinted.current = true; setHint("칸을 길게 누르면 '애매해요'로 표시돼요"); setTimeout(() => setHint(null), 2600) } }}
+              />
+              <View style={styles.legend}>
+                {[[c.yes, c.yes, '돼요'], [c['maybe-soft'], c.maybe, '애매해요 (길게 누르기)'], [c.sheet, c.rule, '안 돼요']].map(([bg, bd, t]) => (
+                  <View key={t} style={styles.legendItem}><View style={[styles.swatch, { backgroundColor: bg, borderColor: bd }]} /><Text style={{ fontSize: 12, color: c['ink-2'] }}>{t}</Text></View>
+                ))}
+              </View>
+            </Card>
+            {(() => {
+              const sum = paintSummary(cfg, parts, draft)
+              const [head, ...rest] = sum.text.split(' · ')
+              return (
+                <View style={styles.status}>
+                  <Text style={[type.caption, { flex: 1, color: c['ink-2'] }]} accessibilityLiveRegion="polite">
+                    <Text style={{ fontWeight: '700', color: c.ink }}>{head}</Text>
+                    {rest.length ? ` · ${rest.join(' · ')}` : ''}
+                    {saveState === 'saving' ? ' · 저장 중…' : saveState === 'saved' ? ' · 저장됨 ✓' : ''}
+                  </Text>
+                  <Button small kind="plain" label="되돌리기" disabled={!undo.length} onPress={() => { const prev = undo[undo.length - 1]; setUndo((u) => u.slice(0, -1)); setDraft(prev) }} />
+                </View>
+              )
+            })()}
+          </>
         )}
-        {mode === 'edit' && canGoogle && <Button small kind="soft" label="Google 캘린더에서 채우기" busy={gBusy} onPress={fromGoogle} />}
 
-        <Card style={{ paddingVertical: 12, gap: 6 }}>
+        {mode === 'all' && <Card style={{ paddingVertical: 12, gap: 6 }}>
           <View style={styles.gridRow}>
             <View style={styles.dayLabel} />
             {parts.map((p) => (
@@ -258,11 +282,14 @@ ${meetingLink(mid)}` }) },
               </View>
             )
           })}
-          <Text style={[type.caption, { color: c['ink-2'], marginTop: 4 }]}>
-            {mode === 'edit' ? '칸을 누를 때마다 가능 → 안 돼요 → 조율 · 30분 단위 다듬기는 웹에서' : '진할수록 많이 돼요 · 숫자는 그 시간대에 되는 사람 수'}
-          </Text>
-        </Card>
+          <Text style={[type.caption, { color: c['ink-2'], marginTop: 4 }]}>진할수록 많이 돼요 · 숫자는 그 시간대에 되는 사람 수</Text>
+        </Card>}
       </ScrollView>
+      {hint ? (
+        <View pointerEvents="none" style={[styles.toast, { backgroundColor: c.ink }]}>
+          <Text style={[type.caption, { color: c.sheet }]}>{hint}</Text>
+        </View>
+      ) : null}
       {mode === 'edit' && (
         <View style={[styles.bottom, { backgroundColor: c.paper, borderColor: c.rule }]}>
           <Button label="다 했어요 · 결과 보기" onPress={() => { flush.current?.(); setMode('all') }} />
@@ -281,7 +308,12 @@ const styles = StyleSheet.create({
   segItem: { flex: 1, minHeight: 38, borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   topCard: { padding: 14 },
   rank: { width: 28, height: 28, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
-  toolbar: { flexDirection: 'row', alignItems: 'center', gap: 6, padding: 8 },
+  chip: { minHeight: 36, paddingHorizontal: 14, borderRadius: 999, borderWidth: 1, alignItems: 'center', justifyContent: 'center' },
+  legend: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
+  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+  swatch: { width: 14, height: 14, borderRadius: 4, borderWidth: 1 },
+  toast: { position: 'absolute', alignSelf: 'center', bottom: 92, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10 },
+  status: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingHorizontal: 2 },
   gridRow: { flexDirection: 'row', alignItems: 'stretch', gap: 6 },
   dayLabel: { width: 44, justifyContent: 'center' },
   cell: { flex: 1, minHeight: 56, alignItems: 'center', justifyContent: 'center' },

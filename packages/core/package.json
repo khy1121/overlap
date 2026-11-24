@@ -23,7 +23,8 @@
     "./newMeeting": "./src/newMeeting.js",
     "./api/notify": "./src/api/notify.js",
     "./api/places": "./src/api/places.js",
-    "./api/calendar": "./src/api/calendar.js"
+    "./api/calendar": "./src/api/calendar.js",
+    "./paint": "./src/paint.js"
   },
   "scripts": {
     "test": "vitest run"

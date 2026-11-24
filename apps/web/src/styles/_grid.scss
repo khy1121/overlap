@@ -19,6 +19,15 @@ $x-mark: linear-gradient(to top right, $x-line), linear-gradient(to bottom right
   &.e { background: var(--cell); border: 1px solid var(--rule); }
 }
 
+// 큰 칸 칠하기의 '애매해요': 노란 빗금 (색을 구분하기 어려워도 무늬로 알아볼 수 있게)
+.paint-maybe {
+  background: repeating-linear-gradient(135deg, var(--maybe-soft) 0 6px, var(--maybe) 6px 9px);
+  -webkit-touch-callout: none; // 길게 눌러도 iOS 미리보기 메뉴가 뜨지 않게
+}
+.sw.mp { background: repeating-linear-gradient(135deg, var(--maybe-soft) 0 3px, var(--maybe) 3px 5px); border: 1px solid var(--maybe); }
+.sw.yp { background: var(--yes); }
+[data-paint-grid] { -webkit-touch-callout: none; }
+
 .timegrid {
   display: grid;
   // 열 수 = 약속 기간(--days, 기본 7일)

@@ -41,11 +41,15 @@ export async function fetchBusy(token, cfg, fetchFn = fetch) {
   return splitByBusy(cfg, (j.calendars?.primary?.busy || []).map((b) => [Date.parse(b.start), Date.parse(b.end)]))
 }
 
-/** 내 칸에 반영: 바쁜 칸 → 안 돼요, (원하면) 빈 칸 중 미입력 → 가능. 결과 { next, changed } */
+/**
+ * 내 칸에 반영 (되는 시간만 칠하기 규칙): 바쁜 칸은 지워요(칠한 사람의 빈칸 = 안 돼요), 원하면 빈 시간 중 비어 있는 칸 → 돼요.
+ * 바쁜 칸에 '안 돼요'를 칠하지 않는 이유: 그 칸만 칠하면 나머지 시간이 전부 안 돼요로 계산돼요.
+ * 결과 { next, changed }
+ */
 export function applyBusy(cells, { busyKeys, freeKeys }, { markBusy = true, fillFree = false } = {}) {
   const next = { ...cells }
   let changed = 0
-  if (markBusy) busyKeys.forEach((k) => { if (next[k] !== 'n') { next[k] = 'n'; changed++ } })
+  if (markBusy) busyKeys.forEach((k) => { if (k in next) { delete next[k]; changed++ } })
   if (fillFree) freeKeys.forEach((k) => { if (!next[k]) { next[k] = 'y'; changed++ } })
   return { next, changed }
 }

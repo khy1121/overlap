@@ -7,9 +7,10 @@ import { copyText } from '../lib/copy'
 import { myRequests, requestFriend, resultText } from '../lib/friends'
 import { deleteMeeting, leaveMeeting } from '../lib/meetings'
 import { placeLink } from '../lib/places'
+import { applyPreset, paintSummary, presets } from '@overlap/core/paint'
 import { APP_ORIGIN } from '../lib/site'
 import { supabase } from '../lib/supabase'
-import { BRUSH_LABEL, briefRange, dayLabel, durText, evaluate, nDays, nSlots, rangeText, summary, timeText, tm } from '@overlap/core/schedule'
+import { BRUSH_LABEL, briefRange, cellStatus, dayLabel, durText, evaluate, nDays, nSlots, rangeText, summary, timeText, tm } from '@overlap/core/schedule'
 import BoardMenu from './BoardMenu'
 import CalendarImport from './CalendarImport'
 import CoarseGrid, { BoundsEditor, DEFAULT_BOUNDS, keysOf, partsOf } from './CoarseGrid'
@@ -229,6 +230,10 @@ export default function Board({ mid, session }) {
     setUndoStack((st) => [...st.slice(-29), draft])
     setDraft(next)
   }
+  // 큰 칸 칠하기(누르기·끌기): 동작을 시작할 때 한 번만 되돌리기에 기록하고, 끄는 동안은 칸만 바꿔요
+  const beginStroke = useCallback(() => setUndoStack((st) => [...st.slice(-29), draftRef.current]), [])
+  const longHinted = useRef(false)
+  const longHint = () => { if (!longHinted.current) { longHinted.current = true; toast("칸을 길게 누르면 '애매해요'로 표시돼요") } }
   function fill(keys) {
     if (!paintOn) return
     const clear = brush && keys.every((k) => draft[k] === brush)
@@ -310,7 +315,7 @@ export default function Board({ mid, session }) {
   // 좁은 화면에서 장소를 열면 시간표 자리를 장소 화면이 대신해요 (칠하는 중엔 항상 시간표)
   const placeFull = narrow && placeOpen && !paintOn
   const selDetail = mode === 'all' && sel
-    ? ['y', 'm', 'n', 'u'].map((k) => [k, people.filter((p) => (p.cells[`${sel.d}-${sel.s}`] || 'u') === k)]).filter(([, ps]) => ps.length)
+    ? ['y', 'm', 'n', 'u'].map((k) => [k, people.filter((p) => cellStatus(p, `${sel.d}-${sel.s}`) === k)]).filter(([, ps]) => ps.length)
     : null
   const best = result.entered && list.length ? list[cand % list.length] : null
   const openSuggestion = (w) => {
@@ -610,14 +615,17 @@ export default function Board({ mid, session }) {
                     {!lockable && <button className="btn-primary btn-sm" onClick={finishEdit}>다 했어요</button>}
                   </div>
                   {boundsOpen && !fine && <BoundsEditor cfg={cfg} bounds={bounds} onBounds={setBounds} />}
-                  <div className="flex flex-wrap items-center gap-1.5">
-                    <span className="mr-0.5 text-[12px] font-semibold text-ink2">빠르게 채우기</span>
-                    <button className="btn btn-sm bg-sheet" onClick={() => applyDraft(allYes())}>전부 가능</button>
+                  <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label="빠른 선택">
+                    {fine ? (
+                      <button className="btn btn-sm bg-sheet" onClick={() => applyDraft(allYes())}>전부 가능</button>
+                    ) : presets(cfg, partsOf(cfg, bounds)).map((pr) => (
+                      <button key={pr.key} className={`btn btn-sm bg-sheet ${pr.key === 'clear' ? 'text-ink2' : ''}`} onClick={() => applyDraft(applyPreset(cfg, draft, pr))}>{pr.label}</button>
+                    ))}
                     {habitOk && <button className="btn btn-sm bg-sheet" onClick={fillHabit}>자주 되던 시간</button>}
-                    {GOOGLE_CLIENT_ID && <button className="btn btn-sm bg-sheet" onClick={() => startCalendar()}>Google 캘린더</button>}
+                    {GOOGLE_CLIENT_ID && <button className="btn btn-sm bg-pen-soft text-accent" onClick={() => startCalendar()}>Google 캘린더로 채우기</button>}
                     <span className="ml-auto flex items-center gap-1">
                       <button className="btn-ghost btn-sm" disabled={!undoStack.length} onClick={undo}>되돌리기</button>
-                      {Object.keys(draft).length > 0 && (
+                      {fine && Object.keys(draft).length > 0 && (
                         <button className="btn-ghost btn-sm text-no hover:text-no" onClick={() => applyDraft({})}>모두 지우기</button>
                       )}
                     </span>
@@ -646,7 +654,7 @@ export default function Board({ mid, session }) {
               )}
 
               {paintOn && !fine ? (
-                <CoarseGrid cfg={cfg} cells={draft} people={people} myPid={myPid} onChange={applyDraft} bounds={bounds} />
+                <CoarseGrid cfg={cfg} cells={draft} onBegin={beginStroke} onSet={setDraft} onLongHint={longHint} bounds={bounds} />
               ) : (
               <TimeGrid
                 cfg={cfg}
@@ -682,14 +690,23 @@ export default function Board({ mid, session }) {
                 </div>
               ) : (
                 <div className="mt-2.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-ink2">
-                  {mode === 'edit' ? (
+                  {mode === 'edit' && paintOn && !fine ? (
+                    <>
+                      <span className="inline-flex items-center gap-1.5"><i className="sw yp" />돼요</span>
+                      <span className="inline-flex items-center gap-1.5"><i className="sw mp" />애매해요 (길게 누르기)</span>
+                      <span className="inline-flex items-center gap-1.5"><i className="sw e" />안 돼요</span>
+                      <span className="w-full text-[13px]" aria-live="polite">
+                        {(() => { const sum = paintSummary(cfg, partsOf(cfg, bounds), draft); const [head, ...rest] = sum.text.split(' · '); return <><b className="font-semibold text-ink">{head}</b>{rest.length ? ` · ${rest.join(' · ')}` : ''} · 누르기·끌기·요일/시간대 이름으로 칠해요</> })()}
+                      </span>
+                    </>
+                  ) : mode === 'edit' ? (
                     <>
                       <span className="inline-flex items-center gap-1.5"><i className="sw y" />가능</span>
                       <span className="inline-flex items-center gap-1.5"><i className="sw m" />조율</span>
                       <span className="inline-flex items-center gap-1.5"><i className="sw n" />불가</span>
                       <span className="inline-flex items-center gap-1.5"><i className="sw e" />미입력</span>
                       {!paintOn && <span>{hasMine ? '내가 칠한 시간이에요' : '아직 칠하지 않았어요'}</span>}
-                      {paintOn && <span>{!fine ? '칸을 누를 때마다 가능 → 안 돼요 → 조율 · 요일·시간대 이름을 누르면 줄 전체' : lockable ? '톡 치면 한 칸, 꾹 눌러 끌면 여러 칸 · 같은 색으로 다시 칠하면 지워져요' : '누르거나 드래그해서 칠해요 · 같은 색으로 다시 칠하면 지워져요'}</span>}
+                      {paintOn && <span>{lockable ? '톡 치면 한 칸, 꾹 눌러 끌면 여러 칸 · 같은 색으로 다시 칠하면 지워져요' : '누르거나 드래그해서 칠해요 · 같은 색으로 다시 칠하면 지워져요'}</span>}
                     </>
                   ) : (
                     <>
