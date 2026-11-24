@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { signInWithKakao } from '../lib/auth'
+import { signInWithGoogle, signInWithKakao } from '../lib/auth'
 import { DAYS, durText } from '@overlap/core/schedule'
 import { supabase } from '../lib/supabase'
-import AuthForm, { KakaoButton } from './AuthForm'
+import AuthForm, { GoogleButton, KakaoButton } from './AuthForm'
 
 /**
  * 초대 링크로 들어온 로그인 전 화면.
- * 약속 요약 한 장 + 아래 고정 [카카오로 바로 참여하기]. 이름·생년월일 가입은 눌러야 펼쳐져요.
+ * 약속 요약 한 장 + 아래 고정 [카카오로 바로 참여하기]. Google·이메일(가입·로그인)은 눌러야 펼쳐져요.
  */
 export default function InviteGate({ mid }) {
   const [info, setInfo] = useState(undefined)
@@ -66,7 +66,12 @@ export default function InviteGate({ mid }) {
         </span>
       </div>
       <p className="m-0 text-[13px] text-ink2">되는 시간만 칠하면, 모두 되는 시간은 Overlap이 찾아 드려요.</p>
-      {formOpen && <div className="mt-2 w-full"><AuthForm initial="signup" hideKakao /></div>}
+      {formOpen && (
+        <div className="mt-2 flex w-full flex-col gap-3">
+          <GoogleButton onClick={() => { setError(''); setBusy(true); signInWithGoogle().catch((e) => { setError(e.message); setBusy(false) }) }} disabled={busy} label="Google로 참여하기" />
+          <AuthForm initial="signup" hideKakao />
+        </div>
+      )}
 
       <div
         className="fixed inset-x-0 bottom-0 z-30 border-t border-rule bg-[color-mix(in_oklab,var(--sheet)_94%,transparent)] px-4 pt-3 backdrop-blur"
@@ -76,7 +81,7 @@ export default function InviteGate({ mid }) {
           {error && <p className="m-0 text-[13px] text-no" role="alert">{error}</p>}
           <KakaoButton onClick={kakao} disabled={busy} label="카카오로 바로 참여하기" />
           <button type="button" className="min-h-[40px] border-0 bg-transparent text-[13px] font-semibold text-ink2" aria-expanded={formOpen} onClick={() => setFormOpen((o) => !o)}>
-            {formOpen ? '접기' : '이름·생년월일로 가입 · 로그인'}
+            {formOpen ? '접기' : 'Google · 이메일로 가입 · 로그인'}
           </button>
         </div>
       </div>
