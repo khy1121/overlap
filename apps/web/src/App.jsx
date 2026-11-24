@@ -12,6 +12,8 @@ import Friends from './components/Friends'
 import Settings from './components/Settings'
 import UpdateBanner from './components/UpdateBanner'
 import Privacy from './components/Privacy'
+import Terms from './components/Terms'
+import DeleteAccountInfo from './components/DeleteAccountInfo'
 import Feedback from './components/Feedback'
 import Inbox from './components/Inbox'
 import TabBar from './components/TabBar'
@@ -56,6 +58,8 @@ export default function App() {
   if (session === undefined) view = <Center>불러오는 중…</Center>
   else if (MID) view = session ? <Board key={MID} mid={MID} session={session} /> : <InviteGate mid={MID} />
   else if (params.get('page') === 'privacy') view = <Privacy /> // 로그인 없이도 볼 수 있어요
+  else if (params.get('page') === 'terms') view = <Terms />
+  else if (params.get('page') === 'delete-account') view = <DeleteAccountInfo /> // 스토어 정책: 앱 없이 삭제 요청하는 웹 주소
   else if (!session) view = <Landing />
   else view = Page ? <Page session={session} /> : <Home session={session} />
 
