@@ -6,11 +6,11 @@ import { appPushState, disableAppPush, enableAppPush } from '../lib/push'
 import { supabase } from '../lib/supabase'
 import { signOut } from '../lib/auth'
 import { type, useTheme } from '../lib/theme'
-import { openPrivacy } from '../lib/web'
+import { openPrivacy, openTerms } from '../lib/web'
 import { Button, Card } from '../ui'
 
 /**
- * 설정: 표시 이름 · 알림(이 기기 켜기, 종류별, 테스트) · 개인정보처리방침 · 로그아웃 · 회원 탈퇴.
+ * 설정: 표시 이름 · 알림(이 기기 켜기, 종류별, 테스트) · 이용약관 · 개인정보처리방침 · 로그아웃 · 회원 탈퇴.
  * 화면 테마는 기기 설정을 따라요.
  */
 export default function SettingsScreen() {
@@ -119,6 +119,7 @@ export default function SettingsScreen() {
       </Card>
 
       <Card>
+        <Row label="이용약관" onPress={openTerms} />
         <Row label="개인정보처리방침" onPress={openPrivacy} />
         <Row label="로그아웃" onPress={logout} />
       </Card>

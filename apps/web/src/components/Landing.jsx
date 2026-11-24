@@ -58,7 +58,11 @@ export default function Landing() {
       <div className="flex flex-col gap-3">
         <AuthForm />
         <InstallApp />
-        <a href="/?page=privacy" className="self-center text-[13px] text-ink2 underline underline-offset-2 hover:text-ink">개인정보처리방침</a>
+        <nav className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 self-center text-[13px] text-ink2" aria-label="정책">
+          <a href="/?page=terms" className="underline underline-offset-2 hover:text-ink">이용약관</a>
+          <a href="/?page=privacy" className="underline underline-offset-2 hover:text-ink">개인정보처리방침</a>
+          <a href="/?page=delete-account" className="underline underline-offset-2 hover:text-ink">계정 삭제 안내</a>
+        </nav>
       </div>
 
       <ul className="m-0 flex list-none flex-col gap-4 p-0 md:hidden">
