@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { MAX_DAYS, durText, nSlots, rangeText } from '@overlap/core/schedule'
 import { TIME_PRESETS, addDays, datePresets } from '@overlap/core/presets'
 import { createMeeting, newMeetingPlan } from '@overlap/core/newMeeting'
@@ -17,6 +18,8 @@ const md = (s) => (s ? `${Number(s.slice(5, 7))}/${Number(s.slice(8, 10))}` : ''
  * 만들면 바로 그 약속 화면으로 (고른 친구는 바로 초대).
  */
 export default function NewMeetingScreen({ navigation }) {
+  // Android 15+(SDK 58)는 화면을 내비게이션 바 아래까지 그려요. 아래 고정 영역은 그만큼 띄워요
+  const insets = useSafeAreaInsets()
   const { c, radius } = useTheme()
   const presets = datePresets()
   const [form, setForm] = useState(() => {
@@ -66,7 +69,7 @@ export default function NewMeetingScreen({ navigation }) {
 
   return (
     <View style={{ flex: 1, backgroundColor: c.paper }}>
-      <ScrollView contentContainerStyle={styles.wrap} keyboardShouldPersistTaps="handled">
+      <ScrollView contentContainerStyle={[styles.wrap, { paddingBottom: 150 + insets.bottom }]} keyboardShouldPersistTaps="handled">
         <Q title="무슨 약속이에요?">
           <TextInput
             style={[styles.input, { backgroundColor: c.sheet, color: c.ink, borderRadius: radius.md, borderColor: titleErr ? c.no : c.rule }]}
@@ -167,7 +170,7 @@ export default function NewMeetingScreen({ navigation }) {
       </ScrollView>
 
       {/* 아래 고정: 요약 한 줄 + 만들기 */}
-      <View style={[styles.bottom, { backgroundColor: c.sheet, borderColor: c.rule }]}>
+      <View style={[styles.bottom, { backgroundColor: c.sheet, borderColor: c.rule, paddingBottom: 12 + insets.bottom }]}>
         {err || submitErr ? (
           <Text style={[type.caption, { textAlign: 'center', color: c.no, fontWeight: '600' }]}>{err || submitErr}</Text>
         ) : (

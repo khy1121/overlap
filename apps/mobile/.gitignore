@@ -7,3 +7,7 @@ ios/
 google-services.json
 # Firebase 서비스 계정 키 등 비밀 파일은 절대 커밋 금지
 *-firebase-adminsdk-*.json
+
+# 네이티브 폴더는 EAS 빌드 때 앱 설정으로 만들어요 (커밋하지 않음 — 있으면 EAS가 이 폴더로 빌드해요)
+/android
+/ios
