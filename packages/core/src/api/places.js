@@ -52,6 +52,19 @@ export function distanceM(a, b) {
 }
 export const kmText = (m) => (m == null ? '' : m < 1000 ? `${Math.round(m)}m` : `${(m / 1000).toFixed(1)}km`)
 
+/**
+ * 저장된 장소 링크를 열어도 되는 주소로: http/https만, http는 https로 바꿔요. 아니면 null
+ * (장소는 약속 멤버 누구나 바꿀 수 있어서 javascript: 같은 주소가 들어와도 열리지 않게)
+ */
+export function safeLink(url) {
+  const s = String(url || '').trim()
+  if (!/^https?:\/\/[^\s]+$/i.test(s)) return null
+  return s.replace(/^http:\/\//i, 'https://')
+}
+
+/** 장소의 '지도 보기' 링크: 안전한 장소 주소, 없으면 카카오맵 길찾기 */
+export const placeLink = (p) => safeLink(p?.url) || kakaoToLink(p)
+
 /** 카카오맵 길찾기 링크 (출발지는 앱에서 사용자가 고르게) */
 export const kakaoToLink = (p) => `https://map.kakao.com/link/to/${encodeURIComponent(p.name)},${p.lat},${p.lng}`
 

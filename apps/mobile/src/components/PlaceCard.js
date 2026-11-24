@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { ActivityIndicator, FlatList, Linking, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native'
-import { kakaoToLink, searchKeyword, toMeetingPlace } from '@overlap/core/api/places'
+import { kakaoToLink, safeLink, searchKeyword, toMeetingPlace } from '@overlap/core/api/places'
 import { supabase } from '../lib/supabase'
 import { type, useTheme } from '../lib/theme'
 import { Button, Card } from '../ui'
@@ -44,7 +44,7 @@ export default function PlaceCard({ place, onChange }) {
             {place.address ? <Text style={[type.caption, { color: c['ink-2'] }]} numberOfLines={1}>{place.address}{place.station ? ` · ${place.station}` : ''}</Text> : null}
             <View style={{ flexDirection: 'row', gap: 8, marginTop: 4 }}>
               <Button small kind="soft" label="길찾기" onPress={() => Linking.openURL(kakaoToLink(place))} style={{ flex: 1 }} />
-              {place.url ? <Button small kind="plain" label="장소 정보" onPress={() => Linking.openURL(place.url)} style={{ flex: 1 }} /> : null}
+              {safeLink(place.url) ? <Button small kind="plain" label="장소 정보" onPress={() => Linking.openURL(safeLink(place.url))} style={{ flex: 1 }} /> : null}
             </View>
           </>
         ) : (

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { applyBusy, fetchBusy, googleAuthUrl, isAppReturn, readGoogleReturn, splitByBusy } from '../src/api/calendar.js'
+import { applyBusy, fetchBusy, googleAuthUrl, isAppReturn, readGoogleReturn, splitByBusy, withNonce } from '../src/api/calendar.js'
 import { slotRange } from '../src/schedule.js'
 
 // 하루짜리 9~11시 (30분 칸 4개)
@@ -31,5 +31,14 @@ describe('Google 캘린더 free/busy', () => {
     expect(u.searchParams.get('state')).toBe('overlap://gcal')
     expect(readGoogleReturn('overlap://gcal#access_token=abc&token_type=Bearer')).toEqual({ token: 'abc' })
     expect(readGoogleReturn('overlap://gcal#error=access_denied').error).toMatch('취소')
+  })
+  it('돌아갈 주소: 바깥 exp:// 호스트는 막고, nonce가 다르면 받지 않아요', () => {
+    expect(isAppReturn('exp://evil.example.com:8081/--/gcal')).toBe(false)
+    expect(isAppReturn('exp://192.168.0.5:8081/--/gcal')).toBe(true)
+    const n = 'a1b2c3d4e5f6a7b8c9d0'
+    expect(isAppReturn(withNonce('overlap://gcal', n))).toBe(true)
+    expect(isAppReturn('overlap://gcal?n=short')).toBe(false)
+    expect(readGoogleReturn(`overlap://gcal?n=${n}#access_token=t1`, n)).toEqual({ token: 't1' })
+    expect(readGoogleReturn('overlap://gcal?n=zzzzzzzzzzzzzzzzzzzz#access_token=t1', n).error).toBeTruthy()
   })
 })

@@ -53,8 +53,15 @@ export function applyBusy(cells, { busyKeys, freeKeys }, { markBusy = true, fill
 // ----- 앱: 웹 클라이언트 + 중계 페이지로 권한 받기 -----
 // Google 창 → https://…/gcal-callback.html#access_token=… → overlap://gcal#access_token=… (앱으로)
 
-/** 중계 페이지가 앱으로 돌려보내도 되는 주소: 우리 앱 스킴과 Expo Go 개발 주소만 */
-export const isAppReturn = (url) => /^(overlap:\/\/|exp:\/\/[\w.:-]+\/--\/)gcal$/.test(String(url || ''))
+/**
+ * 중계 페이지가 앱으로 돌려보내도 되는 주소: 우리 앱(overlap://gcal)과, 개발용 Expo Go는 내 컴퓨터·내부망 주소만.
+ * 뒤에 요청을 묶는 값 ?n=<nonce>가 붙을 수 있어요. (gcal-callback.html도 같은 규칙)
+ */
+export const RETURN_RE = /^(overlap:\/\/|exp:\/\/(localhost|127\.0\.0\.1|10\.\d{1,3}\.\d{1,3}\.\d{1,3}|192\.168\.\d{1,3}\.\d{1,3}|172\.(1[6-9]|2\d|3[01])\.\d{1,3}\.\d{1,3})(:\d{1,5})?\/--\/)gcal(\?n=[A-Za-z0-9_-]{16,64})?$/
+export const isAppReturn = (url) => RETURN_RE.test(String(url || ''))
+
+/** 돌아갈 주소에 이번 요청만의 nonce를 붙여요 (돌아온 주소에서 같은 값인지 확인) */
+export const withNonce = (returnUrl, nonce) => `${returnUrl}?n=${nonce}`
 
 /** Google 권한 창 주소 (토큰 방식, free/busy만). state에 앱으로 돌아올 주소를 담아요 */
 export function googleAuthUrl({ clientId, origin, returnUrl }) {
@@ -70,9 +77,10 @@ export function googleAuthUrl({ clientId, origin, returnUrl }) {
   return `https://accounts.google.com/o/oauth2/v2/auth?${q}`
 }
 
-/** 앱으로 돌아온 주소에서 토큰 읽기 → { token } | { error } */
-export function readGoogleReturn(url) {
-  const frag = String(url || '').split('#')[1] || ''
+/** 앱으로 돌아온 주소에서 토큰 읽기 → { token } | { error }. nonce를 주면 이번 요청의 결과인지 확인해요 */
+export function readGoogleReturn(url, nonce) {
+  const [head, frag = ''] = String(url || '').split('#')
+  if (nonce && !head.endsWith(`?n=${nonce}`)) return { error: '캘린더 연결을 다시 시도해 주세요.' }
   const p = Object.fromEntries(frag.split('&').filter(Boolean).map((kv) => { const [k, v = ''] = kv.split('='); return [k, decodeURIComponent(v)] }))
   if (p.access_token) return { token: p.access_token }
   if (p.error === 'access_denied') return { error: '캘린더 연결을 취소했어요.' }

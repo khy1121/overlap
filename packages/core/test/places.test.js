@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { distanceM, kakaoToLink, kmText, regionText, searchKeyword, toMeetingPlace, toPlace, uniqueStations } from '../src/api/places.js'
+import { distanceM, kakaoToLink, kmText, placeLink, regionText, safeLink, searchKeyword, toMeetingPlace, toPlace, uniqueStations } from '../src/api/places.js'
 
 const raw = { id: '1', place_name: '스타벅스 한성대점', road_address_name: '서울 성북구 삼선교로', category_name: '음식점 > 카페 > 스타벅스', x: '127.01', y: '37.58', place_url: 'http://place.map.kakao.com/1', distance: '120' }
 
@@ -26,5 +26,12 @@ describe('장소', () => {
     expect((await searchKeyword(ok, '스타벅스'))[0].name).toBe('스타벅스 한성대점')
     const missing = { functions: { invoke: async () => ({ error: { context: { status: 500, json: async () => ({ error: 'not_configured' }) } } }) } }
     await expect(searchKeyword(missing, 'x')).rejects.toThrow('아직 서버에 준비되지')
+  })
+  it('장소 링크: http/https만, https로 바꿔서', () => {
+    expect(safeLink('http://place.map.kakao.com/1')).toBe('https://place.map.kakao.com/1')
+    expect(safeLink('javascript:alert(1)')).toBeNull()
+    expect(safeLink('intent://x#Intent;end')).toBeNull()
+    expect(safeLink(' https://a.b/c ')).toBe('https://a.b/c')
+    expect(placeLink({ name: '합정역', lat: 37.5, lng: 126.9, url: 'javascript:x' })).toMatch(/^https:\/\/map\.kakao\.com\/link\/to\//)
   })
 })

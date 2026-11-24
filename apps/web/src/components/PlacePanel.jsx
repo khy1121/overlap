@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
-  canPlaces, clearOrigin, currentPosition, distanceM, fetchMidpoint, fetchMyOrigin, kakaoToLink, kmText,
+  canPlaces, clearOrigin, currentPosition, distanceM, fetchMidpoint, fetchMyOrigin, kakaoToLink, kmText, placeLink, safeLink,
   nearbyStations, regionLabel, saveOrigin, searchCategory, searchKeyword, setOriginPublic,
 } from '../lib/places'
 import { useToast } from '../hooks/useToast'
@@ -173,7 +173,7 @@ export default function PlacePanel({ mid, cfg, people, myPid, onPlace, onClose }
             <b className="block truncate text-[15px] text-ink">📍 {cfg.place.name}</b>
             <span className="block truncate text-xs text-ink2">
               {cfg.place.station ? `${cfg.place.station} 근처 · ` : ''}
-              <a href={cfg.place.url} target="_blank" rel="noreferrer" className="font-semibold text-accent underline">지도 보기</a>
+              <a href={placeLink(cfg.place)} target="_blank" rel="noopener noreferrer" className="font-semibold text-accent underline">지도 보기</a>
             </span>
           </span>
           <button className="btn-ghost btn-sm shrink-0 !px-2 text-no hover:text-no" onClick={() => onPlace(null)}>장소 취소</button>
@@ -335,8 +335,8 @@ function PlaceRow({ p, sub, on, onChoose }) {
         <span className="block truncate text-[14px] font-semibold text-ink">{p.name}</span>
         <span className="block truncate text-xs text-ink2">{sub}</span>
       </span>
-      {p.url && (
-        <a href={p.url} target="_blank" rel="noreferrer" className="btn btn-sm shrink-0 no-underline" aria-label={`${p.name} 정보 보기 (카카오맵)`}>정보</a>
+      {safeLink(p.url) && (
+        <a href={safeLink(p.url)} target="_blank" rel="noopener noreferrer" className="btn btn-sm shrink-0 no-underline" aria-label={`${p.name} 정보 보기 (카카오맵)`}>정보</a>
       )}
       <button className={`btn-sm shrink-0 ${on ? 'btn-primary' : 'btn-soft'}`} onClick={onChoose}>{on ? '선택됨' : '여기로'}</button>
     </div>

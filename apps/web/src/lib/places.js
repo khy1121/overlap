@@ -82,7 +82,7 @@ export async function nearbyStations(center, radius = 3000) {
 }
 
 // ----- 거리·링크, 출발지·중간 지점: @overlap/core (앱과 같아요) -----
-export { distanceM, kakaoToLink, kmText } from '@overlap/core/api/places'
+export { distanceM, kakaoToLink, kmText, placeLink, safeLink } from '@overlap/core/api/places'
 export const fetchMyOrigin = (pid) => placesCore.fetchMyOrigin(supabase, pid)
 export const saveOrigin = (mid, v) => placesCore.saveOrigin(supabase, mid, v)
 export const setOriginPublic = (mid, isPublic) => placesCore.setOriginPublic(supabase, mid, isPublic)
