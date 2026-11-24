@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { ActivityIndicator, Alert, Pressable, ScrollView, Share, StyleSheet, Text, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { useMeeting } from '@overlap/core/hooks/useMeeting'
 import { briefRange, dayLabel, durText, evaluate, nDays, spanText, timeText } from '@overlap/core/schedule'
 import { keysOf, partsOf } from '@overlap/core/parts'
@@ -22,6 +23,8 @@ import PaintGrid from '../components/PaintGrid'
  * 30분 단위 다듬기·후보 투표·참석자 꼭/선택은 다음 단계에서.
  */
 export default function BoardScreen({ route, navigation }) {
+  // Android 15+(SDK 58)는 화면을 내비게이션 바 아래까지 그려요. 아래 고정 영역은 그만큼 띄워요
+  const insets = useSafeAreaInsets()
   const { mid } = route.params
   const { c, radius } = useTheme()
   const m = useMeeting(supabase, mid, (msg) => Alert.alert('', msg))
@@ -150,7 +153,7 @@ ${meetingLink(mid)}` }) },
 
   return (
     <View style={{ flex: 1, backgroundColor: c.paper }}>
-      <ScrollView contentContainerStyle={styles.wrap} scrollEnabled={scrollOn}>
+      <ScrollView contentContainerStyle={[styles.wrap, { paddingBottom: 110 + insets.bottom }]} scrollEnabled={scrollOn}>
         <Pressable onPress={share} accessibilityRole="button" accessibilityLabel="초대 링크 보내기">
           <Text style={[type.caption, { color: c['ink-2'] }]}>{briefRange(cfg)} · {durText(cfg.dur)} · {cfg.count}명 예상</Text>
         </Pressable>
@@ -286,12 +289,12 @@ ${meetingLink(mid)}` }) },
         </Card>}
       </ScrollView>
       {hint ? (
-        <View pointerEvents="none" style={[styles.toast, { backgroundColor: c.ink }]}>
+        <View pointerEvents="none" style={[styles.toast, { backgroundColor: c.ink, bottom: 92 + insets.bottom }]}>
           <Text style={[type.caption, { color: c.sheet }]}>{hint}</Text>
         </View>
       ) : null}
       {mode === 'edit' && (
-        <View style={[styles.bottom, { backgroundColor: c.paper, borderColor: c.rule }]}>
+        <View style={[styles.bottom, { backgroundColor: c.paper, borderColor: c.rule, paddingBottom: 12 + insets.bottom }]}>
           <Button label="다 했어요 · 결과 보기" onPress={() => { flush.current?.(); setMode('all') }} />
         </View>
       )}

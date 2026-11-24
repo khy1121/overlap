@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Alert, Linking, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native'
+import { useSafeAreaInsets } from 'react-native-safe-area-context'
 import { deleteAccount, myProfile, updateMyName } from '@overlap/core/api/profile'
 import { KINDS, loadPrefs, savePrefs, sendTestPush } from '@overlap/core/api/notify'
 import { appPushState, disableAppPush, enableAppPush } from '../lib/push'
@@ -14,6 +15,7 @@ import { Button, Card } from '../ui'
  * 화면 테마는 기기 설정을 따라요.
  */
 export default function SettingsScreen() {
+  const insets = useSafeAreaInsets() // 맨 아래 항목(회원 탈퇴)이 내비게이션 바에 가리지 않게
   const { c, radius } = useTheme()
   const [name, setName] = useState('')
   const [saved, setSaved] = useState('')
@@ -83,7 +85,7 @@ export default function SettingsScreen() {
   )
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: c.paper }} contentContainerStyle={styles.wrap} keyboardShouldPersistTaps="handled">
+    <ScrollView style={{ flex: 1, backgroundColor: c.paper }} contentContainerStyle={[styles.wrap, { paddingBottom: 20 + insets.bottom }]} keyboardShouldPersistTaps="handled">
       <Card style={{ paddingVertical: 12, gap: 6 }}>
         <Text style={[type.caption, { color: c['ink-2'], fontWeight: '600' }]}>표시 이름</Text>
         <View style={{ flexDirection: 'row', gap: 8 }}>
