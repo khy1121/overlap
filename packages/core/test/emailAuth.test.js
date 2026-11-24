@@ -22,9 +22,9 @@ describe('새 가입 방식', () => {
     expect(authMessage({ message: 'Email not confirmed' })).toMatch('인증 링크')
     expect(authMessage({ message: 'Unsupported provider: provider is not enabled' })).toMatch('준비 중')
   })
-  it('이미 가입된 이메일(빈 identities)은 안내', async () => {
+  it('이미 가입된 이메일도 새 가입과 같은 결과 (가입 여부가 드러나지 않게)', async () => {
     const db = { auth: { signUp: async () => ({ data: { user: { identities: [] }, session: null }, error: null }) } }
-    await expect(signUpEmail(db, { email: 'a@b.co', password: '12345678', age14: true }, 'https://x')).rejects.toThrow('이미 가입한')
+    expect(await signUpEmail(db, { email: 'a@b.co', password: '12345678', age14: true }, 'https://x')).toEqual({ needsConfirm: true })
     const ok = { auth: { signUp: async () => ({ data: { user: { identities: [{}] }, session: null }, error: null }) } }
     expect(await signUpEmail(ok, { email: 'a@b.co', password: '12345678', age14: true }, 'https://x')).toEqual({ needsConfirm: true })
   })

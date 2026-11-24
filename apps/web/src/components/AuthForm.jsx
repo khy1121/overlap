@@ -43,7 +43,8 @@ function BirthInput({ value, onChange }) {
  * hideKakao: 소셜 버튼을 화면에 따로 둔 곳(초대 화면)에서는 이메일 폼만 보여 줘요
  */
 export default function AuthForm({ initial = 'login', onDone, hideKakao = false }) {
-  const [mode, setMode] = useState(initial) // 'login' | 'signup' | 'reset' | 'legacy' | 'sent'
+  // 앱의 '비밀번호를 잊었어요'는 웹의 /?auth=reset 으로 열려요 (재설정은 처음부터 끝까지 같은 브라우저에서 해야 해서)
+  const [mode, setMode] = useState(() => (new URLSearchParams(window.location.search).get('auth') === 'reset' ? 'reset' : initial)) // 'login' | 'signup' | 'reset' | 'legacy' | 'sent'
   const [form, setForm] = useState({ email: '', password: '', confirm: '', age14: false, name: '', birth: '' })
   const [error, setError] = useState('')
   const [sentTo, setSentTo] = useState({ kind: '', email: '' })
@@ -199,7 +200,7 @@ export default function AuthForm({ initial = 'login', onDone, hideKakao = false 
           {mode !== 'legacy' && <button type="button" className="ml-auto border-0 bg-transparent p-0 text-[13px] text-ink2 underline underline-offset-2" onClick={() => go('legacy')}>이름·생년월일로 가입한 계정이에요</button>}
         </div>
         <p className="small m-0">
-          {mode === 'signup' ? '가입하면' : '로그인하면'} <a href="/?page=privacy" className="font-semibold text-accent underline underline-offset-2">개인정보처리방침</a>에 따라 정보를 처리하는 데 동의하는 것으로 봐요.
+          {mode === 'signup' ? '가입하면' : '로그인하면'} <a href="/?page=terms" className="font-semibold text-accent underline underline-offset-2">이용약관</a>과 <a href="/?page=privacy" className="font-semibold text-accent underline underline-offset-2">개인정보처리방침</a>에 동의하는 것으로 봐요.
         </p>
       </form>
     </div>

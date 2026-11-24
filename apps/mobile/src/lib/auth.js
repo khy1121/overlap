@@ -35,7 +35,9 @@ export const signInWithGoogle = () => signInWithProvider('google')
 
 // ── 이메일 (규칙·문구는 @overlap/core). 인증·재설정 메일의 링크는 웹으로 열려요 ──
 export const signInEmail = (form) => core.signInEmail(supabase, form)
-export const signUpEmail = (form) => core.signUpEmail(supabase, form, PROD_ORIGIN)
-export const sendPasswordReset = (email) => core.sendPasswordReset(supabase, email, `${PROD_ORIGIN}/?reset=1`)
+// 인증 메일의 링크는 웹으로 열려요. 인증은 끝나지만 로그인 정보는 폰에 있어서, 웹이 '앱에서 로그인해 주세요'라고 안내해요
+export const signUpEmail = (form) => core.signUpEmail(supabase, form, `${PROD_ORIGIN}/?confirmed=app`)
+// 비밀번호 재설정은 요청부터 새 비밀번호까지 같은 브라우저에서 해야 해서(PKCE) 웹의 비밀번호 찾기 화면을 열어요
+export const openPasswordReset = () => Linking.openURL(`${PROD_ORIGIN}/?auth=reset`)
 export const confirmAge14 = () => core.confirmAge14(supabase)
 export { age14Ok, checkEmailSignup } from '@overlap/core/api/auth'

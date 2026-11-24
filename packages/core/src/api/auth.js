@@ -74,7 +74,6 @@ const authMessage = (error) => {
   const m = String(error?.message || '')
   if (/invalid login credentials/i.test(m)) return '이메일 또는 비밀번호가 맞지 않아요.'
   if (/email not confirmed/i.test(m)) return '메일함에서 인증 링크를 먼저 눌러 주세요.'
-  if (/already registered|already exists/i.test(m)) return '이미 가입한 이메일이에요. 로그인하거나 비밀번호 찾기를 해 주세요.'
   if (/signups not allowed|signup is disabled/i.test(m)) return '지금은 이메일 가입을 받지 않아요.'
   if (/rate limit|too many/i.test(m)) return '요청이 너무 많아요. 잠시 후 다시 시도해 주세요.'
   if (/provider is not enabled|unsupported provider/i.test(m)) return '이 로그인 방법은 아직 준비 중이에요.'
@@ -98,10 +97,8 @@ export async function signUpEmail(db, form, emailRedirectTo) {
     options: { emailRedirectTo, data: { age14: true, age14_at: new Date().toISOString() } },
   })
   if (error) throw new Error(authMessage(error))
-  // 이미 가입된(인증 완료) 이메일이면 Supabase는 오류 없이 빈 identities를 돌려줘요
-  if (data?.user && Array.isArray(data.user.identities) && data.user.identities.length === 0) {
-    throw new Error('이미 가입한 이메일이에요. 로그인하거나 비밀번호 찾기를 해 주세요.')
-  }
+  // 이미 가입된 이메일이면 Supabase는 오류 없이 빈 identities를 돌려줘요.
+  // 가입 여부가 드러나지 않게 새 가입과 똑같이 '메일을 보냈어요'로 안내해요 (실제 메일은 가지 않아요).
   return { needsConfirm: !data?.session }
 }
 

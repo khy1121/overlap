@@ -1,7 +1,8 @@
 import { useState } from 'react'
 import { ActivityIndicator, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Switch, Text, TextInput, View } from 'react-native'
 import { dotted, parseBirth } from '@overlap/core/identity'
-import { checkEmailSignup, sendPasswordReset, signIn, signInEmail, signInWithGoogle, signInWithKakao, signUpEmail } from '../lib/auth'
+import { checkEmailSignup, openPasswordReset, signIn, signInEmail, signInWithGoogle, signInWithKakao, signUpEmail } from '../lib/auth'
+import { openPrivacy, openTerms } from '../lib/web'
 import { type, useTheme } from '../lib/theme'
 
 /**
@@ -35,7 +36,6 @@ export default function LoginScreen() {
         if (needsConfirm) { setSent({ kind: 'confirm', email: form.email.trim() }); setMode('sent') }
       })
     }
-    if (mode === 'reset') return run(async () => { await sendPasswordReset(form.email); setSent({ kind: 'reset', email: form.email.trim() }); setMode('sent') })
     if (mode === 'legacy') {
       const birth = parseBirth(form.birth)
       if (!form.name.trim()) return setError('이름을 입력해 주세요.')
@@ -144,9 +144,12 @@ export default function LoginScreen() {
               </Pressable>
 
               <View style={styles.links}>
-                {mode === 'login' && <Pressable accessibilityRole="button" onPress={() => go('reset')} hitSlop={8}><Text style={link}>비밀번호를 잊었어요</Text></Pressable>}
-                {(mode === 'reset' || mode === 'legacy') && <Pressable accessibilityRole="button" onPress={() => go('login')} hitSlop={8}><Text style={link}>← 이메일 로그인으로</Text></Pressable>}
+                {mode === 'login' && <Pressable accessibilityRole="button" onPress={openPasswordReset} hitSlop={8}><Text style={link}>비밀번호를 잊었어요</Text></Pressable>}
+                {mode === 'legacy' && <Pressable accessibilityRole="button" onPress={() => go('login')} hitSlop={8}><Text style={link}>← 이메일 로그인으로</Text></Pressable>}
               </View>
+              <Text style={[type.caption, { color: c['ink-2'] }]}>
+                {mode === 'signup' ? '가입하면' : '로그인하면'} <Text style={link} onPress={openTerms}>이용약관</Text>과 <Text style={link} onPress={openPrivacy}>개인정보처리방침</Text>에 동의하는 것으로 봐요.
+              </Text>
             </View>
             {mode !== 'legacy' && (
               <Pressable accessibilityRole="button" onPress={() => go('legacy')} style={{ alignSelf: 'center', padding: 12 }}>

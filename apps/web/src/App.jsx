@@ -29,7 +29,8 @@ const TAB = MID ? null : !params.get('page') ? 'home' : { schedule: 'schedule', 
 export default function App() {
   const [session, setSession] = useState(undefined) // undefined = 아직 모름
   // 비밀번호 재설정 링크로 들어왔으면 새 비밀번호부터 (재설정 메일의 돌아올 주소에 ?reset=1)
-  const [recovery, setRecovery] = useState(params.get('reset') === '1')
+  // 이미 로그인한 사람이 주소만 바꿔 들어와도 열리지 않게, 메일의 링크(code)로 들어온 경우에만
+  const [recovery, setRecovery] = useState(params.get('reset') === '1' && Boolean(params.get('code')))
   const toast = useToast()
 
   useEffect(() => {
@@ -45,7 +46,9 @@ export default function App() {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
       const back = MID ? `/?m=${MID}` : params.get('page') ? `/?${new URLSearchParams({ page: params.get('page'), ...(params.get('kakao_friends') ? { kakao_friends: '1' } : {}) })}` : '/'
-      if (params.get('code') || err || params.get('reset')) window.history.replaceState(null, '', back)
+      if (params.get('code') || err || params.get('reset') || params.get('confirmed')) window.history.replaceState(null, '', back)
+      // 앱에서 가입한 사람의 인증 메일 링크: 인증은 끝났지만 로그인 정보는 폰에 있어서 웹에서는 로그인되지 않아요
+      if (params.get('confirmed') === 'app' && !data.session) toast('이메일 인증이 끝났어요. 앱으로 돌아가 이메일로 로그인해 주세요.')
       if (err) toast(/already linked/i.test(err) ? '이 카카오 계정은 이미 다른 Overlap 계정에 연결돼 있어요.' : `로그인하지 못했어요: ${err}`)
       else if (params.get('linked') === 'kakao') {
         window.history.replaceState(null, '', '/')
