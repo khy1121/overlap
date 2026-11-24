@@ -39,6 +39,15 @@ module.exports = {
     android: {
       // 지금 Play용 TWA와 같은 패키지 이름: 나중에 같은 서명 키로 업데이트해서 바꿀 수 있게
       package: 'kr.overlap.app',
+      // 로그인 토큰이 기기 백업(구글 백업·adb)으로 빠져나가지 않게
+      allowBackup: false,
+      // Expo 기본 템플릿에 들어오지만 쓰지 않는 권한 (스토어 심사·데이터 보안 양식에 불필요한 항목이 생기지 않게)
+      blockedPermissions: [
+        'android.permission.READ_EXTERNAL_STORAGE',
+        'android.permission.WRITE_EXTERNAL_STORAGE',
+        'android.permission.SYSTEM_ALERT_WINDOW',
+        'com.google.android.gms.permission.AD_ID',
+      ],
       adaptiveIcon: { foregroundImage: './assets/adaptive-icon.png', backgroundColor: '#FFFFFF' },
       // FCM(앱 알림): 빌드 서버는 EAS 파일 변수 GOOGLE_SERVICES_JSON, 내 컴퓨터는 apps/mobile/google-services.json (커밋 안 함)
       ...(googleServices ? { googleServicesFile: googleServices } : {}),
