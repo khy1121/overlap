@@ -20,8 +20,9 @@ Notifications.setNotificationHandler({
  */
 export async function appPushState() {
   if (!projectId) return 'no-project'
-  const { status } = await Notifications.getPermissionsAsync()
-  if (status === 'denied') return 'denied'
+  const { status, canAskAgain } = await Notifications.getPermissionsAsync()
+  // Android 13+는 아직 묻지 않은 권한도 'denied'로 알려 줘요. 다시 물어볼 수 있으면 '꺼짐'(스위치로 켜기)으로 봐요
+  if (status === 'denied' && !canAskAgain) return 'denied'
   return status === 'granted' && (await AsyncStorage.getItem(KEY)) ? 'on' : 'off'
 }
 

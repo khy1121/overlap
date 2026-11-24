@@ -181,6 +181,7 @@ export default function Settings({ session }) {
             />
           )}
           <LinkRow href="/?page=feedback" title="의견 보내기" />
+          <LinkRow href="/?page=terms" title="이용약관" />
           <LinkRow href="/?page=privacy" title="개인정보처리방침" />
           <button
             type="button"
