@@ -6,6 +6,7 @@ import { GOOGLE_CLIENT_ID, requestCalendarToken } from '../lib/googleCalendar'
 import { copyText } from '../lib/copy'
 import { myRequests, requestFriend, resultText } from '../lib/friends'
 import { deleteMeeting, leaveMeeting } from '../lib/meetings'
+import { placeLink } from '../lib/places'
 import { APP_ORIGIN } from '../lib/site'
 import { supabase } from '../lib/supabase'
 import { BRUSH_LABEL, briefRange, dayLabel, durText, evaluate, nDays, nSlots, rangeText, summary, timeText, tm } from '@overlap/core/schedule'
@@ -287,7 +288,7 @@ export default function Board({ mid, session }) {
   function noticeText(w, dur, final) {
     const head = `${cfg.title} 시간 ${final ? '확정' : '제안'}\n${dayLabel(cfg, w.d)} ${timeText(cfg, w.s, dur)}`
     if (final) {
-      const where = cfg.place ? `\n장소: ${cfg.place.name}${cfg.place.station ? ` (${cfg.place.station} 근처)` : ''}\n${cfg.place.url}` : ''
+      const where = cfg.place ? `\n장소: ${cfg.place.name}${cfg.place.station ? ` (${cfg.place.station} 근처)` : ''}\n${placeLink(cfg.place)}` : ''
       return `${head}${where}\n이 시간에 만나요!\n${link}`
     }
     return `${head}\n(${summary(w, n)})\n이 시간 어때요?\n${link}`
@@ -777,7 +778,7 @@ function PlaceLine({ place, originCount, total, linkClass }) {
     <>
       <span className="font-semibold">📍 {place.name}</span>
       {place.station && <span className="opacity-85">{place.station} 근처</span>}
-      <a href={place.url} target="_blank" rel="noreferrer" className={linkClass}>지도 보기</a>
+      <a href={placeLink(place)} target="_blank" rel="noopener noreferrer" className={linkClass}>지도 보기</a>
     </>
   )
 }
