@@ -29,3 +29,18 @@ export async function linkKakao() {
 }
 
 export const hasKakao = (user) => Boolean(user?.identities?.some((i) => i.provider === 'kakao'))
+
+// ── 새 가입 방식: Google · 이메일 (규칙·문구는 @overlap/core, 앱과 같아요) ──
+export { age14Ok, checkEmailSignup, isLegacyAccount } from '@overlap/core/api/auth'
+
+/** Google로 시작하기 (처음이면 자동 가입). 돌아올 주소는 카카오와 같아요 */
+export async function signInWithGoogle() {
+  const { error } = await supabase.auth.signInWithOAuth({ provider: 'google', options: { redirectTo: backHere() } })
+  if (error) throw new Error(core.authMessage(error))
+}
+export const signInEmail = (form) => core.signInEmail(supabase, form)
+/** 인증 메일의 링크는 이 사이트로 돌아와요 (초대 링크로 들어왔으면 그 약속으로) */
+export const signUpEmail = (form) => core.signUpEmail(supabase, form, backHere())
+export const sendPasswordReset = (email) => core.sendPasswordReset(supabase, email, `${window.location.origin}/?reset=1`)
+export const updatePassword = (password) => core.updatePassword(supabase, password)
+export const confirmAge14 = () => core.confirmAge14(supabase)

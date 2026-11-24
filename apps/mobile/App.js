@@ -12,6 +12,8 @@ import { supabase } from './src/lib/supabase'
 import { useTheme } from './src/lib/theme'
 import { refreshAppPush, urlOfResponse } from './src/lib/push'
 import LoginScreen from './src/screens/LoginScreen'
+import Age14Screen from './src/screens/Age14Screen'
+import { age14Ok } from './src/lib/auth'
 import HomeScreen from './src/screens/HomeScreen'
 import ScheduleScreen from './src/screens/ScheduleScreen'
 import FriendsScreen from './src/screens/FriendsScreen'
@@ -95,7 +97,9 @@ export default function App() {
   return (
     <NavigationContainer theme={navTheme} linking={session ? linking : undefined}>
       <StatusBar style={mode === 'dark' ? 'light' : 'dark'} />
-      {session ? (
+      {session && !age14Ok(session.user) ? (
+        <Age14Screen onDone={() => supabase.auth.getSession().then(({ data }) => setSession(data.session))} />
+      ) : session ? (
         <Stack.Navigator>
           <Stack.Screen name="Tabs" options={{ headerShown: false }}>{() => <Tabs session={session} />}</Stack.Screen>
           <Stack.Screen name="Board" component={BoardScreen} options={{ title: '약속', headerBackTitle: '뒤로' }} />

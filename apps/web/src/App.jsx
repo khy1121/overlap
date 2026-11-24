@@ -15,6 +15,8 @@ import Privacy from './components/Privacy'
 import Feedback from './components/Feedback'
 import Inbox from './components/Inbox'
 import TabBar from './components/TabBar'
+import { Age14Gate, NewPassword } from './components/AccountGate'
+import { age14Ok } from './lib/auth'
 
 const params = new URLSearchParams(window.location.search)
 const MID = params.get('m')
@@ -26,6 +28,8 @@ const TAB = MID ? null : !params.get('page') ? 'home' : { schedule: 'schedule', 
 
 export default function App() {
   const [session, setSession] = useState(undefined) // undefined = 아직 모름
+  // 비밀번호 재설정 링크로 들어왔으면 새 비밀번호부터 (재설정 메일의 돌아올 주소에 ?reset=1)
+  const [recovery, setRecovery] = useState(params.get('reset') === '1')
   const toast = useToast()
 
   useEffect(() => {
@@ -41,22 +45,27 @@ export default function App() {
     supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
       const back = MID ? `/?m=${MID}` : params.get('page') ? `/?${new URLSearchParams({ page: params.get('page'), ...(params.get('kakao_friends') ? { kakao_friends: '1' } : {}) })}` : '/'
-      if (params.get('code') || err) window.history.replaceState(null, '', back)
+      if (params.get('code') || err || params.get('reset')) window.history.replaceState(null, '', back)
       if (err) toast(/already linked/i.test(err) ? '이 카카오 계정은 이미 다른 Overlap 계정에 연결돼 있어요.' : `로그인하지 못했어요: ${err}`)
       else if (params.get('linked') === 'kakao') {
         window.history.replaceState(null, '', '/')
         toast('카카오 계정을 연결했어요. 이제 카카오로도 로그인할 수 있어요.')
       }
     })
-    const { data } = supabase.auth.onAuthStateChange((_ev, s) => setSession(s))
+    const { data } = supabase.auth.onAuthStateChange((ev, s) => {
+      setSession(s)
+      if (ev === 'PASSWORD_RECOVERY') setRecovery(true)
+    })
     return () => data.subscription.unsubscribe()
   }, [toast])
 
   let view
   if (session === undefined) view = <Center>불러오는 중…</Center>
-  else if (MID) view = session ? <Board key={MID} mid={MID} session={session} /> : <InviteGate mid={MID} />
+  else if (MID) view = !session ? <InviteGate mid={MID} /> : !age14Ok(session.user) ? <Age14Gate onDone={() => supabase.auth.refreshSession().then(({ data }) => setSession(data.session))} /> : <Board key={MID} mid={MID} session={session} />
   else if (params.get('page') === 'privacy') view = <Privacy /> // 로그인 없이도 볼 수 있어요
   else if (!session) view = <Landing />
+  else if (recovery) view = <NewPassword onDone={() => { setRecovery(false); toast('비밀번호를 바꿨어요') }} />
+  else if (!age14Ok(session.user)) view = <Age14Gate onDone={() => supabase.auth.refreshSession().then(({ data }) => setSession(data.session))} />
   else view = Page ? <Page session={session} /> : <Home session={session} />
 
   return (
